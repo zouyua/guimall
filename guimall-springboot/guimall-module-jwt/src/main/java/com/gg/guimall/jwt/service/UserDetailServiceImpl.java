@@ -2,16 +2,28 @@ package com.gg.guimall.jwt.service;
 
 
 import com.gg.guimall.common.domain.dos.UserDO;
+import com.gg.guimall.common.domain.dos.UserRoleDO;
 import com.gg.guimall.common.domain.mapper.UserMapper;
+import com.gg.guimall.common.domain.mapper.UserRoleMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
+/*
+* @author:wgg
+* @url:www.gg.com
+* @date:2026/2/8
+* @description:TODO*/
 
 @Service
 @Slf4j
@@ -19,6 +31,8 @@ public class UserDetailServiceImpl implements UserDetailsService {
 
     @Autowired
     private UserMapper userMapper;
+    @Autowired
+    private UserRoleMapper userRoleMapper;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -30,10 +44,21 @@ public class UserDetailServiceImpl implements UserDetailsService {
             throw new UsernameNotFoundException("该用户不存在");
         }
 
-        // authorities 用于指定角色，这里写死为 ADMIN 管理员
+        // 用户角色
+        List<UserRoleDO> roleDOS = userRoleMapper.selectByUsername(username);
+
+        String[] roleArr = null;
+
+        // 转数组
+        if (!CollectionUtils.isEmpty(roleDOS)) {
+            List<String> roles = roleDOS.stream().map(p -> p.getRole()).collect(Collectors.toList());
+            roleArr = roles.toArray(new String[roles.size()]);
+        }
+
+        // authorities 用于指定角色
         return User.withUsername(userDO.getUsername())
                 .password(userDO.getPassword())
-                .authorities("ADMIN")
+                .authorities(roleArr)
                 .build();
     }
 }

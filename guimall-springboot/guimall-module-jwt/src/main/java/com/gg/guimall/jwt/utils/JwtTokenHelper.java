@@ -68,7 +68,7 @@ public class JwtTokenHelper implements InitializingBean {
     }
 
     /**
-     * 生成 Token
+     * 生成 Token（生成Base64安全密钥）
      * @param username
      * @return
      */

@@ -23,7 +23,11 @@ import router from './router';
   </main> -->
 </template>
 
-<style scoped>
+<style>
+/* 自定义顶部加载 Loading颜色 */
+#nprogress .bar {
+  background: #e2ffe4 !important;
+}
   /* css代码，scoped表示节点内css样式只针对此组件有效，不影响其他组件 */
 /* header {
   line-height: 1.5;

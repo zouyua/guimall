@@ -3,6 +3,8 @@ import { createRouter, createWebHashHistory } from 'vue-router'
 
 import Login from '@/pages/admin/login.vue'
 
+import AdminIndex from '@/pages/admin/index.vue'
+
 // 统一在这里声明所有路由
 const routes = [
     {
@@ -19,6 +21,13 @@ const routes = [
             title: 'guimall 登录页'
         }
     },
+    {
+        path: "/admin/index",//后台首页
+        component: AdminIndex,
+        meta: {
+            title: 'Admin 后台首页'
+        }
+    }
 ]
 
 // 创建路由

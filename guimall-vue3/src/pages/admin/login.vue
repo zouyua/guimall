@@ -17,7 +17,7 @@
         >
           <!-- 用户名 -->
           <a-form-item name="username">
-            <a-input v-model:value="form.username" placeholder="请输入用户名">
+            <a-input v-model:value="form.username" placeholder="请输入用户名" >
               <template #prefix>
                 <UserOutlined />
               </template>
@@ -57,13 +57,13 @@
             block
             size="large"
             :loading="loading"
-            @click="handleLogin"
+            @click="onSubmit"
           >
             登录
           </a-button>
 
           <!-- 注册/忘记密码 -->
-          <div class="extra">
+          <!-- <div class="extra">
             <router-link to="/register">
               <a-button type="primary">注册</a-button>
             </router-link>
@@ -71,7 +71,7 @@
             <router-link to="/password">
               <a-button type="link">忘记密码</a-button>
             </router-link>
-          </div>
+          </div> -->
         </a-form>
       </div>
     </div>
@@ -80,38 +80,110 @@
   </div>
 </template>
 
-<script setup lang="ts">
-import { ref, reactive } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { message } from 'ant-design-vue'
+<script setup >
 import {
   UserOutlined,
   LockOutlined,
   SafetyOutlined,
 } from '@ant-design/icons-vue'
+import { login } from '@/api/admin/user'
+import { ref, reactive,onMounted,onBeforeUnmount } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { message } from 'ant-design-vue';
 
 import leftImg from '@/assets/left_img_1.png'
+import { showMessage } from '@/composables/util';
+import { setToken } from '@/composables/auth';
 
 const title = 'GuiMall'
 const router = useRouter()
 const route = useRoute()
-
+//登录按钮加载
 const loading = ref(false)
-const formRef = ref()
 
+//定义响应式的表单对象
 const form = reactive({
   username: '',
   password: '',
   verificationCode: '',
 })
-
+//表单引用
+const formRef = ref(null)
+//表单验证规则
 const rules = {
-  username: [{ required: true, message: '请输入用户名' }],
+  username: [
+    {
+      required: true,
+      message: '请输入用户名',
+      trigger: 'blur',
+    }
+  ],
   password: [
-    { required: true, message: '请输入密码' },
-    { min: 6, message: '密码不能少于6位' },
+    {
+      required: true,
+      message: '请输入密码',
+      trigger: 'blur',
+    },
+    { min: 6, message: '密码不能少于6位', trigger: 'blur' },
+  ],
+  verificationCode: [
+    {
+      required: true,
+      message: '请输入验证码',
+      trigger: 'blur',
+    }
   ],
 }
+
+// 登录
+const onSubmit = async () => {
+  try {
+    //先做表单校验
+    await formRef.value.validate()
+
+    //校验通过才会执行到这里
+    //开始加载
+    loading.value = true
+
+    //调用登录接口
+    const res = await login(form.username, form.password)
+
+    //判断是否成功
+    if (res.success === true) {
+      //提示登录成功
+      showMessage('登录成功', 'success')
+      //跳转到后台首页
+      router.push('/admin/index')
+      //存储Token到Cookie中
+      let token = res.data.token
+      setToken(token)
+    } else {
+      //获取服务端返回的错误消息
+      let message = res.message
+      //提示消息
+      showMessage(res.data.message, 'error')
+    }
+
+  } catch (err) {
+    //校验失败会直接进 catch
+    console.log('表单校验未通过', err)
+    //message.error('服务器异常，请稍后重试')
+  } finally {
+    //结束加载
+    loading.value = false
+  }
+}
+// const onSubmit = () => {
+//     console.log('登录')
+//     login(form.username, form.password).then((res) => {
+//         console.log(res)
+//         // 判断是否成功
+//         if (res.data.success == true) {
+//             // 跳转到后台首页
+//             router.push('/admin/index')
+//         }
+//     })
+// }
 
 const codeUrl = ref('https://www.oschina.net/action/user/captcha')
 
@@ -119,21 +191,40 @@ const changeCode = () => {
   codeUrl.value = `https://www.oschina.net/action/user/captcha?${Date.now()}`
 }
 
-const handleLogin = async () => {
-  try {
-    await formRef.value.validate()
-    loading.value = true
+// const handleLogin = async () => {
+//   try {
+//     await formRef.value.validate()
+//     loading.value = true
 
-    // 模拟登录
-    setTimeout(() => {
-      loading.value = false
-      message.success('登录成功')
-      router.push('/')
-    }, 1000)
-  } catch (err) {
-    console.log(err)
+
+//     //模拟登录
+//     setTimeout(() => {
+//       loading.value = false
+//       message.success('登录成功')
+//       router.push('/')
+//     }, 1000)
+//   } catch (err) {
+//     console.log(err)
+//   }
+// }
+//按回车键后，执行登录事件
+function onKeyUp(e) {
+  console.log(e)
+  if (e.key === 'Enter') {
+    onSubmit()
   }
 }
+
+//添加键盘监听
+onMounted(() => {
+  console.log('添加键盘监听')
+  document.addEventListener('keyup', onKeyUp)
+})
+
+//移除键盘监听
+onBeforeUnmount(() => {
+  document.removeEventListener('keyup', onKeyUp)
+})
 </script>
 
 <style scoped>
@@ -185,11 +276,11 @@ const handleLogin = async () => {
   cursor: pointer;
 }
 
-.extra {
+/* .extra {
   margin-top: 20px;
   display: flex;
   justify-content: space-between;
-}
+} */
 
 footer {
   margin-top: 20px;
