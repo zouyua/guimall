@@ -1,63 +1,61 @@
 <template>
-    <a-layout-sider width="200" theme="dark" style="height: 100vh ">
+    <a-menu
+  v-model:selectedKeys="selectedKeys"
+  v-model:openKeys="openKeys"
+  mode="inline"
+  theme="dark"
+  :style="{ borderRight: 0 }"
+>
+        <template v-for="menu in menus">
+            <!-- 如果没有子菜单，则渲染为 a-menu-item -->
+            <a-menu-item v-if="!menu.children || menu.children.length === 0" :key="menu.path" @click="goRoute(menu.path)">
+                <component :is="menu.icon" />
+                <span>{{ menu.title }}</span>
+            </a-menu-item>
 
-        <!-- LOGO -->
-        <div class="h-[64px] overflow-hidden">
-            <img src="@/assets/guimall-logo.png" class="w-full h-full object-cover">
-        </div>
-
-        <!-- 动态菜单 -->
-        <a-menu v-model:selectedKeys="selectedKeys" v-model:openKeys="openKeys" mode="inline" theme="dark"
-            :style="{ height: 'calc(100% - 64px)', borderRight: 0 }">
-            <a-sub-menu v-for="menu in menus" :key="menu.key">
-                <!-- 一级标题 -->
+            <!-- 如果有子菜单，则渲染为 a-sub-menu -->
+            <a-sub-menu v-else :key="menu.key">
                 <template #title>
                     <component :is="menu.icon" />
                     <span>{{ menu.title }}</span>
                 </template>
-
-                <!-- 二级菜单 -->
-                <a-menu-item
-  v-for="child in menu.children"
-  :key="child.path"
-  @click="goRoute(child.path)"
->
-  <!-- 渲染 icon -->
-  <component
-    v-if="child.icon"
-    :is="child.icon"
-    class="mr-2"
-  />
-
-  <span>{{ child.title }}</span>
-</a-menu-item>
-
+                <a-menu-item v-for="child in menu.children" :key="child.path" @click="goRoute(child.path)">
+                    <component v-if="child.icon" :is="child.icon" class="mr-2" />
+                    <span>{{ child.title }}</span>
+                </a-menu-item>
             </a-sub-menu>
-        </a-menu>
-    </a-layout-sider>
+        </template>
+    </a-menu>
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useMenuStore } from '@/stores/menu'
 
 import {
-  DashboardOutlined,
-  TeamOutlined,
-  AppstoreOutlined,
-  ShoppingCartOutlined,
-  GiftOutlined,
-  EnvironmentOutlined,
-  SafetyCertificateOutlined,
-  UserOutlined,
-  PlusOutlined,
-  ShoppingOutlined,
-  ApartmentOutlined,
-  SettingOutlined
+    DashboardOutlined,
+    TeamOutlined,
+    AppstoreOutlined,
+    ShoppingCartOutlined,
+    GiftOutlined,
+    EnvironmentOutlined,
+    SafetyCertificateOutlined,
+    UserOutlined,
+    PlusOutlined,
+    ShoppingOutlined,
+    ApartmentOutlined,
+    SettingOutlined
 } from '@ant-design/icons-vue'
+
+//引入useMenuStore
+const menuStore = useMenuStore()
 
 const router = useRouter()
 const route = useRoute()
+
+//是否折叠
+const isCollapse = computed(() => menuStore.menuWidth !== '200px')
 
 // 当前选中菜单
 const selectedKeys = ref([route.path])
@@ -171,4 +169,5 @@ const menus = [
 :deep(.ant-menu-dark .ant-menu-sub) {
     background-color: #000c17 !important;
 }
+
 </style>
