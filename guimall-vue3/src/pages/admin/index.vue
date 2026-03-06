@@ -1,5 +1,5 @@
 <template>
   <div>
-    后台首页
+    仪表盘
   </div>
 </template>

@@ -89,11 +89,10 @@ import {
 import { login } from '@/api/admin/user'
 import { ref, reactive,onMounted,onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { message } from 'ant-design-vue';
 
 import leftImg from '@/assets/left_img_1.png'
 import { showMessage } from '@/composables/util';
-import { setToken } from '@/composables/auth';
+import { setToken } from '@/composables/cookie';
 
 const title = 'GuiMall'
 const router = useRouter()

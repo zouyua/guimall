@@ -1,15 +1,15 @@
 import Index from '@/pages/frontend/index.vue'
-import { createRouter, createWebHashHistory } from 'vue-router'
-
 import Login from '@/pages/admin/login.vue'
-
 import AdminIndex from '@/pages/admin/index.vue'
+// import AdminDashboard from '@/pages/admin/dashboard/index.vue'
+// import AdminFarmer from '@/pages/admin/farmer/index.vue'
+// import AdminOms from '@/pages/admin/oms'
+// import AdminPms from '@/pages/admin/product/index.vue'
+// import AdminSms from '@/pages/admin/sms'
+// import AdminTrace from '@/pages/admin/trace'
+// import AdminUms from '@/pages/admin/ums'
+import { createRouter, createWebHashHistory } from 'vue-router'
 import Admin from '@/layouts/admin/admin.vue'
-
-import Dashboard from '@/pages/admin/dashboard/index.vue'
-import FarmerList from '@/pages/admin/farmer/index.vue'
-import ProductList from '@/pages/admin/pms/product/index.vue'
-import OrderList from '@/pages/admin/oms/order/index.vue'
 
 // 统一在这里声明所有路由
 const routes = [
@@ -30,19 +30,12 @@ const routes = [
     {
         path: '/admin',//后台首页
         component: Admin,
-        redirect: '/admin/index',
+        redirect: '/admin/index', // 默认子路由
         children: [
             {
-                path: 'index',
+                path: '/admin/index',
                 component: AdminIndex,
-                meta: {
-                    title: 'Admin 后台首页'
-                }
-            },
-            {
-                path: 'dashboard',
-                component: () => import('@/pages/admin/dashboard/index.vue'),
-                meta: { title: '销售统计' }
+                meta: { title: '仪表盘' }
             },
             {
                 path: 'farmer',

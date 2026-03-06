@@ -3,14 +3,7 @@
   <a-layout style="min-height: 100vh">
 
     <!-- 左侧菜单栏 -->
-    <!-- <a-layout-sider width="200" theme="dark"> -->
-      <!-- <a-layout-sider
-  :width="200"
-  :collapsed="menuStore.menuWidth !== '200px'"
-  collapsible
-  theme="dark"
-  class="transition-all duration-300"
-> -->
+
 <a-layout-sider
   :width="menuStore.menuWidth"
   :collapsed="menuStore.menuWidth === '64px'"
@@ -18,19 +11,7 @@
   :trigger="null"
   class="transition-all duration-300"
 >
-      <!-- LOGO -->
-      <!-- <div class="h-[64px] flex items-center justify-center bg-[#001529]">
-  <img
-    v-if="menuStore.menuWidth === '200px'"
-    src="@/assets/guimall-logo.png"
-    class="h-[40px] object-contain"
-  />
-  <img
-    v-else
-    src="@/assets/guimall-logo-mini.png"
-    class="h-[32px] object-contain"
-  />
-</div> -->
+
       <div class="h-[64px] flex items-center justify-center overflow-hidden">
   <img
     v-if="menuStore.menuWidth === '200px'"
@@ -55,7 +36,7 @@
       </a-layout-header>
 
       <!-- 内容区 -->
-      <a-layout-content class="content">
+      <a-layout-content class="content" >
 
         <!-- 标签导航栏 -->
         <AdminTagList />

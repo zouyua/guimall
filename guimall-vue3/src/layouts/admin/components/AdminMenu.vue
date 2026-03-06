@@ -1,18 +1,19 @@
 <template>
-    <a-menu
-  v-model:selectedKeys="selectedKeys"
-  v-model:openKeys="openKeys"
-  mode="inline"
-  theme="dark"
-  :style="{ borderRight: 0 }"
->
+    <a-menu v-model:selectedKeys="selectedKeys" v-model:openKeys="openKeys" mode="inline" theme="dark"
+        :style="{ borderRight: 0 }">
         <template v-for="menu in menus">
             <!-- 如果没有子菜单，则渲染为 a-menu-item -->
-            <a-menu-item v-if="!menu.children || menu.children.length === 0" :key="menu.path" @click="goRoute(menu.path)">
+            <!-- <a-menu-item v-if="!menu.children || menu.children.length === 0" :key="menu.path" @click="goRoute(menu.path)">
+                <component :is="menu.icon" />
+                <span>{{ menu.title }}</span>
+            </a-menu-item> -->
+            <!-- 一级菜单 -->
+            <a-menu-item v-if="!menu.children" :key="menu.path" @click="goRoute(menu.path)">
                 <component :is="menu.icon" />
                 <span>{{ menu.title }}</span>
             </a-menu-item>
 
+            <!-- 二级菜单 -->
             <!-- 如果有子菜单，则渲染为 a-sub-menu -->
             <a-sub-menu v-else :key="menu.key">
                 <template #title>
@@ -77,12 +78,16 @@ const goRoute = (path) => {
 // 菜单结构
 const menus = [
     {
-        key: 'dashboard',
-        title: '数据中心',
+        key: 'AdminIndex',
+        title: '仪表盘',
         icon: DashboardOutlined,
-        children: [
-            { title: '销售统计', icon: DashboardOutlined, path: '/admin/dashboard' }
-        ]
+        path: '/admin/index',//一级菜单路径
+        // children: [
+        //     {path: 'dashboard' }
+        // ]
+        // children: [
+        //     { title: '仪表盘', icon: DashboardOutlined, path: '/admin/dashboard' }
+        // ]
     },
     {
         key: 'product',
@@ -169,5 +174,4 @@ const menus = [
 :deep(.ant-menu-dark .ant-menu-sub) {
     background-color: #000c17 !important;
 }
-
 </style>
