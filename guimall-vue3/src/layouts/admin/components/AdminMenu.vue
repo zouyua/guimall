@@ -39,7 +39,14 @@ import {
     TeamOutlined,
     AppstoreOutlined,
     ShoppingCartOutlined,
+    UnorderedListOutlined,
+    RollbackOutlined,
+    FormOutlined,
     GiftOutlined,
+    TagsOutlined,
+    RocketOutlined,
+    HeartOutlined,
+    PlayCircleOutlined,
     EnvironmentOutlined,
     SafetyCertificateOutlined,
     UserOutlined,
@@ -115,9 +122,9 @@ const menus = [
         title: '订单模块',
         icon: ShoppingCartOutlined,
         children: [
-            { title: '订单列表', icon: ShoppingCartOutlined, path: '/admin/oms/order' },
-            { title: '退货处理', icon: ShoppingCartOutlined, path: '/admin/oms/apply' },
-            { title: '退货原因处理', icon: ShoppingCartOutlined, path: '/admin/oms/apply/reason' }
+            { title: '订单列表', icon: UnorderedListOutlined, path: '/admin/oms/order' },
+            { title: '退货处理', icon: RollbackOutlined, path: '/admin/oms/apply' },
+            { title: '退货原因处理', icon: FormOutlined, path: '/admin/oms/apply/reason' }
         ]
     },
     {
@@ -125,9 +132,10 @@ const menus = [
         title: '营销模块',
         icon: GiftOutlined,
         children: [
-            { title: '优惠券管理', icon: GiftOutlined, path: '/admin/sms/coupon' },
-            { title: '新品推荐', icon: GiftOutlined, path: '/admin/sms/new' },
-            { title: '广告管理', icon: GiftOutlined, path: '/admin/sms/advertise' }
+            { title: '优惠券管理', icon: TagsOutlined, path: '/admin/sms/coupon' },
+            { title: '新品推荐', icon: RocketOutlined, path: '/admin/sms/new' },
+            { title: '人气推荐', icon: HeartOutlined, path: '/admin/sms/hot' },
+            { title: '广告管理', icon: PlayCircleOutlined, path: '/admin/sms/advertise' }
         ]
     },
     {

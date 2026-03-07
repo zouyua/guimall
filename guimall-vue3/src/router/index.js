@@ -163,6 +163,11 @@ const routes = [
                 meta: { title: '新品推荐' }
             },
             {
+                path: 'sms/hot',
+                component: () => import('@/pages/admin/sms/hot/index.vue'),
+                meta: { title: '人气推荐' }
+            },
+            {
                 path: 'sms/advertise',
                 component: () => import('@/pages/admin/sms/advertise/index.vue'),
                 meta: { title: '广告管理' }
