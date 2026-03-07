@@ -1,6 +1,8 @@
 //消息提示
-import { message } from 'ant-design-vue'
+import { message, Modal } from 'ant-design-vue'
 import nProgress from 'nprogress'
+import { ExclamationCircleFilled } from '@ant-design/icons-vue';
+import { h } from 'vue'
 
 export function showMessage(
   content = '提示内容',
@@ -33,3 +35,28 @@ export function showPageLoading() {
 export function hidePageLoading() {
   nProgress.done()
 }
+
+const { confirm } = Modal;
+//消息弹窗框showConfirm
+//确认弹窗
+export function showConfirm(content = '确定操作吗？', onOk) {
+
+  confirm({
+    title: '提示',
+    icon: h(ExclamationCircleFilled),
+    content: content,
+
+    okText: '确定',
+    cancelText: '取消',
+
+    onOk() {
+      if (onOk) {
+        onOk()
+      }
+    },
+
+    onCancel() {
+      console.log('取消')
+    }
+  })
+};

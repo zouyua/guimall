@@ -59,6 +59,7 @@
 </template>
 
 <script setup>
+import { onMounted } from 'vue'
 //引入组件
 import AdminMenu from './components/AdminMenu.vue'
 import AdminHeader from './components/AdminHeader.vue'
@@ -66,8 +67,15 @@ import AdminTagList from './components/AdminTagList.vue'
 import AdminFooter from './components/AdminFooter.vue'
 
 import { useMenuStore } from '@/stores/menu'
+import { useUserStore } from '@/stores/user'
 
 const menuStore = useMenuStore()
+const userStore = useUserStore()
+
+// 在组件挂载时获取用户信息
+onMounted(() => {
+  userStore.setUserInfo()
+})
 </script>
 
 <style scoped>
@@ -75,7 +83,7 @@ const menuStore = useMenuStore()
 .header {
   height: 64px;
   padding: 0;
-  background: #047857;
+  background: #e2efeb;
   color: white;
   line-height: 64px;
 }

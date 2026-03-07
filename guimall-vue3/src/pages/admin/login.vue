@@ -93,10 +93,12 @@ import { useRouter, useRoute } from 'vue-router'
 import leftImg from '@/assets/left_img_1.png'
 import { showMessage } from '@/composables/util';
 import { setToken } from '@/composables/cookie';
+import { useUserStore } from '@/stores/user'
 
 const title = 'GuiMall'
 const router = useRouter()
 const route = useRoute()
+const userStore = useUserStore()
 //登录按钮加载
 const loading = ref(false)
 
@@ -149,13 +151,15 @@ const onSubmit = async () => {
 
     //判断是否成功
     if (res.success === true) {
+      //存储Token到Cookie中
+      let token = res.data.token
+      setToken(token)
+      //获取用户信息，并存错到全局状态中
+      userStore.setUserInfo()
       //提示登录成功
       showMessage('登录成功', 'success')
       //跳转到后台首页
       router.push('/admin/index')
-      //存储Token到Cookie中
-      let token = res.data.token
-      setToken(token)
     } else {
       //获取服务端返回的错误消息
       let message = res.message
