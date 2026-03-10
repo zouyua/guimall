@@ -35,7 +35,7 @@ public class PageResponse<T> extends Response<List<T>> {
     * @param data
     * @return
     * @param <T>*/
-    public static <T> PageResponse<T> success(IPage page,List<T> data) {
+    public static <T> PageResponse<T> success(IPage page, List<T> data) {
         PageResponse<T> response = new PageResponse<>();
         response.setSuccess(true);
         response.setCurrent(Objects.isNull(page) ? 1L : page.getCurrent());
@@ -43,6 +43,21 @@ public class PageResponse<T> extends Response<List<T>> {
         response.setPages(Objects.isNull(page) ? 0L : page.getPages());
         response.setTotal(Objects.isNull(page) ? 0L : page.getTotal());
         response.setData(data);
+        return response;
+    }
+
+    /*成功响应 - 直接传入IPage对象
+    * @param page Mybatis Plus 提供的分页接口
+    * @return
+    * @param <T>*/
+    public static <T> PageResponse<T> success(IPage<T> page) {
+        PageResponse<T> response = new PageResponse<>();
+        response.setSuccess(true);
+        response.setCurrent(Objects.isNull(page) ? 1L : page.getCurrent());
+        response.setSize(Objects.isNull(page) ? 10L : page.getSize());
+        response.setPages(Objects.isNull(page) ? 0L : page.getPages());
+        response.setTotal(Objects.isNull(page) ? 0L : page.getTotal());
+        response.setData(Objects.isNull(page) ? null : page.getRecords());
         return response;
     }
 }

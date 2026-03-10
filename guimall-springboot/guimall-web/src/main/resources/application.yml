@@ -14,3 +14,10 @@ jwt:
   tokenHeaderKey: Authorization
   # token 请求头中的 value 值前缀
   tokenPrefix: Bearer
+
+mybatis-plus:
+  global-config:
+    db-config:
+      logic-delete-field: deleteStatus
+      logic-delete-value: 1
+      logic-not-delete-value: 0
