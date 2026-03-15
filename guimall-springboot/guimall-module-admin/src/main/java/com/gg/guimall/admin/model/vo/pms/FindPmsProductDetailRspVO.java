@@ -25,11 +25,20 @@ public class FindPmsProductDetailRspVO {
     @ApiModelProperty(value = "商品分类ID")
     private Long productCategoryId;
 
+    @ApiModelProperty(value = "商品分类名称（关联展示）")
+    private String categoryName;
+
     @ApiModelProperty(value = "商品属性分类ID")
     private Long productAttributeCategoryId;
 
+    @ApiModelProperty(value = "商品属性分类名称（关联展示）")
+    private String productAttributeCategoryName;
+
     @ApiModelProperty(value = "农户ID")
     private Long farmerId;
+
+    @ApiModelProperty(value = "农户名称（关联展示）")
+    private String farmerName;
 
     @ApiModelProperty(value = "商品名称")
     private String name;

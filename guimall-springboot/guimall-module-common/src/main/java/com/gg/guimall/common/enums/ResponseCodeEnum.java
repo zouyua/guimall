@@ -32,6 +32,17 @@ public enum ResponseCodeEnum implements BaseExceptionInterface {
     PRODUCT_UPDATE_FAIL("30004", "商品修改失败"),
     PRODUCT_DELETE_FAIL("30005", "商品删除失败"),
     INVALID_PRODUCT_DATA("30006", "商品数据无效"),
+    /** 该分类下存在子分类，无法删除 */
+    CATEGORY_HAS_CHILDREN("30012", "该分类下存在子分类，无法删除"),
+    /** 该分类下存在关联商品，无法删除 */
+    CATEGORY_HAS_PRODUCTS("30013", "该分类下存在关联商品，无法删除"),
+
+    // ----------- 农户管理异常状态码 -----------
+    FARMER_NOT_FOUND("30007", "农户不存在"),
+    FARMER_NAME_EXISTS("30008", "农户名称已存在"),
+    FARMER_CREATE_FAIL("30009", "农户创建失败"),
+    FARMER_UPDATE_FAIL("30010", "农户修改失败"),
+    FARMER_DELETE_FAIL("30011", "农户删除失败"),
     ;
 
     // 异常码

@@ -58,4 +58,18 @@ public class PmsProductController {
     public Response deleteProduct(@PathVariable Long id) {
         return pmsProductService.deleteProduct(id);
     }
+
+    @PutMapping("/{id}/publish")
+    @ApiOperation(value = "上架商品")
+    @ApiOperationLog(description = "上架商品")
+    public Response publishProduct(@PathVariable Long id) {
+        return pmsProductService.publishProduct(id);
+    }
+
+    @PutMapping("/{id}/unpublish")
+    @ApiOperation(value = "下架商品")
+    @ApiOperationLog(description = "下架商品")
+    public Response unpublishProduct(@PathVariable Long id) {
+        return pmsProductService.unpublishProduct(id);
+    }
 }

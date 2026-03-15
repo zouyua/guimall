@@ -3,7 +3,13 @@ package com.gg.guimall.admin.service.impl;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.gg.guimall.admin.model.vo.pms.*;
 import com.gg.guimall.admin.service.PmsProductService;
+import com.gg.guimall.common.domain.dos.PmsProductAttributeCategoryDO;
 import com.gg.guimall.common.domain.dos.PmsProductDO;
+import com.gg.guimall.common.domain.dos.PmsProductCategoryDO;
+import com.gg.guimall.common.domain.dos.PmsFarmerDO;
+import com.gg.guimall.common.domain.mapper.PmsFarmerMapper;
+import com.gg.guimall.common.domain.mapper.PmsProductAttributeCategoryMapper;
+import com.gg.guimall.common.domain.mapper.PmsProductCategoryMapper;
 import com.gg.guimall.common.domain.mapper.PmsProductMapper;
 import com.gg.guimall.common.enums.ResponseCodeEnum;
 import com.gg.guimall.common.exception.BizException;
@@ -14,7 +20,10 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * 商品管理 Service 实现类
@@ -29,12 +38,42 @@ public class PmsProductServiceImpl implements PmsProductService {
 
     @Autowired
     private PmsProductMapper pmsProductMapper;
+    @Autowired
+    private PmsProductCategoryMapper pmsProductCategoryMapper;
+    @Autowired
+    private PmsFarmerMapper pmsFarmerMapper;
+    @Autowired
+    private PmsProductAttributeCategoryMapper pmsProductAttributeCategoryMapper;
 
     /**
      * 创建商品
      */
     @Override
     public Response createProduct(PmsProductCreateReqVO reqVO) {
+        // 校验商品分类是否存在
+        if (Objects.nonNull(reqVO.getProductCategoryId())) {
+            PmsProductCategoryDO categoryDO = pmsProductCategoryMapper.selectById(reqVO.getProductCategoryId());
+            if (Objects.isNull(categoryDO)) {
+                throw new BizException(ResponseCodeEnum.PRODUCT_CATEGORY_NOT_FOUND);
+            }
+        }
+
+        // 校验农户是否存在
+        if (Objects.nonNull(reqVO.getFarmerId())) {
+            PmsFarmerDO farmerDO = pmsFarmerMapper.selectById(reqVO.getFarmerId());
+            if (Objects.isNull(farmerDO)) {
+                throw new BizException(ResponseCodeEnum.FARMER_NOT_FOUND);
+            }
+        }
+
+        // 校验商品属性分类是否存在（如果传入了）
+        if (Objects.nonNull(reqVO.getProductAttributeCategoryId())) {
+            PmsProductAttributeCategoryDO attrCategoryDO =
+                    pmsProductAttributeCategoryMapper.selectById(reqVO.getProductAttributeCategoryId());
+            if (Objects.isNull(attrCategoryDO)) {
+                throw new BizException(ResponseCodeEnum.INVALID_PRODUCT_DATA);
+            }
+        }
 
         // 构建商品 DO
         PmsProductDO productDO = PmsProductDO.builder()
@@ -57,8 +96,10 @@ public class PmsProductServiceImpl implements PmsProductService {
                 .detailTitle(reqVO.getDetailTitle())
                 .detailDesc(reqVO.getDetailDesc())
                 .detailHtml(reqVO.getDetailHtml())
-                .publishStatus(reqVO.getPublishStatus())
-                .sort(reqVO.getSort())
+                .publishStatus(0) // 默认下架状态
+                .verifyStatus(0) // 默认未审核
+                .deleteStatus(0) // 默认未删除
+                .sort(reqVO.getSort() != null ? reqVO.getSort() : 0)
                 .build();
 
         // 插入数据库
@@ -68,12 +109,11 @@ public class PmsProductServiceImpl implements PmsProductService {
     }
 
     /**
-     * 商品分页查询
+     * 商品分页查询（列表项含关联展示：分类名、农户名、属性分类名）
      */
     @Override
     public PageResponse findProductPageList(FindPmsProductPageListReqVO reqVO) {
 
-        // 分页查询
         Page<PmsProductDO> page = pmsProductMapper.selectPageList(
                 reqVO.getCurrent(),
                 reqVO.getSize(),
@@ -82,11 +122,57 @@ public class PmsProductServiceImpl implements PmsProductService {
                 reqVO.getPublishStatus()
         );
 
-        return PageResponse.success(page);
+        List<FindPmsProductPageListRspVO> voList = page.getRecords().stream()
+                .map(this::convertToPageListRspVO)
+                .collect(Collectors.toList());
+
+        return PageResponse.success(page, voList);
     }
 
     /**
-     * 查询商品详情
+     * 将商品 DO 转为分页列表 VO，并填充分类名、农户名、属性分类名
+     */
+    private FindPmsProductPageListRspVO convertToPageListRspVO(PmsProductDO product) {
+        FindPmsProductPageListRspVO vo = FindPmsProductPageListRspVO.builder()
+                .id(product.getId())
+                .productCategoryId(product.getProductCategoryId())
+                .productAttributeCategoryId(product.getProductAttributeCategoryId())
+                .farmerId(product.getFarmerId())
+                .name(product.getName())
+                .subTitle(product.getSubTitle())
+                .productSn(product.getProductSn())
+                .pic(product.getPic())
+                .price(product.getPrice())
+                .stock(product.getStock())
+                .publishStatus(product.getPublishStatus())
+                .sale(product.getSale())
+                .createTime(product.getCreateTime())
+                .build();
+
+        if (Objects.nonNull(product.getProductCategoryId())) {
+            PmsProductCategoryDO category = pmsProductCategoryMapper.selectById(product.getProductCategoryId());
+            if (category != null) {
+                vo.setCategoryName(category.getName());
+            }
+        }
+        if (Objects.nonNull(product.getFarmerId())) {
+            PmsFarmerDO farmer = pmsFarmerMapper.selectById(product.getFarmerId());
+            if (farmer != null) {
+                vo.setFarmerName(farmer.getName());
+            }
+        }
+        if (Objects.nonNull(product.getProductAttributeCategoryId())) {
+            PmsProductAttributeCategoryDO attrCategory = pmsProductAttributeCategoryMapper.selectById(product.getProductAttributeCategoryId());
+            if (attrCategory != null) {
+                vo.setProductAttributeCategoryName(attrCategory.getName());
+            }
+        }
+
+        return vo;
+    }
+
+    /**
+     * 查询商品详情（含关联展示：分类名称、农户名称、属性分类名称）
      */
     @Override
     public Response findProductDetail(Long id) {
@@ -104,6 +190,30 @@ public class PmsProductServiceImpl implements PmsProductService {
         FindPmsProductDetailRspVO rspVO = new FindPmsProductDetailRspVO();
         BeanUtils.copyProperties(productDO, rspVO);
 
+        // 关联查询并填充分类名称
+        if (Objects.nonNull(productDO.getProductCategoryId())) {
+            PmsProductCategoryDO category = pmsProductCategoryMapper.selectById(productDO.getProductCategoryId());
+            if (category != null) {
+                rspVO.setCategoryName(category.getName());
+            }
+        }
+
+        // 关联查询并填充农户名称
+        if (Objects.nonNull(productDO.getFarmerId())) {
+            PmsFarmerDO farmer = pmsFarmerMapper.selectById(productDO.getFarmerId());
+            if (farmer != null) {
+                rspVO.setFarmerName(farmer.getName());
+            }
+        }
+
+        // 关联查询并填充属性分类名称
+        if (Objects.nonNull(productDO.getProductAttributeCategoryId())) {
+            PmsProductAttributeCategoryDO attrCategory = pmsProductAttributeCategoryMapper.selectById(productDO.getProductAttributeCategoryId());
+            if (attrCategory != null) {
+                rspVO.setProductAttributeCategoryName(attrCategory.getName());
+            }
+        }
+
         return Response.success(rspVO);
     }
 
@@ -112,6 +222,41 @@ public class PmsProductServiceImpl implements PmsProductService {
      */
     @Override
     public Response updateProduct(PmsProductUpdateReqVO reqVO) {
+        // 参数校验
+        if (Objects.isNull(reqVO.getId()) || reqVO.getId() <= 0) {
+            throw new BizException(ResponseCodeEnum.INVALID_PRODUCT_DATA);
+        }
+
+        // 校验商品是否存在
+        PmsProductDO existProduct = pmsProductMapper.selectById(reqVO.getId());
+        if (Objects.isNull(existProduct)) {
+            throw new BizException(ResponseCodeEnum.PRODUCT_NOT_FOUND);
+        }
+
+        // 校验商品分类是否存在
+        if (Objects.nonNull(reqVO.getProductCategoryId())) {
+            PmsProductCategoryDO categoryDO = pmsProductCategoryMapper.selectById(reqVO.getProductCategoryId());
+            if (Objects.isNull(categoryDO)) {
+                throw new BizException(ResponseCodeEnum.PRODUCT_CATEGORY_NOT_FOUND);
+            }
+        }
+
+        // 校验农户是否存在
+        if (Objects.nonNull(reqVO.getFarmerId())) {
+            PmsFarmerDO farmerDO = pmsFarmerMapper.selectById(reqVO.getFarmerId());
+            if (Objects.isNull(farmerDO)) {
+                throw new BizException(ResponseCodeEnum.FARMER_NOT_FOUND);
+            }
+        }
+
+        // 校验商品属性分类是否存在（如果传入了）
+        if (Objects.nonNull(reqVO.getProductAttributeCategoryId())) {
+            PmsProductAttributeCategoryDO attrCategoryDO =
+                    pmsProductAttributeCategoryMapper.selectById(reqVO.getProductAttributeCategoryId());
+            if (Objects.isNull(attrCategoryDO)) {
+                throw new BizException(ResponseCodeEnum.INVALID_PRODUCT_DATA);
+            }
+        }
 
         PmsProductDO productDO = PmsProductDO.builder()
                 .id(reqVO.getId())
@@ -136,6 +281,7 @@ public class PmsProductServiceImpl implements PmsProductService {
                 .detailHtml(reqVO.getDetailHtml())
                 .publishStatus(reqVO.getPublishStatus())
                 .sort(reqVO.getSort())
+                .updateTime(LocalDateTime.now())
                 .build();
 
         pmsProductMapper.updateById(productDO);
@@ -149,7 +295,60 @@ public class PmsProductServiceImpl implements PmsProductService {
     @Override
     public Response deleteProduct(Long id) {
 
+        // 参数校验
+        if (Objects.isNull(id) || id <= 0) {
+            throw new BizException(ResponseCodeEnum.INVALID_PRODUCT_DATA);
+        }
+
+        // 校验商品是否存在
+        PmsProductDO productDO = pmsProductMapper.selectById(id);
+        if (Objects.isNull(productDO)) {
+            throw new BizException(ResponseCodeEnum.PRODUCT_NOT_FOUND);
+        }
+
+        // 执行删除
         pmsProductMapper.deleteById(id);
+
+        return Response.success();
+    }
+
+    /**
+     * 上架商品
+     */
+    @Override
+    public Response publishProduct(Long id) {
+        return updatePublishStatus(id, 1);
+    }
+
+    /**
+     * 下架商品
+     */
+    @Override
+    public Response unpublishProduct(Long id) {
+        return updatePublishStatus(id, 0);
+    }
+
+    /**
+     * 更新上架状态
+     */
+    private Response updatePublishStatus(Long id, Integer publishStatus) {
+        // 参数校验
+        if (Objects.isNull(id) || id <= 0) {
+            throw new BizException(ResponseCodeEnum.INVALID_PRODUCT_DATA);
+        }
+
+        // 校验商品是否存在
+        PmsProductDO productDO = pmsProductMapper.selectById(id);
+        if (Objects.isNull(productDO)) {
+            throw new BizException(ResponseCodeEnum.PRODUCT_NOT_FOUND);
+        }
+
+        // 更新上架状态
+        PmsProductDO updateDO = PmsProductDO.builder()
+                .id(id)
+                .publishStatus(publishStatus)
+                .build();
+        pmsProductMapper.updateById(updateDO);
 
         return Response.success();
     }

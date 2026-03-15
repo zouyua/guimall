@@ -38,4 +38,14 @@ public interface PmsProductService {
      */
     Response deleteProduct(Long id);
 
+    /**
+     * 上架商品
+     */
+    Response publishProduct(Long id);
+
+    /**
+     * 下架商品
+     */
+    Response unpublishProduct(Long id);
+
 }
