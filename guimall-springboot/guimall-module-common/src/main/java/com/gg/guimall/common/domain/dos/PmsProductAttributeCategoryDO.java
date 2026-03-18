@@ -9,10 +9,11 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * 商品属性分类表
- *
- * @author wly
- */
+ * @author: wly
+ * @url: www.gg.com
+ * @date: 2026/3/13
+ * @description: 商品属性分类表
+ **/
 @Data
 @Builder
 @NoArgsConstructor
@@ -29,7 +30,7 @@ public class PmsProductAttributeCategoryDO {
     private String name;
 
     /**
-     * 属性数量
+     * 属性数量（规格数量）
      */
     private Integer attributeCount;
 

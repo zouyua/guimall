@@ -18,16 +18,16 @@ public interface PmsProductCategoryService {
     /**
      * 新增商品分类
      *
-     * @param reqVO 创建分类请求参数
+     * @param pmsProductCategoryCreateReqVO 创建分类请求参数
      */
-    void addCategory(PmsProductCategoryCreateReqVO reqVO);
+    void addCategory(PmsProductCategoryCreateReqVO pmsProductCategoryCreateReqVO);
 
     /**
      * 修改商品分类
      *
-     * @param reqVO 修改分类请求参数
+     * @param pmsProductCategoryUpdateReqVO 修改分类请求参数
      */
-    void updateCategory(PmsProductCategoryUpdateReqVO reqVO);
+    void updateCategory(PmsProductCategoryUpdateReqVO pmsProductCategoryUpdateReqVO);
 
     /**
      * 删除商品分类
@@ -44,10 +44,10 @@ public interface PmsProductCategoryService {
      * 2 分类名称模糊搜索
      * 3 显示状态筛选
      *
-     * @param reqVO 查询条件
+     * @param findPmsProductCategoryPageReqVO 查询条件
      * @return 分类分页数据（与商品、农户分页格式一致）
      */
-    PageResponse findCategoryPage(FindPmsProductCategoryPageReqVO reqVO);
+    PageResponse findCategoryPage(FindPmsProductCategoryPageReqVO findPmsProductCategoryPageReqVO);
 
     /**
      * 查询商品分类树结构

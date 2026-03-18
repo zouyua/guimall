@@ -43,6 +43,19 @@ public enum ResponseCodeEnum implements BaseExceptionInterface {
     FARMER_CREATE_FAIL("30009", "农户创建失败"),
     FARMER_UPDATE_FAIL("30010", "农户修改失败"),
     FARMER_DELETE_FAIL("30011", "农户删除失败"),
+
+    // ----------- 商品属性管理异常状态码 -----------
+    ATTRIBUTE_CATEGORY_NOT_FOUND("30014", "属性分类不存在"),
+    ATTRIBUTE_CATEGORY_NAME_EXISTS("30015", "属性分类名称已存在"),
+    ATTRIBUTE_NOT_FOUND("30016", "商品属性不存在"),
+    ATTRIBUTE_NAME_EXISTS("30017", "属性名称已存在"),
+    ATTRIBUTE_IN_USE("30018", "属性正在使用中，无法删除"),
+
+    // ----------- SKU库存异常状态码 -----------
+    SKU_NOT_FOUND("30019", "SKU不存在"),
+
+    // ----------- 满减异常状态码 -----------
+    FULL_REDUCTION_NOT_FOUND("30020", "满减规则不存在"),
     ;
 
     // 异常码

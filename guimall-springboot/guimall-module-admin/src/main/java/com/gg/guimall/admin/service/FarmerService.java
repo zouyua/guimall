@@ -15,12 +15,12 @@ public interface FarmerService {
     /**
      * 创建农户
      */
-    Response createFarmer(CreateFarmerReqVO reqVO);
+    Response createFarmer(CreateFarmerReqVO createFarmerReqVO);
 
     /**
      * 分页查询农户列表
      */
-    PageResponse findFarmerPageList(FindFarmerPageListReqVO reqVO);
+    PageResponse findFarmerPageList(FindFarmerPageListReqVO findFarmerPageListReqVO);
 
     /**
      * 查询农户详情
@@ -30,7 +30,7 @@ public interface FarmerService {
     /**
      * 修改农户信息
      */
-    Response updateFarmer(UpdateFarmerReqVO reqVO);
+    Response updateFarmer(UpdateFarmerReqVO updateFarmerReqVO);
 
     /**
      * 删除农户

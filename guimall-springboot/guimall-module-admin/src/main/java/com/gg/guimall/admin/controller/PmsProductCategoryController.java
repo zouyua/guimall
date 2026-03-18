@@ -19,7 +19,7 @@ import java.util.List;
  * @description: 商品分类 Controller
  */
 @RestController
-@RequestMapping("/admin/product/category")
+@RequestMapping("/admin/pms/productCate")
 @RequiredArgsConstructor
 @Api(tags = "商品分类管理")
 public class PmsProductCategoryController {
@@ -34,9 +34,9 @@ public class PmsProductCategoryController {
      */
     @PostMapping
     @ApiOperation("新增商品分类")
-    public Response addCategory(@RequestBody PmsProductCategoryCreateReqVO reqVO) {
+    public Response addCategory(@RequestBody PmsProductCategoryCreateReqVO pmsProductCategoryCreateReqVO) {
 
-        categoryService.addCategory(reqVO);
+        categoryService.addCategory(pmsProductCategoryCreateReqVO);
         return Response.success();
     }
 
@@ -45,9 +45,9 @@ public class PmsProductCategoryController {
      */
     @PutMapping
     @ApiOperation("修改商品分类")
-    public Response updateCategory(@RequestBody @Validated PmsProductCategoryUpdateReqVO reqVO) {
+    public Response updateCategory(@RequestBody @Validated PmsProductCategoryUpdateReqVO pmsProductCategoryUpdateReqVO) {
 
-        categoryService.updateCategory(reqVO);
+        categoryService.updateCategory(pmsProductCategoryUpdateReqVO);
         return Response.success();
     }
 
@@ -68,9 +68,9 @@ public class PmsProductCategoryController {
     @PostMapping("/list")
     @ApiOperation("分页查询商品分类")
     public PageResponse findCategoryPage(
-            @RequestBody @Validated FindPmsProductCategoryPageReqVO reqVO) {
+            @RequestBody @Validated FindPmsProductCategoryPageReqVO findPmsProductCategoryPageReqVO) {
 
-        return categoryService.findCategoryPage(reqVO);
+        return categoryService.findCategoryPage(findPmsProductCategoryPageReqVO);
     }
 
     /**
