@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.*;
  * @url: www.gg.com
  * @date: 2026/3/19
  */
-@RestController
+@RestController("adminSmsCouponController")
 @RequestMapping("/admin/sms/coupon")
 @Api(tags = "优惠券管理模块")
 public class SmsCouponController {

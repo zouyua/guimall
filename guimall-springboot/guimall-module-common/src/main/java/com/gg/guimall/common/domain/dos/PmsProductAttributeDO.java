@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
  * @author: wly
  * @url: www.gg.com
  * @date: 2026/3/16
- * @description: 商品属性 TODO
+ * @description: 商品属性
  **/
 @Data
 @Builder

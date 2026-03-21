@@ -48,17 +48,10 @@ public class OmsOrderReturnReasonController {
         return returnReasonService.deleteReturnReasons(ids);
     }
 
-    @GetMapping("/list")
+    @PostMapping("/list")
     @ApiOperation("分页查询退货原因")
     @ApiOperationLog(description = "分页查询退货原因")
-    public PageResponse<FindOmsOrderReturnReasonPageRspVO> list(FindOmsOrderReturnReasonPageReqVO reqVO) {
-        return returnReasonService.findReturnReasonPageList(reqVO);
-    }
-
-    @PostMapping("/list")
-    @ApiOperation("分页查询退货原因（POST）")
-    @ApiOperationLog(description = "分页查询退货原因（POST）")
-    public PageResponse<FindOmsOrderReturnReasonPageRspVO> listByPost(
+    public PageResponse<FindOmsOrderReturnReasonPageRspVO> list(
             @RequestBody @Validated FindOmsOrderReturnReasonPageReqVO reqVO) {
         return returnReasonService.findReturnReasonPageList(reqVO);
     }

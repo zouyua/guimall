@@ -13,7 +13,7 @@ import java.util.Objects;
  * @author:wly
  * @url:www.gg.com
  * @date:2026/3/10
- * @description:商品Mapper TODO */
+ * @description:商品Mapper*/
 public interface PmsProductMapper extends BaseMapper<PmsProductDO> {
 
     /**

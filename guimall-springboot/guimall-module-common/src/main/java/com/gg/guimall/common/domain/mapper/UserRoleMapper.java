@@ -9,7 +9,7 @@ import java.util.List;
 * @author:wgg
 * @url:www.gg.com
 * @date:2026/2/8
-* @description:TODO*/
+* @description:*/
 
 public interface UserRoleMapper extends BaseMapper<UserRoleDO> {
     /**

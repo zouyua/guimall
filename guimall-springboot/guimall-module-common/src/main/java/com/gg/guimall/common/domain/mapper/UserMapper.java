@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 * @author:wly
 * @url:www.gg.com
 * @date:2026/1/28
-* @description:TODO*/
+* @description:*/
 public interface UserMapper extends BaseMapper<UserDO> {
     default UserDO findByUsername(String username) {
         LambdaQueryWrapper<UserDO> wrapper = new LambdaQueryWrapper<>();
