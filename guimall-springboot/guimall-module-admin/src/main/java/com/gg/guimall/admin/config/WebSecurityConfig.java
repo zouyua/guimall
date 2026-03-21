@@ -40,6 +40,15 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                 .apply(jwtAuthenticationSecurityConfig) // 设置用户登录认证相关配置
                 .and()
                 .authorizeHttpRequests()
+                // 放行 Knife4j 相关路径
+                .mvcMatchers("/doc.html", "/doc.html/**").permitAll()
+                .mvcMatchers("/swagger-ui.html", "/swagger-ui/**").permitAll()
+                .mvcMatchers("/webjars/**").permitAll()
+                .mvcMatchers("/swagger-resources", "/swagger-resources/**").permitAll()
+                .mvcMatchers("/v2/api-docs", "/v2/api-docs/**").permitAll()
+                .mvcMatchers("/v3/api-docs", "/v3/api-docs/**").permitAll()
+                .mvcMatchers("/favicon.ico").permitAll()
+                .mvcMatchers("/error").permitAll()
                 .mvcMatchers("/admin/**").authenticated() // 认证所有以 /admin 为前缀的 URL 资源
                 .anyRequest().permitAll() // 其他都需要放行，无需认证
                 .and()

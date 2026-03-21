@@ -56,6 +56,30 @@ public enum ResponseCodeEnum implements BaseExceptionInterface {
 
     // ----------- 满减异常状态码 -----------
     FULL_REDUCTION_NOT_FOUND("30020", "满减规则不存在"),
+
+    // ----------- 订单异常状态码 -----------
+    ORDER_NOT_FOUND("40001", "订单不存在"),
+    ORDER_STATUS_ILLEGAL("40002", "订单状态不允许该操作"),
+
+    // ----------- 退货异常状态码 -----------
+    ORDER_RETURN_NOT_FOUND("40003", "退货申请不存在"),
+    ORDER_RETURN_STATUS_ILLEGAL("40004", "退货申请状态不允许该操作"),
+
+    // ----------- 退货原因异常状态码 -----------
+    ORDER_RETURN_REASON_NOT_FOUND("40005", "退货原因不存在"),
+
+    // ----------- 购物车异常状态码 -----------
+    CART_ITEM_NOT_FOUND("40006", "购物车商品不存在"),
+
+    // ----------- 产地/溯源异常状态码 -----------
+    ORIGIN_NOT_FOUND("50001", "产地不存在"),
+    ORIGIN_NAME_EXISTS("50002", "产地名称已存在"),
+    PRODUCT_ORIGIN_NOT_FOUND("50003", "商品产地关联不存在"),
+    TRACE_RECORD_NOT_FOUND("50004", "溯源记录不存在"),
+    TRACE_QRCODE_NOT_FOUND("50005", "溯源二维码不存在"),
+
+    // ----------- 营销/优惠券异常状态码 -----------
+    COUPON_NOT_FOUND("60001", "优惠券不存在"),
     ;
 
     // 异常码

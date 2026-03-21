@@ -213,4 +213,81 @@ public class PmsProductCategoryServiceImpl implements PmsProductCategoryService 
 
         return roots;
     }
+
+    /**
+     * 获取商品分类下拉列表
+     * 返回扁平化的分类列表，按层级排序，便于前端下拉选择
+     */
+    @Override
+    public List<PmsProductCategoryOptionVO> findCategoryOptions() {
+
+        // 查询所有启用状态的分类，按sort排序
+        List<PmsProductCategoryDO> list = categoryMapper.selectList(
+                new LambdaQueryWrapper<PmsProductCategoryDO>()
+                        .eq(PmsProductCategoryDO::getShowStatus, 1)
+                        .orderByAsc(PmsProductCategoryDO::getSort)
+        );
+
+        // 转换为VO并构建层级结构
+        return buildFlatCategoryList(list);
+    }
+
+    /**
+     * 构建扁平化的分类列表（带层级信息）
+     * 父分类在前，子分类在后，便于下拉框显示
+     */
+    private List<PmsProductCategoryOptionVO> buildFlatCategoryList(
+            List<PmsProductCategoryDO> allCategories) {
+
+        List<PmsProductCategoryOptionVO> result = new java.util.ArrayList<>();
+
+        // 创建ID到分类的映射
+        java.util.Map<Long, PmsProductCategoryDO> categoryMap = allCategories.stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        PmsProductCategoryDO::getId,
+                        category -> category,
+                        (a, b) -> a
+                ));
+
+        // 找出所有根分类（parentId为0或null）
+        List<PmsProductCategoryDO> roots = allCategories.stream()
+                .filter(c -> c.getParentId() == null || Long.valueOf(0).equals(c.getParentId()))
+                .collect(Collectors.toList());
+
+        // 递归添加分类及其子分类
+        for (PmsProductCategoryDO root : roots) {
+            addCategoryWithChildren(root, categoryMap, result, 0);
+        }
+
+        return result;
+    }
+
+    /**
+     * 递归添加分类及其子分类到结果列表
+     */
+    private void addCategoryWithChildren(
+            PmsProductCategoryDO category,
+            java.util.Map<Long, PmsProductCategoryDO> categoryMap,
+            List<PmsProductCategoryOptionVO> result,
+            int level) {
+
+        // 添加当前分类
+        PmsProductCategoryOptionVO option = PmsProductCategoryOptionVO.builder()
+                .id(category.getId())
+                .name(category.getName())
+                .parentId(category.getParentId())
+                .level(level)
+                .build();
+        result.add(option);
+
+        // 查找并添加子分类
+        List<PmsProductCategoryDO> children = categoryMap.values().stream()
+                .filter(c -> category.getId().equals(c.getParentId()))
+                .sorted(java.util.Comparator.comparing(PmsProductCategoryDO::getSort))
+                .collect(Collectors.toList());
+
+        for (PmsProductCategoryDO child : children) {
+            addCategoryWithChildren(child, categoryMap, result, level + 1);
+        }
+    }
 }

@@ -1,6 +1,10 @@
 package com.gg.guimall.admin.model.vo.farmer;
 
+import io.swagger.annotations.ApiModel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.hibernate.validator.constraints.Length;
 
 import javax.validation.constraints.NotBlank;
@@ -12,8 +16,13 @@ import javax.validation.constraints.Pattern;
  * @author wly
  * @url www.gg.com
  * @date 2026/3/12
+ * @description 创建农户请求 VO（对应 pms_farmer 表）
  */
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@ApiModel(value = "创建农户请求 VO")
 public class CreateFarmerReqVO {
 
     /** 农户姓名 */

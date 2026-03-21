@@ -1,7 +1,6 @@
 package com.gg.guimall.common.domain.dos;
 
 import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.AllArgsConstructor;
@@ -16,7 +15,7 @@ import java.time.LocalDateTime;
  *
  * @author wly
  * @url www.gg.com
- * @date 2026/3/15
+ * @date 2026/3/19
  */
 @Data
 @Builder
@@ -29,7 +28,6 @@ public class TraceOriginDO {
     private Long id;
 
     /** 产地名称 */
-    @TableField("origin_name")
     private String originName;
 
     /** 省 */

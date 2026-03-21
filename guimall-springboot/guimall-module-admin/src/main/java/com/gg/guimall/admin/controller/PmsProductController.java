@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
  * @date:2026/3/10
  * @description:商品管理 Controller
  * */
-@RestController
+@RestController("adminPmsProductController")
 @RequestMapping("/admin/pms/product")
 @Api(tags = "商品管理模块")
 public class PmsProductController {

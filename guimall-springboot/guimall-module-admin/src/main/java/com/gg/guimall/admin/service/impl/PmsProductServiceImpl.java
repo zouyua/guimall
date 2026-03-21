@@ -32,7 +32,7 @@ import java.util.stream.Collectors;
  *
  * @author wly
  */
-@Service
+@Service("adminPmsProductServiceImpl")
 @Slf4j
 public class PmsProductServiceImpl implements PmsProductService {
 

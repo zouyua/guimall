@@ -1,16 +1,25 @@
 package com.gg.guimall.common.domain.mapper;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.gg.guimall.common.domain.dos.TraceRecordDO;
-import org.apache.ibatis.annotations.Mapper;
+
+import java.util.List;
+import java.util.Objects;
 
 /**
- * 溯源记录表 Mapper
+ * 溯源记录 Mapper trace_record
  *
  * @author wly
  * @url www.gg.com
- * @date 2026/3/15
+ * @date 2026/3/19
  */
-@Mapper
 public interface TraceRecordMapper extends BaseMapper<TraceRecordDO> {
+
+    default List<TraceRecordDO> selectByProductId(Long productId) {
+        return selectList(new LambdaQueryWrapper<TraceRecordDO>()
+                .eq(Objects.nonNull(productId), TraceRecordDO::getProductId, productId)
+                .orderByDesc(TraceRecordDO::getRecordTime)
+                .orderByDesc(TraceRecordDO::getCreateTime));
+    }
 }

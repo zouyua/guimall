@@ -1,5 +1,6 @@
 package com.gg.guimall.admin.model.vo.farmer;
 
+import io.swagger.annotations.ApiModel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,6 +16,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@ApiModel(value = "农户下拉选项 VO")
 public class FarmerOptionVO {
 
     /**

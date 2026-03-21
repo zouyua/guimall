@@ -82,4 +82,15 @@ public class PmsProductCategoryController {
 
         return categoryService.findCategoryTree();
     }
+
+    /**
+     * 获取商品分类下拉列表
+     */
+    @GetMapping("/options")
+    @ApiOperation("获取商品分类下拉列表")
+    public Response findCategoryOptions() {
+
+        List<PmsProductCategoryOptionVO> options = categoryService.findCategoryOptions();
+        return Response.success(options);
+    }
 }

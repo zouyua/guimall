@@ -1,6 +1,10 @@
 package com.gg.guimall.admin.model.vo.farmer;
 
+import io.swagger.annotations.ApiModel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * @author: wly
@@ -9,6 +13,10 @@ import lombok.Data;
  * @description: 分页查询农户请求VO
  **/
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@ApiModel(value = "分页查询农户请求 VO")
 public class FindFarmerPageListReqVO {
 
     /**

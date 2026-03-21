@@ -1,17 +1,24 @@
 package com.gg.guimall.admin.model.vo.farmer;
 
+import io.swagger.annotations.ApiModel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
 /**
- * 农户详情响应 VO（对应 pms_farmer 表，无 originId 字段；产地通过 trace_product_origin 等关联）
- *
  * @author wly
  * @url www.gg.com
  * @date 2026/3/12
+ * @description: 农户详情响应 VO
  */
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@ApiModel(value = "农户详情响应 VO")
 public class FindFarmerDetailRspVO {
 
     /** 农户ID */

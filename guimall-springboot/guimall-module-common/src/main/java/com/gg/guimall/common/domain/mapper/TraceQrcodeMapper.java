@@ -1,16 +1,27 @@
 package com.gg.guimall.common.domain.mapper;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.gg.guimall.common.domain.dos.TraceQrcodeDO;
-import org.apache.ibatis.annotations.Mapper;
+
+import java.util.Objects;
 
 /**
- * 溯源二维码表 Mapper
+ * 溯源二维码 Mapper trace_qrcode
  *
  * @author wly
  * @url www.gg.com
- * @date 2026/3/15
+ * @date 2026/3/19
  */
-@Mapper
 public interface TraceQrcodeMapper extends BaseMapper<TraceQrcodeDO> {
+
+    default TraceQrcodeDO selectByProductId(Long productId) {
+        if (Objects.isNull(productId) || productId <= 0) {
+            return null;
+        }
+        return selectOne(new LambdaQueryWrapper<TraceQrcodeDO>()
+                .eq(TraceQrcodeDO::getProductId, productId)
+                .orderByDesc(TraceQrcodeDO::getCreateTime)
+                .last("limit 1"));
+    }
 }

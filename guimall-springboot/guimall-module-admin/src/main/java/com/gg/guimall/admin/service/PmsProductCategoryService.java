@@ -57,4 +57,14 @@ public interface PmsProductCategoryService {
      * @return 分类树结构
      */
     List<FindPmsProductCategoryTreeRspVO> findCategoryTree();
+
+    /**
+     * 获取商品分类下拉列表
+     *
+     * 用于商品添加/编辑时选择分类
+     * 返回扁平化的分类列表，按层级排序
+     *
+     * @return 分类下拉选项列表
+     */
+    List<PmsProductCategoryOptionVO> findCategoryOptions();
 }

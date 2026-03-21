@@ -11,11 +11,11 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 /**
- * 农产品溯源记录表 trace_record
+ * 农产品溯源记录 trace_record
  *
  * @author wly
  * @url www.gg.com
- * @date 2026/3/15
+ * @date 2026/3/19
  */
 @Data
 @Builder
