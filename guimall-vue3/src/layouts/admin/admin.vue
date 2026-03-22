@@ -1,6 +1,6 @@
 <template>
   <!-- 外层布局必须撑满屏幕 -->
-  <a-layout style="min-height: 100vh">
+  <a-layout style="height: 100vh">
 
     <!-- 左侧菜单栏 -->
 
@@ -86,6 +86,7 @@ onMounted(() => {
   background: #e2efeb;
   color: white;
   line-height: 64px;
+  overflow: hidden;
 }
 
 /* 内容区 */
@@ -96,8 +97,8 @@ onMounted(() => {
 
 /* router-view 主体 */
 .main {
-  background: white;
-  min-height: calc(100vh - 64px - 70px);
+  background: #f5f5f5;
+  height: calc(100vh - 64px - 70px);
   padding: 16px;
 }
 
@@ -137,10 +138,11 @@ onMounted(() => {
 /* 底部 */
 .footer {
   height: 70px;
-  background: #0e7490;
+  background: #f5f5f5;
   color: white;
   text-align: center;
   line-height: 70px;
   padding: 0;
+  overflow: hidden;
 }
 </style>

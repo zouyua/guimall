@@ -17,7 +17,6 @@
     "animate.css": "^4.1.1",
     "ant-design-vue": "^4.2.6",
     "axios": "^1.13.4",
-    "element-plus": "^2.3.9",
     "flowbite": "^1.8.1",
     "nprogress": "^0.2.0",
     "pinia": "^3.0.4",
