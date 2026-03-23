@@ -36,7 +36,7 @@
 
       <!-- 新增 -->
       <div class="mb-4">
-        <a-button type="primary" class="flex items-center gap-1">
+        <a-button type="primary" class="flex items-center gap-1" @click="router.push('/admin/pms/product/add')">
           <PlusOutlined />
           新增商品
         </a-button>
@@ -58,6 +58,7 @@
 
 <script setup>
 import { ref, computed, h } from 'vue'
+import { useRouter } from 'vue-router'
 
 import {
   Image,
@@ -73,6 +74,7 @@ import {
   DeleteOutlined
 } from '@ant-design/icons-vue'
 
+const router = useRouter()
 
 /* 查询条件 */
 const searchProductName = ref('')
@@ -119,7 +121,7 @@ const columns = [
   {
     title: '序号',
     align: 'center',
-    customRender: ({ index }) => index + 1
+    customRender: ({ index }) => (current.value - 1) * size.value + index + 1
   },
 
   {
@@ -182,27 +184,40 @@ const columns = [
   {
     title: '状态',
     align: 'center',
+    width: 160,
     customRender: ({ record }) => {
-
-      return h('div', { class: 'flex flex-col items-center gap-2' }, [
-
-        h('div', { class: 'flex items-center gap-2' }, [
-          '上架',
-          h(Switch, { checked: record.publishStatus, size: 'small' })
+      return h('div', { class: 'flex flex-col items-center gap-3 py-1' }, [
+        h('div', { class: 'flex items-center justify-center gap-2' }, [
+          h('span', { class: 'text-sm text-gray-600 w-10 text-right shrink-0' }, '上架'),
+          h(Switch, {
+            checked: record.publishStatus,
+            class: 'product-status-switch',
+            onChange: (checked) => {
+              record.publishStatus = checked
+            }
+          })
         ]),
-
-        h('div', { class: 'flex items-center gap-2' }, [
-          '新品',
-          h(Switch, { checked: record.newStatus, size: 'small' })
+        h('div', { class: 'flex items-center justify-center gap-2' }, [
+          h('span', { class: 'text-sm text-gray-600 w-10 text-right shrink-0' }, '新品'),
+          h(Switch, {
+            checked: record.newStatus,
+            class: 'product-status-switch',
+            onChange: (checked) => {
+              record.newStatus = checked
+            }
+          })
         ]),
-
-        h('div', { class: 'flex items-center gap-2' }, [
-          '推荐',
-          h(Switch, { checked: record.recommendStatus, size: 'small' })
+        h('div', { class: 'flex items-center justify-center gap-2' }, [
+          h('span', { class: 'text-sm text-gray-600 w-10 text-right shrink-0' }, '推荐'),
+          h(Switch, {
+            checked: record.recommendStatus,
+            class: 'product-status-switch',
+            onChange: (checked) => {
+              record.recommendStatus = checked
+            }
+          })
         ])
-
       ])
-
     }
   },
 
@@ -281,12 +296,28 @@ const columns = [
 const current = ref(1)
 const size = ref(10)
 
+const categoryIdToName = { 1: '水果', 2: '蔬菜' }
+
 const filteredProducts = computed(() => {
 
   let list = allProducts.value
 
   if (searchProductName.value) {
     list = list.filter(p => p.name.includes(searchProductName.value))
+  }
+
+  if (categoryId.value != null) {
+    const name = categoryIdToName[categoryId.value]
+    if (name) {
+      list = list.filter(p => p.categoryName === name)
+    }
+  }
+
+  if (publishStatus.value === 1) {
+    list = list.filter(p => p.publishStatus === true)
+  }
+  if (publishStatus.value === 0) {
+    list = list.filter(p => p.publishStatus === false)
   }
 
   return list
@@ -319,11 +350,18 @@ const handleDelete = (id) => {
 }
 
 const handleEdit = (record) => {
-  console.log('编辑', record)
+  router.push({ path: '/admin/pms/product/update', query: { id: record.id } })
 }
 
 const handleView = (record) => {
-  console.log('查看', record)
+  router.push({ path: '/admin/pms/product/detail', query: { id: record.id } })
 }
 
 </script>
+
+<style scoped>
+:deep(.product-status-switch.ant-switch) {
+  transform: scale(1.12);
+  transform-origin: center center;
+}
+</style>

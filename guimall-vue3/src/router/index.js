@@ -53,6 +53,11 @@ const routes = [
                 meta: { title: '更改农户信息' }
             },
             {
+                path: 'farmer/farmer-link',
+                component: () => import('@/pages/admin/farmer/farmerLink.vue'),
+                meta: { title: '农户关联' }
+            },
+            {
                 path: 'pms/product',
                 component: () => import('@/pages/admin/pms/product/index.vue'),
                 meta: { title: '商品管理' }
@@ -68,9 +73,9 @@ const routes = [
                 meta: { title: '更改商品信息' }
             },
             {
-                path: 'pms/product/farmer-link',
-                component: () => import('@/pages/admin/pms/product/index.vue'), // 暂时指向商品列表作为占位
-                meta: { title: '农户关联' }
+                path: 'pms/product/detail',
+                component: () => import('@/pages/admin/pms/product/components/ProductDetail.vue'),
+                meta: { title: '商品详情' }
             },
             {
                 path: 'pms/productCate',
@@ -170,17 +175,17 @@ const routes = [
             {
                 path: 'sms/advertise',
                 component: () => import('@/pages/admin/sms/advertise/index.vue'),
-                meta: { title: '广告管理' }
+                meta: { title: '轮播图管理' }
             },
             {
                 path: 'sms/advertise/add',
                 component: () => import('@/pages/admin/sms/advertise/add.vue'),
-                meta: { title: '添加广告' }
+                meta: { title: '新增轮播图' }
             },
             {
                 path: 'sms/advertise/update',
                 component: () => import('@/pages/admin/sms/advertise/update.vue'),
-                meta: { title: '更改广告' }
+                meta: { title: '编辑轮播图' }
             },
             {
                 path: 'trace/origin',
@@ -188,19 +193,29 @@ const routes = [
                 meta: { title: '产地信息' }
             },
             {
+                path: 'trace/origin/add',
+                component: () => import('@/pages/admin/trace/add.vue'),
+                meta: { title: '新增产地' }
+            },
+            {
+                path: 'trace/origin/update',
+                component: () => import('@/pages/admin/trace/update.vue'),
+                meta: { title: '编辑产地' }
+            },
+            {
                 path: 'ums/admin',
                 component: () => import('@/pages/admin/ums/admin/index.vue'),
-                meta: { title: '管理员管理' }
+                meta: { title: '角色管理' }
             },
             {
                 path: 'ums/role',
                 component: () => import('@/pages/admin/ums/role/index.vue'),
-                meta: { title: '角色管理' }
+                meta: { title: '管理员管理' }
             },
             {
                 path: 'ums/role/allocMenu',
                 component: () => import('@/pages/admin/ums/role/allocMenu.vue'),
-                meta: { title: '分配菜单' }
+                meta: { title: '分配菜单权限' }
             },
             {
                 path: 'ums/menu',
@@ -210,12 +225,12 @@ const routes = [
             {
                 path: 'ums/menu/add',
                 component: () => import('@/pages/admin/ums/menu/add.vue'),
-                meta: { title: '添加菜单' }
+                meta: { title: '新增菜单' }
             },
             {
                 path: 'ums/menu/update',
                 component: () => import('@/pages/admin/ums/menu/update.vue'),
-                meta: { title: '更改菜单' }
+                meta: { title: '编辑菜单' }
             }
         ]
     }

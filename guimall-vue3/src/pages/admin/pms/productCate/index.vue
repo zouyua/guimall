@@ -36,18 +36,12 @@
       <!-- 右侧分类表格 -->
       <a-card :bordered="false" class="flex-1">
 
-        <!-- 标题 + 新增 -->
-        <div class="mb-4 flex justify-between items-center">
-
-          <div class="font-semibold">
-            分类列表
-          </div>
-
+        <!-- 新增 -->
+        <div class="mb-4">
           <a-button type="primary" class="flex items-center gap-1" @click="handleAdd">
             <PlusOutlined />
             新增分类
           </a-button>
-
         </div>
 
         <!-- 表格 -->
@@ -56,18 +50,12 @@
         <!-- 分页 -->
         <div class="mt-6 flex justify-center">
           <a-pagination v-model:current="current" v-model:pageSize="size" :total="total" show-size-changer
-            :pageSizeOptions="[10, 20, 50]" />
+            :pageSizeOptions="[10, 20, 50]" :show-total="(t) => `共 ${t} 条`" />
         </div>
 
       </a-card>
 
     </div>
-
-    <!-- 新增分类弹窗 -->
-    <AddCategory ref="addRef" />
-
-    <!-- 编辑分类弹窗 -->
-    <UpdateCategory ref="updateRef" />
 
   </div>
 </template>
@@ -75,9 +63,7 @@
 <script setup>
 
 import { ref, computed, h } from 'vue'
-
-import AddCategory from './add.vue'
-import UpdateCategory from './update.vue'
+import { useRouter } from 'vue-router'
 
 import {
   Button,
@@ -90,12 +76,7 @@ import {
   DeleteOutlined
 } from '@ant-design/icons-vue'
 
-
-/* ================= 弹窗 ref ================= */
-
-const addRef = ref()
-const updateRef = ref()
-
+const router = useRouter()
 
 /* ================= 查询条件 ================= */
 
@@ -331,12 +312,12 @@ const handleReset = () => {
 
 /* 新增分类 */
 const handleAdd = () => {
-  addRef.value.open()
+  router.push('/admin/pms/productCate/add')
 }
 
 /* 编辑分类 */
 const handleEdit = (record) => {
-  updateRef.value.open(record)
+  router.push({ path: '/admin/pms/productCate/update', query: { id: record.id } })
 }
 
 /* 树选择 */

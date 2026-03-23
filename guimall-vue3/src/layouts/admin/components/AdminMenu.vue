@@ -42,6 +42,7 @@ import {
     UnorderedListOutlined,
     RollbackOutlined,
     FormOutlined,
+    CarOutlined,
     GiftOutlined,
     TagsOutlined,
     RocketOutlined,
@@ -53,7 +54,8 @@ import {
     PlusOutlined,
     ShoppingOutlined,
     ApartmentOutlined,
-    SettingOutlined
+    SettingOutlined,
+    LinkOutlined
 } from '@ant-design/icons-vue'
 
 //引入useMenuStore
@@ -105,7 +107,6 @@ const menus = [
             { title: '添加商品', icon: PlusOutlined, path: '/admin/pms/product/add' },
             { title: '商品分类', icon: ApartmentOutlined, path: '/admin/pms/productCate' },
             { title: '商品类型', icon: SettingOutlined, path: '/admin/pms/productAttr' },
-            { title: '农户关联', icon: TeamOutlined, path: '/admin/pms/product/farmer-link' },
             { title: '产地信息', icon: EnvironmentOutlined, path: '/admin/trace/origin' }
         ]
     },
@@ -114,7 +115,8 @@ const menus = [
         title: '农户管理',
         icon: TeamOutlined,
         children: [
-            { title: '农户列表', icon: UserOutlined, path: '/admin/farmer' }
+            { title: '农户列表', icon: UserOutlined, path: '/admin/farmer' },
+            { title: '农户关联', icon: LinkOutlined, path: '/admin/farmer/farmer-link' }
         ]
     },
     {
@@ -123,6 +125,7 @@ const menus = [
         icon: ShoppingCartOutlined,
         children: [
             { title: '订单列表', icon: UnorderedListOutlined, path: '/admin/oms/order' },
+            { title: '发货管理', icon: CarOutlined, path: '/admin/oms/order/deliverOrderList' },
             { title: '退货处理', icon: RollbackOutlined, path: '/admin/oms/apply' },
             { title: '退货原因处理', icon: FormOutlined, path: '/admin/oms/apply/reason' }
         ]
@@ -135,7 +138,7 @@ const menus = [
             { title: '优惠券管理', icon: TagsOutlined, path: '/admin/sms/coupon' },
             { title: '新品推荐', icon: RocketOutlined, path: '/admin/sms/new' },
             { title: '人气推荐', icon: HeartOutlined, path: '/admin/sms/hot' },
-            { title: '广告管理', icon: PlayCircleOutlined, path: '/admin/sms/advertise' }
+            { title: '轮播图管理', icon: PlayCircleOutlined, path: '/admin/sms/advertise' }
         ]
     },
     {
@@ -143,8 +146,8 @@ const menus = [
         title: '权限模块',
         icon: SettingOutlined,
         children: [
-            { title: '管理员管理', icon: UserOutlined, path: '/admin/ums/admin' },
-            { title: '角色管理', icon: SafetyCertificateOutlined, path: '/admin/ums/role' },
+            { title: '角色管理', icon: UserOutlined, path: '/admin/ums/admin' },
+            { title: '管理员管理', icon: SafetyCertificateOutlined, path: '/admin/ums/role' },
             { title: '菜单管理', icon: AppstoreOutlined, path: '/admin/ums/menu' }
         ]
     }
