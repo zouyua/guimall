@@ -88,6 +88,7 @@ public enum ResponseCodeEnum implements BaseExceptionInterface {
     COUPON_HISTORY_NOT_EXIST("60006", "优惠券领取记录不存在"),
     COUPON_NOT_BELONG_TO_MEMBER("60007", "该优惠券不属于当前会员"),
     COUPON_ALREADY_USED("60008", "优惠券已使用或已过期"),
+
     ;
 
     // 异常码

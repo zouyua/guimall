@@ -13,37 +13,15 @@
 
     <a-card :bordered="false" title="类型信息">
       <a-form
+        ref="formRef"
         :model="form"
+        :rules="rules"
         layout="horizontal"
         :label-col="{ span: 6 }"
         :wrapper-col="{ span: 16 }"
       >
-        <a-form-item label="类型名称">
-          <a-input v-model:value="form.name" placeholder="如：规格、颜色、产地" />
-        </a-form-item>
-
-        <a-form-item label="关联分类">
-          <a-select v-model:value="form.categoryId" placeholder="请选择分类" class="w-full">
-            <a-select-option :value="1">水果</a-select-option>
-            <a-select-option :value="2">蔬菜</a-select-option>
-            <a-select-option :value="3">粮油副食</a-select-option>
-          </a-select>
-        </a-form-item>
-
-        <a-form-item label="录入方式">
-          <a-select v-model:value="form.inputType" placeholder="请选择" class="w-full">
-            <a-select-option value="唯一文本">唯一文本</a-select-option>
-            <a-select-option value="单选">单选</a-select-option>
-            <a-select-option value="多选">多选</a-select-option>
-          </a-select>
-        </a-form-item>
-
-        <a-form-item label="排序">
-          <a-input-number v-model:value="form.sort" :min="0" class="w-full" />
-        </a-form-item>
-
-        <a-form-item label="备注">
-          <a-textarea v-model:value="form.remark" :rows="3" placeholder="选填，说明该类型的用途" />
+        <a-form-item name="name" label="类型名称" :required="true">
+          <a-input v-model:value="form.name" placeholder="如：规格、参数、产地类型" />
         </a-form-item>
       </a-form>
 
@@ -57,26 +35,35 @@
 </template>
 
 <script setup>
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { message } from 'ant-design-vue'
 import { ArrowLeftOutlined } from '@ant-design/icons-vue'
+import { createProductAttrCategory } from '@/api/admin/productAttrCategory'
 
 const router = useRouter()
+const formRef = ref(null)
+
+const rules = {
+  name: [{ required: true, message: '请输入类型名称', trigger: 'blur' }]
+}
 
 const form = reactive({
-  name: '',
-  categoryId: undefined,
-  inputType: '单选',
-  sort: 0,
-  remark: ''
+  name: ''
 })
 
 const goBack = () => {
   router.push('/admin/pms/productAttr/productAttrList')
 }
 
-const handleSubmit = () => {
-  console.log('添加商品类型', { ...form })
+const handleSubmit = async () => {
+  try {
+    await formRef.value?.validate()
+  } catch (e) {
+    return
+  }
+  await createProductAttrCategory({ name: form.name.trim() })
+  message.success('新增成功')
   goBack()
 }
 </script>

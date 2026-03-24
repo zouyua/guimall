@@ -1,13 +1,14 @@
 <template>
   <div class="p-2 box">
 
-    <a-card :bordered="false" class="mb-5">
+    <!-- <a-card :bordered="false" class="mb-5">
       <div class="text-base font-semibold text-gray-900 mb-1">菜单管理</div>
       <p class="text-sm text-gray-500 mb-0 leading-relaxed">
         维护后台侧边栏菜单结构；其中「角色管理」「管理员管理」等与权限模块对应（静态演示）。
       </p>
-    </a-card>
+    </a-card> -->
 
+    <!-- 搜索区：按菜单名称筛选菜单分页列表 -->
     <a-card :bordered="false" class="mb-5">
       <a-form layout="inline" class="flex flex-wrap items-center gap-4">
 
@@ -23,8 +24,10 @@
       </a-form>
     </a-card>
 
+    <!-- 数据表格区：展示菜单列表 + 显示/隐藏开关 + 编辑/删除操作 -->
     <a-card :bordered="false">
 
+      <!-- 工具栏：新增菜单 -->
       <div class="mb-4">
         <a-button type="primary" class="flex w-fit items-center gap-1" @click="router.push('/admin/ums/menu/add')">
           <PlusOutlined />
@@ -32,6 +35,7 @@
         </a-button>
       </div>
 
+      <!-- 表格：包含父级菜单、路由路径、图标、排序、显示状态开关与操作按钮 -->
       <a-table
         :dataSource="pagedData"
         :columns="columns"
@@ -59,41 +63,53 @@
 </template>
 
 <script setup>
-import { ref, computed, h } from 'vue'
+import { ref, computed, h, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Button, Popconfirm, Switch, message } from 'ant-design-vue'
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons-vue'
+import { fetchUmsMenuList, updateUmsMenu, deleteUmsMenus } from '@/api/admin/umsMenu'
 
 const router = useRouter()
 
 const searchName = ref('')
 
-const allRows = ref([
-  { id: 1, parentName: '—', name: '仪表盘', path: '/admin/index', icon: 'DashboardOutlined', sort: 0, hidden: 0 },
-  { id: 2, parentName: '—', name: '商品模块', path: '', icon: 'AppstoreOutlined', sort: 1, hidden: 0 },
-  { id: 3, parentName: '商品模块', name: '商品管理', path: '/admin/pms/product', icon: 'ShoppingOutlined', sort: 1, hidden: 0 },
-  { id: 4, parentName: '商品模块', name: '商品分类', path: '/admin/pms/productCate', icon: 'ApartmentOutlined', sort: 2, hidden: 0 },
-  { id: 5, parentName: '—', name: '权限模块', path: '', icon: 'SettingOutlined', sort: 9, hidden: 0 },
-  { id: 6, parentName: '权限模块', name: '角色管理', path: '/admin/ums/admin', icon: 'UserOutlined', sort: 1, hidden: 0 },
-  { id: 7, parentName: '权限模块', name: '管理员管理', path: '/admin/ums/role', icon: 'SafetyCertificateOutlined', sort: 2, hidden: 0 }
-])
+// 当前分页菜单数据源
+const allRows = ref([])
 
 const current = ref(1)
 const size = ref(10)
 
-const filtered = computed(() => {
-  let list = allRows.value
-  if (searchName.value.trim()) {
-    list = list.filter((r) => r.name.includes(searchName.value.trim()))
+const total = ref(0)
+const pagedData = computed(() => allRows.value)
+
+// 加载菜单列表（支持分页 + 菜单名称模糊）
+const fetchMenus = async () => {
+  const reqVO = {
+    current: current.value,
+    size: size.value
   }
-  return list
+  if (searchName.value.trim()) {
+    reqVO.name = searchName.value.trim()
+  }
+
+  const rsp = await fetchUmsMenuList(reqVO)
+  if (rsp?.success) {
+    allRows.value = rsp.data || []
+    total.value = rsp.total || 0
+    return
+  }
+
+  // 若后端返回失败，给出提示便于排查接口/鉴权/数据过滤问题
+  console.log('fetchUmsMenuList failed:', rsp)
+  message.error(rsp?.message || '获取菜单列表失败')
+}
+
+onMounted(() => {
+  fetchMenus()
 })
 
-const total = computed(() => filtered.value.length)
-
-const pagedData = computed(() => {
-  const start = (current.value - 1) * size.value
-  return filtered.value.slice(start, start + size.value)
+watch([current, size], () => {
+  fetchMenus()
 })
 
 const columns = [
@@ -121,8 +137,20 @@ const columns = [
           checkedChildren: '显示',
           unCheckedChildren: '隐藏',
           class: 'ums-menu-visible-switch',
-          onChange: (checked) => {
-            record.hidden = checked ? 0 : 1
+          onChange: async (checked) => {
+            // 侧栏显示/隐藏开关：checked=true -> hidden=0
+            const nextHidden = checked ? 0 : 1
+            await updateUmsMenu({
+              id: record.id,
+              parentId: record.parentId,
+              name: record.name,
+              path: record.path,
+              icon: record.icon,
+              sort: record.sort,
+              hidden: nextHidden
+            })
+            record.hidden = nextHidden
+            message.success('状态已更新')
           }
         })
       ])
@@ -177,18 +205,28 @@ const columns = [
 ]
 
 const handleSearch = () => {
+  const prev = current.value
   current.value = 1
+  if (prev === 1) fetchMenus()
 }
 
 const handleReset = () => {
   searchName.value = ''
+  const prev = current.value
   current.value = 1
+  if (prev === 1) fetchMenus()
 }
 
-const handleDelete = (id) => {
-  allRows.value = allRows.value.filter((r) => r.id !== id)
-  if (pagedData.value.length === 0 && current.value > 1) current.value--
-  message.success('已删除（演示）')
+const handleDelete = async (id) => {
+  if (!id) return
+  await deleteUmsMenus([id])
+  message.success('已删除')
+
+  if (allRows.value.length === 1 && current.value > 1) {
+    current.value--
+    return
+  }
+  await fetchMenus()
 }
 </script>
 

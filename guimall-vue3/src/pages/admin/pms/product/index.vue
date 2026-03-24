@@ -11,8 +11,9 @@
 
         <a-form-item label="商品分类">
           <a-select v-model:value="categoryId" placeholder="请选择分类" class="!w-44" allow-clear>
-            <a-select-option :value="1">水果</a-select-option>
-            <a-select-option :value="2">蔬菜</a-select-option>
+            <a-select-option v-for="item in categoryOptions" :key="item.id" :value="item.id">
+              {{ item.name }}
+            </a-select-option>
           </a-select>
         </a-form-item>
 
@@ -57,9 +58,11 @@
 </template>
 
 <script setup>
-import { ref, computed, h } from 'vue'
+import { ref, computed, h, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { message } from 'ant-design-vue'
 
+//引入所需图标
 import {
   Image,
   Switch,
@@ -73,46 +76,37 @@ import {
   EditOutlined,
   DeleteOutlined
 } from '@ant-design/icons-vue'
+import {
+  fetchProductList,
+  deleteProduct,
+  publishProduct,
+  unpublishProduct
+} from '@/api/admin/product'
+import { fetchProductCategoryOptions } from '@/api/admin/productCategory'
+import {
+  fetchHomeNewProductList,
+  createHomeNewProduct,
+  deleteHomeNewProduct
+} from '@/api/admin/homeNewProduct'
+import {
+  fetchHomeRecommendProductList,
+  createHomeRecommendProduct,
+  deleteHomeRecommendProduct
+} from '@/api/admin/homeRecommendProduct'
 
 const router = useRouter()
 
-/* 查询条件 */
+/* 分页查询参数 */
 const searchProductName = ref('')
 const categoryId = ref()
 const publishStatus = ref()
+const categoryOptions = ref([])
+const allProducts = ref([])
+const total = ref(0)
 
-
-/* 假数据 */
-const allProducts = ref([
-  {
-    id: 1,
-    name: '砂糖橘',
-    pic: 'https://picsum.photos/80',
-    categoryName: '水果',
-    farmerName: '张三',
-    price: 12.5,
-    stock: 100,
-    sale: 200,
-    publishStatus: true,
-    newStatus: true,
-    recommendStatus: false,
-    createTime: '2026-03-15'
-  },
-  {
-    id: 2,
-    name: '脐橙',
-    pic: 'https://picsum.photos/81',
-    categoryName: '水果',
-    farmerName: '李四',
-    price: 18.9,
-    stock: 80,
-    sale: 120,
-    publishStatus: false,
-    newStatus: false,
-    recommendStatus: true,
-    createTime: '2026-03-16'
-  }
-])
+// 通过 productId 反查“新品推荐表 / 人气推荐表”主键，便于删除时走正确接口入参
+const homeNewIdMap = ref({})
+const homeRecommendIdMap = ref({})
 
 
 /* 表格列 */
@@ -190,30 +184,30 @@ const columns = [
         h('div', { class: 'flex items-center justify-center gap-2' }, [
           h('span', { class: 'text-sm text-gray-600 w-10 text-right shrink-0' }, '上架'),
           h(Switch, {
-            checked: record.publishStatus,
+            checked: Number(record.publishStatus) === 1,
             class: 'product-status-switch',
-            onChange: (checked) => {
-              record.publishStatus = checked
+            onChange: async (checked) => {
+              await handleTogglePublish(record, checked)
             }
           })
         ]),
         h('div', { class: 'flex items-center justify-center gap-2' }, [
           h('span', { class: 'text-sm text-gray-600 w-10 text-right shrink-0' }, '新品'),
           h(Switch, {
-            checked: record.newStatus,
+            checked: !!record.newStatus,
             class: 'product-status-switch',
-            onChange: (checked) => {
-              record.newStatus = checked
+            onChange: async (checked) => {
+              await handleToggleNew(record, checked)
             }
           })
         ]),
         h('div', { class: 'flex items-center justify-center gap-2' }, [
           h('span', { class: 'text-sm text-gray-600 w-10 text-right shrink-0' }, '推荐'),
           h(Switch, {
-            checked: record.recommendStatus,
+            checked: !!record.recommendStatus,
             class: 'product-status-switch',
-            onChange: (checked) => {
-              record.recommendStatus = checked
+            onChange: async (checked) => {
+              await handleToggleRecommend(record, checked)
             }
           })
         ])
@@ -296,57 +290,85 @@ const columns = [
 const current = ref(1)
 const size = ref(10)
 
-const categoryIdToName = { 1: '水果', 2: '蔬菜' }
+const pagedData = computed(() => allProducts.value)
 
-const filteredProducts = computed(() => {
+const fetchCategories = async () => {
+  const rsp = await fetchProductCategoryOptions()
+  categoryOptions.value = rsp?.data || []
+}
 
-  let list = allProducts.value
+const fetchStatusRelations = async () => {
+  const [newRsp, recommendRsp] = await Promise.all([
+    fetchHomeNewProductList({ current: 1, size: 1000 }),
+    fetchHomeRecommendProductList({ current: 1, size: 1000 })
+  ])
 
-  if (searchProductName.value) {
-    list = list.filter(p => p.name.includes(searchProductName.value))
-  }
+  const nextNewMap = {}
+  const nextRecommendMap = {}
 
-  if (categoryId.value != null) {
-    const name = categoryIdToName[categoryId.value]
-    if (name) {
-      list = list.filter(p => p.categoryName === name)
+  ;(newRsp?.data || []).forEach((item) => {
+    if (item?.productId != null && item?.id != null) {
+      nextNewMap[item.productId] = item.id
     }
+  })
+  ;(recommendRsp?.data || []).forEach((item) => {
+    if (item?.productId != null && item?.id != null) {
+      nextRecommendMap[item.productId] = item.id
+    }
+  })
+
+  homeNewIdMap.value = nextNewMap
+  homeRecommendIdMap.value = nextRecommendMap
+}
+
+const fetchProducts = async () => {
+  const reqVO = {
+    current: current.value,
+    size: size.value
+  }
+  if (searchProductName.value.trim()) reqVO.name = searchProductName.value.trim()
+  if (categoryId.value != null) reqVO.categoryId = categoryId.value
+  if (publishStatus.value === 0 || publishStatus.value === 1) reqVO.publishStatus = publishStatus.value
+
+  const rsp = await fetchProductList(reqVO)
+  if (!rsp?.success) {
+    message.error(rsp?.message || '获取商品列表失败')
+    return
   }
 
-  if (publishStatus.value === 1) {
-    list = list.filter(p => p.publishStatus === true)
-  }
-  if (publishStatus.value === 0) {
-    list = list.filter(p => p.publishStatus === false)
-  }
-
-  return list
-
-})
-
-const total = computed(() => filteredProducts.value.length)
-
-const pagedData = computed(() => {
-  const start = (current.value - 1) * size.value
-  const end = start + size.value
-  return filteredProducts.value.slice(start, end)
-})
-
+  allProducts.value = (rsp.data || []).map((item) => ({
+    ...item,
+    newStatus: !!homeNewIdMap.value[item.id],
+    recommendStatus: !!homeRecommendIdMap.value[item.id]
+  }))
+  total.value = rsp.total || 0
+}
 
 /* 方法 */
 const handleSearch = () => {
+  const prev = current.value
   current.value = 1
+  if (prev === 1) fetchProducts()
 }
 
 const handleReset = () => {
   searchProductName.value = ''
   categoryId.value = undefined
   publishStatus.value = undefined
+  const prev = current.value
   current.value = 1
+  if (prev === 1) fetchProducts()
 }
 
-const handleDelete = (id) => {
-  allProducts.value = allProducts.value.filter(p => p.id !== id)
+const handleDelete = async (id) => {
+  await deleteProduct(id)
+  message.success('删除成功')
+  if (allProducts.value.length === 1 && current.value > 1) {
+    current.value--
+    return
+  }
+  await fetchStatusRelations()
+  await fetchProducts()
 }
 
 const handleEdit = (record) => {
@@ -356,6 +378,67 @@ const handleEdit = (record) => {
 const handleView = (record) => {
   router.push({ path: '/admin/pms/product/detail', query: { id: record.id } })
 }
+
+const handleTogglePublish = async (record, checked) => {
+  if (!record?.id) return
+  if (checked) {
+    await publishProduct(record.id)
+  } else {
+    await unpublishProduct(record.id)
+  }
+  record.publishStatus = checked ? 1 : 0
+  message.success('上架状态已更新')
+}
+
+const handleToggleNew = async (record, checked) => {
+  if (!record?.id) return
+  if (checked) {
+    await createHomeNewProduct({
+      productId: record.id,
+      productName: record.name,
+      recommendStatus: 1,
+      sort: 0
+    })
+  } else {
+    const relationId = homeNewIdMap.value[record.id]
+    if (relationId) {
+      await deleteHomeNewProduct(relationId)
+    }
+  }
+  await fetchStatusRelations()
+  record.newStatus = !!homeNewIdMap.value[record.id]
+  message.success('新品状态已更新')
+}
+
+const handleToggleRecommend = async (record, checked) => {
+  if (!record?.id) return
+  if (checked) {
+    await createHomeRecommendProduct({
+      productId: record.id,
+      productName: record.name,
+      recommendStatus: 1,
+      sort: 0
+    })
+  } else {
+    const relationId = homeRecommendIdMap.value[record.id]
+    if (relationId) {
+      await deleteHomeRecommendProduct(relationId)
+    }
+  }
+  await fetchStatusRelations()
+  record.recommendStatus = !!homeRecommendIdMap.value[record.id]
+  message.success('推荐状态已更新')
+}
+
+onMounted(async () => {
+  await fetchCategories()
+  await fetchStatusRelations()
+  await fetchProducts()
+})
+
+watch([current, size], () => {
+  fetchProducts()
+})
 
 </script>
 

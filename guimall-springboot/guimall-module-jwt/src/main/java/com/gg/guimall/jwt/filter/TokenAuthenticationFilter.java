@@ -83,14 +83,20 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
                 if (StringUtils.isNotBlank(username)
                         && Objects.isNull(SecurityContextHolder.getContext().getAuthentication())) {
                     // 根据用户名获取用户详情信息
-                    UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+                    try {
+                        UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
-                    // 将用户信息存入 authentication，方便后续校验
-                    UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userDetails, null,
-                            userDetails.getAuthorities());
-                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    // 将 authentication 存入 ThreadLocal，方便后续获取用户信息
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                        // 将用户信息存入 authentication，方便后续校验
+                        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userDetails, null,
+                                userDetails.getAuthorities());
+                        authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                        // 将 authentication 存入 ThreadLocal，方便后续获取用户信息
+                        SecurityContextHolder.getContext().setAuthentication(authentication);
+                    } catch (Exception e) {
+                        // token 可能来自前台会员等「不在 admin 用户表」的场景。
+                        // 对于这种情况，不应当直接阻断请求，只要不写入 SecurityContext 即可。
+                        log.info("Token subject not found in admin user table, ignore authentication. subject={}", username);
+                    }
                 }
             }
         }

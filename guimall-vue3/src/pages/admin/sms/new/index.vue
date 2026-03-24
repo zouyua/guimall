@@ -3,9 +3,7 @@
 
     <a-card :bordered="false" class="mb-5">
       <div class="text-base font-semibold text-gray-900 mb-1">新品推荐</div>
-      <p class="text-sm text-gray-500 mb-0 leading-relaxed">
-        维护首页「新品」区块展示的商品及排序（静态演示数据）。
-      </p>
+      <p class="text-sm text-gray-500 mb-0 leading-relaxed">维护首页「新品」区块展示的商品及排序（动态接口数据）。</p>
     </a-card>
 
     <a-card :bordered="false">
@@ -18,13 +16,13 @@
         </a-button>
       </div>
 
-      <a-table :dataSource="list" :columns="columns" :pagination="false" rowKey="rowKey" bordered class="w-full" />
+      <a-table :dataSource="list" :columns="columns" :pagination="false" rowKey="id" bordered class="w-full" />
 
     </a-card>
 
     <a-modal
       v-model:open="modalVisible"
-      title="选择商品加入新品推荐"
+      :title="editingId ? '编辑新品推荐' : '选择商品加入新品推荐'"
       ok-text="确定"
       cancel-text="取消"
       destroy-on-close
@@ -42,11 +40,11 @@
           >
             <a-select-option
               v-for="p in availablePool"
-              :key="p.id"
-              :value="p.id"
-              :label="p.name"
+              :key="p.productId"
+              :value="p.productId"
+              :label="p.productName"
             >
-              {{ p.name }}
+              {{ p.productName }}
             </a-select-option>
           </a-select>
         </a-form-item>
@@ -57,69 +55,115 @@
 </template>
 
 <script setup>
-import { ref, computed, h } from 'vue'
-import { Button, Popconfirm, Image, message } from 'ant-design-vue'
-import { PlusOutlined, DeleteOutlined, ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons-vue'
+// 新品推荐列表页
+// 职责：查询新品推荐列表、增删改、排序上移下移
+import { ref, computed, h, onMounted } from 'vue'
+import { Button, Popconfirm, message, Tag } from 'ant-design-vue'
+import { PlusOutlined, DeleteOutlined, ArrowUpOutlined, ArrowDownOutlined, EditOutlined } from '@ant-design/icons-vue'
+import {
+  createHomeNewProduct,
+  deleteHomeNewProduct,
+  fetchHomeNewProductList,
+  fetchHomeNewProductOptions,
+  updateHomeNewProduct
+} from '@/api/admin/homeNewProduct'
 
-const productPool = [
-  { id: 201, name: '草莓礼盒', pic: 'https://picsum.photos/seed/n1/80' },
-  { id: 202, name: '春见耙耙柑', pic: 'https://picsum.photos/seed/n2/80' },
-  { id: 203, name: '有机番茄', pic: 'https://picsum.photos/seed/n3/80' },
-  { id: 204, name: '即食玉米', pic: 'https://picsum.photos/seed/n4/80' }
-]
-
-const list = ref([
-  { rowKey: 'r1', productId: 201, name: '草莓礼盒', pic: 'https://picsum.photos/seed/n1/80', sort: 1 },
-  { rowKey: 'r2', productId: 202, name: '春见耙耙柑', pic: 'https://picsum.photos/seed/n2/80', sort: 2 }
-])
-
+const list = ref([])
+const productPool = ref([])
 const modalVisible = ref(false)
 const pickProductId = ref(undefined)
+const editingId = ref(undefined)
 
 const availablePool = computed(() => {
-  const picked = new Set(list.value.map((r) => r.productId))
-  return productPool.filter((p) => !picked.has(p.id))
+  // 可选商品：默认排除已推荐商品；编辑时保留当前记录可选
+  const picked = new Set(list.value.map((r) => Number(r.productId)))
+  return productPool.value.filter((p) => !picked.has(Number(p.productId)) || Number(p.id) === Number(editingId.value))
 })
 
-const openModal = () => {
-  pickProductId.value = undefined
+const openModal = (record) => {
+  // record 存在时表示编辑，不存在表示新增
+  if (record?.id) {
+    editingId.value = Number(record.id)
+    pickProductId.value = Number(record.productId)
+  } else {
+    editingId.value = undefined
+    pickProductId.value = undefined
+  }
   modalVisible.value = true
 }
 
-const handleAddOk = () => {
+const handleAddOk = async () => {
+  // 新增/编辑按钮入参严格校验
   if (!pickProductId.value) {
     message.warning('请选择商品')
     return
   }
-  const p = productPool.find((x) => x.id === pickProductId.value)
-  if (!p) return
-  list.value.push({
-    rowKey: `r${Date.now()}`,
-    productId: p.id,
-    name: p.name,
-    pic: p.pic,
-    sort: list.value.length + 1
-  })
+  const option = productPool.value.find((x) => Number(x.productId) === Number(pickProductId.value))
+  if (!option) {
+    message.warning('商品选项不存在')
+    return
+  }
+  const payload = {
+    productId: Number(option.productId),
+    productName: String(option.productName || '').trim(),
+    recommendStatus: 1,
+    sort: Number(option.sort || 0)
+  }
+  if (!payload.productName) {
+    message.warning('商品名称不能为空')
+    return
+  }
+  const rsp = editingId.value
+    ? await updateHomeNewProduct(editingId.value, payload)
+    : await createHomeNewProduct(payload)
+  if (!rsp?.success) {
+    message.error(rsp?.message || (editingId.value ? '更新失败' : '新增失败'))
+    return
+  }
   modalVisible.value = false
-  message.success('已加入推荐（演示）')
+  message.success(editingId.value ? '更新成功' : '新增成功')
+  await fetchList()
 }
 
-const move = (index, dir) => {
+const move = async (index, dir) => {
+  // 通过交换 sort 实现上移/下移
   const j = index + dir
   if (j < 0 || j >= list.value.length) return
-  const arr = list.value
-  ;[arr[index], arr[j]] = [arr[j], arr[index]]
-  arr.forEach((r, i) => {
-    r.sort = i + 1
+  const cur = list.value[index]
+  const target = list.value[j]
+  if (!cur?.id || !target?.id) return
+  const rsp1 = await updateHomeNewProduct(cur.id, {
+    productId: Number(cur.productId),
+    productName: String(cur.productName || '').trim(),
+    recommendStatus: Number(cur.recommendStatus ?? 1),
+    sort: Number(target.sort)
   })
+  const rsp2 = await updateHomeNewProduct(target.id, {
+    productId: Number(target.productId),
+    productName: String(target.productName || '').trim(),
+    recommendStatus: Number(target.recommendStatus ?? 1),
+    sort: Number(cur.sort)
+  })
+  if (!rsp1?.success || !rsp2?.success) {
+    message.error(rsp1?.message || rsp2?.message || '调整排序失败')
+    return
+  }
+  await fetchList()
 }
 
-const remove = (index) => {
-  list.value.splice(index, 1)
-  list.value.forEach((r, i) => {
-    r.sort = i + 1
-  })
+const remove = async (record) => {
+  // 删除按钮入参校验：id 必须存在
+  if (!record?.id) {
+    message.warning('新品推荐ID不能为空')
+    return
+  }
+  const rsp = await deleteHomeNewProduct(record.id)
+  if (!rsp?.success) {
+    message.error(rsp?.message || '移除失败')
+    return
+  }
   message.success('已移除')
+  await fetchList()
 }
 
 const columns = [
@@ -129,23 +173,34 @@ const columns = [
     align: 'center',
     width: 80
   },
+  { title: '商品ID', dataIndex: 'productId', align: 'center', width: 100 },
+  { title: '商品名称', dataIndex: 'productName', align: 'center' },
   {
-    title: '商品图',
-    dataIndex: 'pic',
+    title: '推荐状态',
+    dataIndex: 'recommendStatus',
     align: 'center',
     width: 100,
-    customRender: ({ text }) =>
-      h('div', { class: 'flex justify-center' }, [
-        h(Image, { src: text, width: 56, height: 56, class: 'rounded object-cover' })
-      ])
+    customRender: ({ record }) => h(Tag, { color: Number(record.recommendStatus) === 1 ? 'success' : 'default' }, () => Number(record.recommendStatus) === 1 ? '推荐' : '不推荐')
   },
-  { title: '商品名称', dataIndex: 'name', align: 'center' },
   {
     title: '操作',
     align: 'center',
-    width: 220,
-    customRender: ({ index }) =>
+    width: 280,
+    customRender: ({ record, index }) =>
       h('div', { class: 'flex flex-nowrap items-center justify-center gap-2' }, [
+        h(
+          Button,
+          {
+            size: 'small',
+            type: 'primary',
+            class: 'inline-flex items-center gap-1',
+            onClick: () => openModal(record)
+          },
+          {
+            icon: () => h(EditOutlined),
+            default: () => '编辑'
+          }
+        ),
         h(
           Button,
           {
@@ -176,7 +231,7 @@ const columns = [
           Popconfirm,
           {
             title: '从新品推荐中移除？',
-            onConfirm: () => remove(index)
+            onConfirm: () => remove(record)
           },
           {
             default: () =>
@@ -197,4 +252,29 @@ const columns = [
       ])
   }
 ]
+
+const fetchList = async () => {
+  // 拉取新品推荐分页数据（此处取较大 size 用于列表管理）
+  const rsp = await fetchHomeNewProductList({ current: 1, size: 200 })
+  if (!rsp?.success) {
+    message.error(rsp?.message || '获取新品推荐列表失败')
+    return
+  }
+  list.value = [...(rsp.data || [])].sort((a, b) => Number(a.sort || 0) - Number(b.sort || 0))
+}
+
+const fetchOptions = async () => {
+  // 拉取可选商品下拉数据
+  const rsp = await fetchHomeNewProductOptions()
+  if (!rsp?.success) {
+    message.error(rsp?.message || '获取商品选项失败')
+    return
+  }
+  productPool.value = rsp.data || []
+}
+
+onMounted(async () => {
+  await fetchOptions()
+  await fetchList()
+})
 </script>

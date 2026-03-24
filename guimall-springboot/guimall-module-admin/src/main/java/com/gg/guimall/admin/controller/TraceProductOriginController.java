@@ -38,6 +38,20 @@ public class TraceProductOriginController {
         return traceProductOriginService.findByProductId(productId);
     }
 
+    @GetMapping("/origin/{originId}")
+    @ApiOperation(value = "根据产地ID查询绑定商品")
+    @ApiOperationLog(description = "根据产地ID查询绑定商品")
+    public Response findByOriginId(@PathVariable Long originId) {
+        return traceProductOriginService.findByOriginId(originId);
+    }
+
+    @GetMapping("/farmer/{farmerId}")
+    @ApiOperation(value = "根据农户ID查询绑定商品")
+    @ApiOperationLog(description = "根据农户ID查询绑定商品")
+    public Response findByFarmerId(@PathVariable Long farmerId) {
+        return traceProductOriginService.findByFarmerId(farmerId);
+    }
+
     @DeleteMapping("/product/{productId}")
     @ApiOperation(value = "解除商品产地绑定")
     @ApiOperationLog(description = "解除商品产地绑定")

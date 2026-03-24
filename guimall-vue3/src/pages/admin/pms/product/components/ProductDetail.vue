@@ -43,7 +43,9 @@
 <script setup>
 import { reactive, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { message } from 'ant-design-vue'
 import { ArrowLeftOutlined } from '@ant-design/icons-vue'
+import { getProductDetail } from '@/api/admin/product'
 
 const router = useRouter()
 const route = useRoute()
@@ -58,56 +60,40 @@ const detail = reactive({
   stock: 0,
   sale: 0,
   unit: '斤',
-  publishStatus: false,
+  publishStatus: 0,
   newStatus: false,
   recommendStatus: false,
   createTime: '',
   description: ''
 })
-
-const mockById = {
-  1: {
-    id: 1,
-    name: '砂糖橘',
-    pic: 'https://picsum.photos/80',
-    categoryName: '水果',
-    farmerName: '张三',
-    price: 12.5,
-    stock: 100,
-    sale: 200,
-    unit: '斤',
-    publishStatus: true,
-    newStatus: true,
-    recommendStatus: false,
-    createTime: '2026-03-15',
-    description: '新鲜砂糖橘，产地直发。'
-  },
-  2: {
-    id: 2,
-    name: '脐橙',
-    pic: 'https://picsum.photos/81',
-    categoryName: '水果',
-    farmerName: '李四',
-    price: 18.9,
-    stock: 80,
-    sale: 120,
-    unit: '斤',
-    publishStatus: false,
-    newStatus: false,
-    recommendStatus: true,
-    createTime: '2026-03-16',
-    description: '赣南脐橙。'
-  }
-}
-
-const loadMock = () => {
+const loadDetail = async () => {
   const id = Number(route.query.id)
-  const row = mockById[id] || mockById[1]
-  Object.assign(detail, row)
+  if (!id || Number.isNaN(id)) return
+
+  const rsp = await getProductDetail(id)
+  if (!rsp?.success || !rsp?.data) {
+    message.error(rsp?.message || '获取商品详情失败')
+    return
+  }
+
+  Object.assign(detail, {
+    id: rsp.data.id,
+    name: rsp.data.name ?? '',
+    pic: rsp.data.pic ?? '',
+    categoryName: rsp.data.categoryName ?? '',
+    farmerName: rsp.data.farmerName ?? '',
+    price: rsp.data.price ?? 0,
+    stock: rsp.data.stock ?? 0,
+    sale: rsp.data.sale ?? 0,
+    unit: rsp.data.unit ?? '斤',
+    publishStatus: rsp.data.publishStatus ?? 0,
+    createTime: rsp.data.createTime ?? '',
+    description: rsp.data.description ?? ''
+  })
 }
 
 onMounted(() => {
-  loadMock()
+  loadDetail()
 })
 
 const goBack = () => {

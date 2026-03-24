@@ -13,39 +13,48 @@
 
     <a-card :bordered="false" title="菜单信息">
       <a-form
+        ref="formRef"
         :model="form"
+        :rules="rules"
         layout="horizontal"
         :label-col="{ span: 6 }"
         :wrapper-col="{ span: 14 }"
       >
-        <a-form-item label="上级菜单">
-          <a-select v-model:value="form.parentId" class="w-full" allow-clear>
+        <!-- 表单：上级菜单（可调整层级） -->
+        <a-form-item name="parentId" label="上级菜单" :required="true">
+          <a-select v-model:value="form.parentId" class="w-full">
             <a-select-option :value="0">顶级菜单</a-select-option>
             <a-select-option v-for="p in parentOptions" :key="p.id" :value="p.id">{{ p.name }}</a-select-option>
           </a-select>
         </a-form-item>
 
-        <a-form-item label="菜单名称" required>
+        <!-- 表单：菜单名称（必填） -->
+        <a-form-item name="name" label="菜单名称" :required="true">
           <a-input v-model:value="form.name" allow-clear />
         </a-form-item>
 
+        <!-- 表单：路由路径（可选） -->
         <a-form-item label="路由路径">
           <a-input v-model:value="form.path" allow-clear />
         </a-form-item>
 
+        <!-- 表单：图标组件名（可选） -->
         <a-form-item label="图标组件名">
           <a-input v-model:value="form.icon" allow-clear />
         </a-form-item>
 
-        <a-form-item label="排序">
+        <!-- 表单：排序（必填） -->
+        <a-form-item name="sort" label="排序" :required="true">
           <a-input-number v-model:value="form.sort" :min="0" class="w-full max-w-xs" />
         </a-form-item>
 
-        <a-form-item label="显示">
+        <!-- 表单：显示/隐藏（必填） -->
+        <a-form-item name="hidden" label="显示" :required="true">
           <a-switch :checked="form.hidden === 0" @update:checked="(v) => (form.hidden = v ? 0 : 1)" />
         </a-form-item>
       </a-form>
 
+      <!-- 提交区：保存修改后返回菜单列表 -->
       <div class="mt-6 flex justify-center gap-3">
         <a-button type="primary" @click="handleSubmit">保存</a-button>
         <a-button @click="goBack">取消</a-button>
@@ -56,19 +65,18 @@
 </template>
 
 <script setup>
-import { reactive, onMounted } from 'vue'
+import { reactive, onMounted, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { ArrowLeftOutlined } from '@ant-design/icons-vue'
+import { fetchUmsMenuList, fetchUmsMenuOptions, updateUmsMenu } from '@/api/admin/umsMenu'
 
 const router = useRouter()
 const route = useRoute()
 
-const parentOptions = [
-  { id: 2, name: '商品模块' },
-  { id: 5, name: '权限模块' }
-]
+const parentOptions = ref([])
 
+// 编辑菜单表单模型（对应 UpdateUmsMenuReqVO）
 const form = reactive({
   id: null,
   parentId: 0,
@@ -79,57 +87,69 @@ const form = reactive({
   hidden: 0
 })
 
-const mockById = {
-  1: {
-    id: 1,
-    parentId: 0,
-    name: '仪表盘',
-    path: '/admin/index',
-    icon: 'DashboardOutlined',
-    sort: 0,
-    hidden: 0
-  },
-  3: {
-    id: 3,
-    parentId: 2,
-    name: '商品管理',
-    path: '/admin/pms/product',
-    icon: 'ShoppingOutlined',
-    sort: 1,
-    hidden: 0
-  },
-  6: {
-    id: 6,
-    parentId: 5,
-    name: '角色管理',
-    path: '/admin/ums/admin',
-    icon: 'UserOutlined',
-    sort: 1,
-    hidden: 0
+const formRef = ref(null)
+
+// 编辑菜单表单校验规则
+const rules = {
+  parentId: [{ required: true, message: '请选择上级菜单', trigger: 'change' }],
+  name: [{ required: true, message: '请输入菜单名称', trigger: 'blur' }],
+  sort: [{ required: true, message: '请输入排序', trigger: 'blur' }],
+  hidden: [{ required: true, message: '请选择显示状态', trigger: 'change' }]
+}
+
+onMounted(async () => {
+  // 1) 获取上级菜单下拉选项
+  const options = await fetchUmsMenuOptions()
+  parentOptions.value = Array.isArray(options) ? options : options?.data || []
+  if (!Array.isArray(parentOptions.value)) {
+    console.log('fetchUmsMenuOptions failed:', options)
+    message.error(options?.message || '获取菜单下拉选项失败')
+    return
   }
-}
 
-const loadMock = () => {
+  // 2) 根据路由参数加载要编辑的菜单
   const id = Number(route.query.id)
-  const row = mockById[id] || mockById[3]
-  Object.assign(form, row)
-}
+  if (!id || Number.isNaN(id)) return
 
-onMounted(() => {
-  loadMock()
+  const rsp = await fetchUmsMenuList({ current: 1, size: 1000 })
+  const row = rsp?.success ? (rsp.data || []).find((r) => Number(r.id) === id) : null
+
+  if (row) {
+    Object.assign(form, {
+      id: row.id,
+      parentId: row.parentId ?? 0,
+      name: row.name ?? '',
+      path: row.path ?? '',
+      icon: row.icon ?? '',
+      sort: row.sort ?? 0,
+      hidden: row.hidden ?? 0
+    })
+  }
 })
 
 const goBack = () => {
   router.push('/admin/ums/menu')
 }
 
-const handleSubmit = () => {
-  if (!form.name?.trim()) {
-    message.warning('请输入菜单名称')
+// 提交编辑：表单校验通过后调用 updateUmsMenu
+const handleSubmit = async () => {
+  try {
+    await formRef.value?.validate()
+  } catch (e) {
     return
   }
-  console.log('保存菜单', { ...form })
-  message.success('保存成功（演示数据）')
+
+  await updateUmsMenu({
+    id: form.id,
+    parentId: form.parentId ?? 0,
+    name: form.name.trim(),
+    path: form.path,
+    icon: form.icon,
+    sort: form.sort,
+    hidden: form.hidden
+  })
+
+  message.success('保存成功')
   goBack()
 }
 </script>

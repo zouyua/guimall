@@ -54,7 +54,7 @@ const routes = [
             },
             {
                 path: 'farmer/farmer-link',
-                component: () => import('@/pages/admin/farmer/farmerLink.vue'),
+                component: () => import('@/pages/admin/farmer/components/farmerLink.vue'),
                 meta: { title: '农户关联' }
             },
             {
@@ -99,7 +99,7 @@ const routes = [
             },
             {
                 path: 'pms/productAttr/productAttrList',
-                component: () => import('@/pages/admin/pms/productAttr/productAttrList.vue'),
+                component: () => import('@/pages/admin/pms/productAttr/index.vue'),
                 meta: { title: '商品类型列表' }
             },
             {
@@ -119,12 +119,12 @@ const routes = [
             },
             {
                 path: 'oms/order/orderDetail',
-                component: () => import('@/pages/admin/oms/order/orderDetail.vue'),
+                component: () => import('@/pages/admin/oms/order/components/orderDetail.vue'),
                 meta: { title: '订单详情' }
             },
             {
                 path: 'oms/order/deliverOrderList',
-                component: () => import('@/pages/admin/oms/order/deliverOrderList.vue'),
+                component: () => import('@/pages/admin/oms/order/components/deliverOrderList.vue'),
                 meta: { title: '发货管理' }
             },
             {
@@ -134,12 +134,12 @@ const routes = [
             },
             {
                 path: 'oms/apply/reason',
-                component: () => import('@/pages/admin/oms/apply/reason.vue'),
+                component: () => import('@/pages/admin/oms/apply/components/reason.vue'),
                 meta: { title: '退货原因处理' }
             },
             {
                 path: 'oms/apply/applyDetail',
-                component: () => import('@/pages/admin/oms/apply/applyDetail.vue'),
+                component: () => import('@/pages/admin/oms/apply/components/applyDetail.vue'),
                 meta: { title: '退货详情' }
             },
             {
@@ -159,7 +159,7 @@ const routes = [
             },
             {
                 path: 'sms/coupon/history',
-                component: () => import('@/pages/admin/sms/coupon/history.vue'),
+                component: () => import('@/pages/admin/sms/coupon/components/history.vue'),
                 meta: { title: '优惠券领取详情' }
             },
             {
@@ -214,7 +214,7 @@ const routes = [
             },
             {
                 path: 'ums/role/allocMenu',
-                component: () => import('@/pages/admin/ums/role/allocMenu.vue'),
+                component: () => import('@/pages/admin/ums/role/components/allocMenu.vue'),
                 meta: { title: '分配菜单权限' }
             },
             {

@@ -12,7 +12,7 @@
       <a-form layout="inline" class="flex flex-wrap items-center gap-4">
 
         <a-form-item label="轮播标题">
-          <a-input v-model:value="searchTitle" placeholder="请输入关键词" class="w-56" allow-clear />
+          <a-input v-model:value="searchName" placeholder="请输入关键词" class="w-56" allow-clear />
         </a-form-item>
 
         <a-form-item label="状态">
@@ -30,7 +30,7 @@
       </a-form>
     </a-card>
 
-    <a-card :bordered="false">
+    <a-card :bordered="false" title="轮播图列表">
 
       <!-- 新增 -->
       <div class="mb-4">
@@ -59,60 +59,28 @@
 </template>
 
 <script setup>
-import { ref, computed, h } from 'vue'
+// 轮播图管理列表页
+// 职责：查询/分页/删除/状态切换/跳转新增编辑
+import { ref, computed, h, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { Button, Image, Popconfirm, Switch } from 'ant-design-vue'
+import { Button, Image, Popconfirm, Switch, message } from 'ant-design-vue'
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons-vue'
+import { deleteHomeAdvertise, fetchHomeAdvertiseList, updateHomeAdvertise } from '@/api/admin/homeAdvertise'
 
 const router = useRouter()
 
-const searchTitle = ref('')
+// 查询条件
+const searchName = ref('')
 const searchStatus = ref()
 
-const allRows = ref([
-  {
-    id: 1,
-    title: '春季鲜果节',
-    pic: 'https://picsum.photos/seed/ad1/120/60',
-    sort: 1,
-    enabled: 1
-  },
-  {
-    id: 2,
-    title: '会员福利日',
-    pic: 'https://picsum.photos/seed/ad2/120/60',
-    sort: 2,
-    enabled: 1
-  },
-  {
-    id: 3,
-    title: '下线占位',
-    pic: 'https://picsum.photos/seed/ad3/120/60',
-    sort: 3,
-    enabled: 0
-  }
-])
+// 列表数据与分页状态
+const allRows = ref([])
+const total = ref(0)
 
 const current = ref(1)
 const size = ref(10)
 
-const filtered = computed(() => {
-  let list = allRows.value
-  if (searchTitle.value.trim()) {
-    list = list.filter((r) => r.title.includes(searchTitle.value.trim()))
-  }
-  if (searchStatus.value === 0 || searchStatus.value === 1) {
-    list = list.filter((r) => r.enabled === searchStatus.value)
-  }
-  return list
-})
-
-const total = computed(() => filtered.value.length)
-
-const pagedData = computed(() => {
-  const start = (current.value - 1) * size.value
-  return filtered.value.slice(start, start + size.value)
-})
+const pagedData = computed(() => allRows.value)
 
 const columns = [
   {
@@ -131,7 +99,7 @@ const columns = [
         h(Image, { src: text, height: 48, class: 'rounded object-cover max-w-[120px]' })
       ])
   },
-  { title: '轮播标题', dataIndex: 'title', align: 'center', ellipsis: true },
+  { title: '轮播标题', dataIndex: 'name', align: 'center', ellipsis: true },
   { title: '排序', dataIndex: 'sort', align: 'center', width: 80 },
   {
     title: '状态',
@@ -140,12 +108,12 @@ const columns = [
     customRender: ({ record }) =>
       h('div', { class: 'flex justify-center py-1' }, [
         h(Switch, {
-          checked: record.enabled === 1,
+          checked: Number(record.status) === 1,
           checkedChildren: '启用',
           unCheckedChildren: '停用',
           class: 'advertise-status-switch',
           onChange: (checked) => {
-            record.enabled = checked ? 1 : 0
+            handleToggleStatus(record, checked)
           }
         })
       ])
@@ -197,19 +165,87 @@ const columns = [
 ]
 
 const handleSearch = () => {
+  // 查询时回到第一页
+  const prev = current.value
   current.value = 1
+  if (prev === 1) fetchList()
 }
 
 const handleReset = () => {
-  searchTitle.value = ''
+  // 重置条件并刷新列表
+  searchName.value = ''
   searchStatus.value = undefined
+  const prev = current.value
   current.value = 1
+  if (prev === 1) fetchList()
 }
 
-const handleDelete = (id) => {
-  allRows.value = allRows.value.filter((r) => r.id !== id)
-  if (pagedData.value.length === 0 && current.value > 1) current.value--
+const handleDelete = async (id) => {
+  // 删除按钮入参校验：id 必须存在
+  if (!id) {
+    message.warning('广告ID不能为空')
+    return
+  }
+  const rsp = await deleteHomeAdvertise(id)
+  if (!rsp?.success) {
+    message.error(rsp?.message || '删除失败')
+    return
+  }
+  message.success('删除成功')
+  await fetchList()
 }
+
+const handleToggleStatus = async (record, checked) => {
+  // 状态开关接口是 update，必须带齐 UpdateSmsHomeAdvertiseReqVO 必填字段
+  if (!record?.id) {
+    message.warning('广告ID不能为空')
+    return
+  }
+  const payload = {
+    name: record.name,
+    type: Number(record.type ?? 0),
+    pic: record.pic,
+    startTime: record.startTime,
+    endTime: record.endTime,
+    status: checked ? 1 : 0,
+    url: record.url || '',
+    note: record.note || '',
+    sort: Number(record.sort || 0)
+  }
+  const rsp = await updateHomeAdvertise(record.id, payload)
+  if (!rsp?.success) {
+    message.error(rsp?.message || '状态更新失败')
+    return
+  }
+  record.status = payload.status
+  message.success('状态已更新')
+}
+
+const fetchList = async () => {
+  // 与后端 FindSmsHomeAdvertisePageListReqVO 对齐
+  const reqVO = {
+    current: current.value,
+    size: size.value
+  }
+  if (searchName.value.trim()) reqVO.name = searchName.value.trim()
+  if (searchStatus.value === 0 || searchStatus.value === 1) reqVO.status = Number(searchStatus.value)
+  const rsp = await fetchHomeAdvertiseList(reqVO)
+  if (!rsp?.success) {
+    message.error(rsp?.message || '获取轮播图列表失败')
+    return
+  }
+  allRows.value = rsp.data || []
+  total.value = rsp.total || 0
+}
+
+onMounted(() => {
+  // 页面首次进入加载
+  fetchList()
+})
+
+watch([current, size], () => {
+  fetchList()
+})
 </script>
 
 <style scoped>

@@ -13,46 +13,67 @@
 
     <a-card :bordered="false" title="基本信息">
       <a-form
+        ref="formRef"
         :model="form"
+        :rules="rules"
         layout="horizontal"
         :label-col="{ span: 6 }"
         :wrapper-col="{ span: 14 }"
       >
-        <a-form-item label="农户姓名" required>
+        <a-form-item label="农户姓名" name="name" :required="true">
           <a-input v-model:value="form.name" placeholder="请输入姓名" allow-clear />
         </a-form-item>
 
-        <a-form-item label="手机号" required>
+        <a-form-item label="手机号" name="phone" :required="true">
           <a-input v-model:value="form.phone" placeholder="请输入手机号" maxlength="11" allow-clear />
         </a-form-item>
 
-        <a-form-item label="所在地区">
-          <a-input v-model:value="form.region" placeholder="如：广西桂林市临桂区" allow-clear />
+        <a-form-item label="身份证号" name="idCard">
+          <a-input v-model:value="form.idCard" placeholder="选填" allow-clear />
         </a-form-item>
 
-        <a-form-item label="头像地址">
+        <a-form-item label="农场名称" name="farmName">
+          <a-input v-model:value="form.farmName" placeholder="如：临桂金桔合作社" allow-clear />
+        </a-form-item>
+
+        <a-form-item label="省" name="province">
+          <a-input v-model:value="form.province" placeholder="如：广西壮族自治区" allow-clear />
+        </a-form-item>
+
+        <a-form-item label="市" name="city">
+          <a-input v-model:value="form.city" placeholder="如：桂林市" allow-clear />
+        </a-form-item>
+
+        <a-form-item label="区/县" name="region">
+          <a-input v-model:value="form.region" placeholder="如：临桂区" allow-clear />
+        </a-form-item>
+
+        <a-form-item label="详细地址" name="detailAddress">
+          <a-input v-model:value="form.detailAddress" placeholder="街道/乡镇/村信息" allow-clear />
+        </a-form-item>
+
+        <a-form-item label="头像地址" name="avatar">
           <a-input v-model:value="form.avatar" placeholder="图片 URL" allow-clear />
         </a-form-item>
 
-        <a-form-item label="认证状态">
-          <a-select v-model:value="form.certStatus" placeholder="请选择" class="w-full" allow-clear>
-            <a-select-option :value="0">待审核</a-select-option>
-            <a-select-option :value="1">已认证</a-select-option>
-            <a-select-option :value="2">未通过</a-select-option>
+        <a-form-item label="主要农产品" name="mainProduct">
+          <a-input v-model:value="form.mainProduct" placeholder="如：金桔、罗汉果" allow-clear />
+        </a-form-item>
+
+        <a-form-item label="状态" name="status">
+          <a-select v-model:value="form.status" placeholder="请选择" class="w-full">
+            <a-select-option :value="1">启用</a-select-option>
+            <a-select-option :value="0">禁用</a-select-option>
           </a-select>
         </a-form-item>
 
-        <a-form-item label="关联商品数">
-          <a-input-number v-model:value="form.productCount" :min="0" class="w-full" disabled />
-        </a-form-item>
-
-        <a-form-item label="注册时间">
+        <a-form-item label="创建时间">
           <a-input v-model:value="form.createTime" disabled />
         </a-form-item>
 
-        <a-form-item label="简介">
+        <a-form-item label="简介" name="description">
           <a-textarea
-            v-model:value="form.intro"
+            v-model:value="form.description"
             :rows="4"
             placeholder="选填：种植品类、基地介绍等"
             allow-clear
@@ -70,102 +91,109 @@
 </template>
 
 <script setup>
-import { reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { ArrowLeftOutlined } from '@ant-design/icons-vue'
+import { getFarmerDetail, updateFarmer } from '@/api/admin/farmer'
 
 const router = useRouter()
 const route = useRoute()
+const formRef = ref()
 
 const form = reactive({
   id: null,
   name: '',
   phone: '',
+  idCard: '',
+  farmName: '',
+  province: '',
+  city: '',
   region: '',
+  detailAddress: '',
   avatar: '',
-  certStatus: 0,
-  productCount: 0,
+  mainProduct: '',
+  status: 1,
   createTime: '',
-  intro: ''
+  description: ''
 })
 
-const mockById = {
-  1: {
-    id: 1,
-    name: '张三',
-    phone: '13800138001',
-    region: '广西桂林',
-    avatar: 'https://picsum.photos/seed/f1/80',
-    certStatus: 1,
-    productCount: 5,
-    createTime: '2026-03-01',
-    intro: '桂林砂糖橘种植基地。'
-  },
-  2: {
-    id: 2,
-    name: '李四',
-    phone: '13900139002',
-    region: '江西赣州',
-    avatar: 'https://picsum.photos/seed/f2/80',
-    certStatus: 1,
-    productCount: 3,
-    createTime: '2026-03-05',
-    intro: ''
-  },
-  3: {
-    id: 3,
-    name: '王五',
-    phone: '13700137003',
-    region: '云南昆明',
-    avatar: 'https://picsum.photos/seed/f3/80',
-    certStatus: 0,
-    productCount: 0,
-    createTime: '2026-03-12',
-    intro: '新入驻，资料审核中。'
-  },
-  4: {
-    id: 4,
-    name: '赵六',
-    phone: '13600136004',
-    region: '四川成都',
-    avatar: 'https://picsum.photos/seed/f4/80',
-    certStatus: 2,
-    productCount: 1,
-    createTime: '2026-03-14',
-    intro: ''
-  }
+const rules = {
+  name: [{ required: true, message: '请输入农户姓名', trigger: 'blur' }],
+  phone: [
+    { required: true, message: '请输入手机号', trigger: 'blur' },
+    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的11位手机号', trigger: 'blur' }
+  ]
 }
 
-const loadMock = () => {
+const loadDetail = async () => {
   const id = Number(route.query.id)
-  const row = mockById[id] || mockById[1]
-  Object.assign(form, row)
+  if (!id) {
+    message.warning('缺少农户ID')
+    goBack()
+    return
+  }
+  const rsp = await getFarmerDetail(id)
+  if (!rsp?.success || !rsp?.data) {
+    message.error(rsp?.message || '获取农户详情失败')
+    goBack()
+    return
+  }
+  Object.assign(form, {
+    id: rsp.data.id,
+    name: rsp.data.name || '',
+    phone: rsp.data.phone || '',
+    idCard: rsp.data.idCard || '',
+    farmName: rsp.data.farmName || '',
+    province: rsp.data.province || '',
+    city: rsp.data.city || '',
+    region: rsp.data.region || '',
+    detailAddress: rsp.data.detailAddress || '',
+    avatar: rsp.data.avatar || '',
+    mainProduct: rsp.data.mainProduct || '',
+    status: rsp.data.status ?? 1,
+    createTime: rsp.data.createTime || '',
+    description: rsp.data.description || ''
+  })
 }
 
 onMounted(() => {
-  loadMock()
+  loadDetail()
 })
 
 const goBack = () => {
   router.push('/admin/farmer')
 }
 
-const handleSubmit = () => {
-  if (!form.name?.trim()) {
-    message.warning('请输入农户姓名')
+// 保存按钮入参与后端 UpdateFarmerReqVO 字段严格对齐
+const handleSubmit = async () => {
+  if (!formRef.value) return
+  try {
+    await formRef.value.validate()
+  } catch {
     return
   }
-  if (!form.phone?.trim()) {
-    message.warning('请输入手机号')
+  const reqVO = {
+    id: form.id,
+    name: form.name.trim(),
+    phone: form.phone.trim(),
+    idCard: form.idCard?.trim() || '',
+    avatar: form.avatar?.trim() || '',
+    farmName: form.farmName?.trim() || '',
+    province: form.province?.trim() || '',
+    city: form.city?.trim() || '',
+    region: form.region?.trim() || '',
+    detailAddress: form.detailAddress?.trim() || '',
+    mainProduct: form.mainProduct?.trim() || '',
+    description: form.description?.trim() || '',
+    status: form.status
+  }
+  const rsp = await updateFarmer(reqVO)
+  if (!rsp?.success) {
+    message.error(rsp?.message || '保存失败')
     return
   }
-  if (!/^1\d{10}$/.test(form.phone.trim())) {
-    message.warning('请输入正确的 11 位手机号')
-    return
-  }
-  console.log('保存农户', { ...form })
-  message.success('保存成功（演示数据，未请求后端）')
+  message.success('保存成功')
   goBack()
 }
 </script>

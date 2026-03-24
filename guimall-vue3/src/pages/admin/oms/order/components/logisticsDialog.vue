@@ -4,6 +4,7 @@
     title="填写物流信息"
     ok-text="确认发货"
     cancel-text="取消"
+    :confirmLoading="confirmLoading"
     destroy-on-close
     @ok="handleOk"
   >
@@ -30,8 +31,11 @@
 import { ref, reactive } from 'vue'
 import { message } from 'ant-design-vue'
 
+const emit = defineEmits(['submit'])
+
 const visible = ref(false)
 const current = ref(null)
+const confirmLoading = ref(false)
 
 const form = reactive({
   company: undefined,
@@ -49,15 +53,27 @@ const open = (record) => {
   visible.value = true
 }
 
-const handleOk = () => {
+const close = () => {
+  visible.value = false
+}
+
+const handleOk = async () => {
   if (!form.company || !form.trackingNo?.trim()) {
     message.warning('请选择物流公司并填写运单号')
     return Promise.reject()
   }
-  console.log('发货', { order: current.value, ...form })
-  message.success('已记录物流信息（演示）')
-  visible.value = false
+  confirmLoading.value = true
+  try {
+    await emit('submit', {
+      order: current.value,
+      deliveryCompany: form.company,
+      deliverySn: form.trackingNo.trim()
+    })
+    visible.value = false
+  } finally {
+    confirmLoading.value = false
+  }
 }
 
-defineExpose({ open })
+defineExpose({ open, close })
 </script>

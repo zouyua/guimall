@@ -13,12 +13,14 @@
 
     <a-card :bordered="false" title="分类信息">
       <a-form
+        ref="formRef"
         :model="form"
+        :rules="rules"
         layout="horizontal"
         :label-col="{ span: 6 }"
         :wrapper-col="{ span: 16 }"
       >
-        <a-form-item label="分类名称">
+        <a-form-item name="name" label="分类名称" :required="true">
           <a-input v-model:value="form.name" placeholder="请输入分类名称" />
         </a-form-item>
 
@@ -78,30 +80,20 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import { reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { message } from 'ant-design-vue'
 import { ArrowLeftOutlined } from '@ant-design/icons-vue'
+import { createProductCategory, fetchProductCategoryOptions } from '@/api/admin/productCategory'
 
 const router = useRouter()
+const formRef = ref(null)
 
-const CATEGORY_SELECT_OPTIONS = [
-  { id: 1, name: '水果' },
-  { id: 2, name: '柑橘类' },
-  { id: 3, name: '砂糖橘' },
-  { id: 4, name: '脐橙' },
-  { id: 5, name: '沃柑' },
-  { id: 6, name: '热带水果' },
-  { id: 7, name: '芒果' },
-  { id: 8, name: '香蕉' },
-  { id: 9, name: '蔬菜' },
-  { id: 10, name: '叶菜类' },
-  { id: 11, name: '生菜' },
-  { id: 12, name: '粮油副食' },
-  { id: 13, name: '大米' },
-  { id: 14, name: '食用油' }
-]
+const categoryList = ref([])
 
-const categoryList = ref([...CATEGORY_SELECT_OPTIONS])
+const rules = {
+  name: [{ required: true, message: '请输入分类名称', trigger: 'blur' }]
+}
 
 const form = reactive({
   parentId: 0,
@@ -119,8 +111,30 @@ const goBack = () => {
   router.push('/admin/pms/productCate')
 }
 
-const handleSubmit = () => {
-  console.log('新增分类', { ...form })
+onMounted(async () => {
+  const rsp = await fetchProductCategoryOptions()
+  categoryList.value = rsp?.data || []
+})
+
+const handleSubmit = async () => {
+  try {
+    await formRef.value?.validate()
+  } catch (e) {
+    return
+  }
+  await createProductCategory({
+    parentId: form.parentId,
+    name: form.name.trim(),
+    level: form.parentId && form.parentId !== 0 ? 1 : 0,
+    productUnit: form.productUnit?.trim() || null,
+    navStatus: form.navStatus,
+    showStatus: form.showStatus,
+    sort: form.sort,
+    icon: form.icon?.trim() || null,
+    keywords: form.keywords?.trim() || null,
+    description: form.description?.trim() || null
+  })
+  message.success('新增成功')
   goBack()
 }
 </script>

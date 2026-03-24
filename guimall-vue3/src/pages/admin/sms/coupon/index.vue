@@ -8,15 +8,6 @@
           <a-input v-model:value="searchName" placeholder="请输入名称" class="w-56" allow-clear />
         </a-form-item>
 
-        <a-form-item label="状态">
-          <a-select v-model:value="searchStatus" placeholder="请选择" class="!w-40" allow-clear>
-            <a-select-option value="进行中">进行中</a-select-option>
-            <a-select-option value="未开始">未开始</a-select-option>
-            <a-select-option value="已结束">已结束</a-select-option>
-            <a-select-option value="已停用">已停用</a-select-option>
-          </a-select>
-        </a-form-item>
-
         <a-form-item>
           <a-button type="primary" @click="handleSearch">查询</a-button>
           <a-button class="ml-2" @click="handleReset">重置</a-button>
@@ -54,79 +45,27 @@
 </template>
 
 <script setup>
-import { ref, computed, h } from 'vue'
+// 优惠券管理列表页
+// 职责：查询/分页/删除/跳转新增编辑/查看领取记录
+import { ref, computed, h, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { Button, Popconfirm, Tag } from 'ant-design-vue'
+import { Button, Popconfirm, message } from 'ant-design-vue'
 import { PlusOutlined, EditOutlined, UnorderedListOutlined, DeleteOutlined } from '@ant-design/icons-vue'
+import { deleteCoupon, fetchCouponList } from '@/api/admin/coupon'
 
 const router = useRouter()
 
+// 查询条件
 const searchName = ref('')
-const searchStatus = ref()
 
-const statusColor = {
-  进行中: 'processing',
-  未开始: 'default',
-  已结束: 'default',
-  已停用: 'error'
-}
-
-const allRows = ref([
-  {
-    id: 1,
-    name: '新客满50减10',
-    type: '满减',
-    benefitText: '满50减10元',
-    totalCount: 1000,
-    received: 326,
-    startTime: '2026-03-01 00:00:00',
-    endTime: '2026-06-30 23:59:59',
-    status: '进行中'
-  },
-  {
-    id: 2,
-    name: '果蔬88折券',
-    type: '折扣',
-    benefitText: '满30享8.8折',
-    totalCount: 500,
-    received: 88,
-    startTime: '2026-04-01 00:00:00',
-    endTime: '2026-05-01 23:59:59',
-    status: '未开始'
-  },
-  {
-    id: 3,
-    name: '春节满减',
-    type: '满减',
-    benefitText: '满100减20元',
-    totalCount: 200,
-    received: 200,
-    startTime: '2026-01-01 00:00:00',
-    endTime: '2026-02-01 23:59:59',
-    status: '已结束'
-  }
-])
+// 列表数据与分页状态
+const allRows = ref([])
+const total = ref(0)
 
 const current = ref(1)
 const size = ref(10)
 
-const filtered = computed(() => {
-  let list = allRows.value
-  if (searchName.value.trim()) {
-    list = list.filter((r) => r.name.includes(searchName.value.trim()))
-  }
-  if (searchStatus.value) {
-    list = list.filter((r) => r.status === searchStatus.value)
-  }
-  return list
-})
-
-const total = computed(() => filtered.value.length)
-
-const pagedData = computed(() => {
-  const start = (current.value - 1) * size.value
-  return filtered.value.slice(start, start + size.value)
-})
+const pagedData = computed(() => allRows.value)
 
 const columns = [
   {
@@ -136,22 +75,20 @@ const columns = [
     customRender: ({ index }) => (current.value - 1) * size.value + index + 1
   },
   { title: '优惠券名称', dataIndex: 'name', align: 'center', ellipsis: true },
-  { title: '类型', dataIndex: 'type', align: 'center', width: 90 },
-  { title: '优惠内容', dataIndex: 'benefitText', align: 'center' },
-  { title: '发行数量', dataIndex: 'totalCount', align: 'center', width: 100 },
-  { title: '已领取', dataIndex: 'received', align: 'center', width: 90 },
+  {
+    title: '优惠类型',
+    align: 'center',
+    width: 120,
+    customRender: () => '满减券'
+  },
+  { title: '优惠金额', dataIndex: 'amount', align: 'center', width: 100 },
+  { title: '发行数量', dataIndex: 'count', align: 'center', width: 100 },
+  { title: '已领取', dataIndex: 'receiveCount', align: 'center', width: 90 },
   {
     title: '有效期',
     align: 'center',
     width: 200,
-    customRender: ({ record }) => `${record.startTime.slice(0, 10)} ~ ${record.endTime.slice(0, 10)}`
-  },
-  {
-    title: '状态',
-    align: 'center',
-    width: 100,
-    customRender: ({ record }) =>
-      h(Tag, { color: statusColor[record.status] || 'default' }, () => record.status)
+    customRender: ({ record }) => `${String(record.startTime || '').slice(0, 10)} ~ ${String(record.endTime || '').slice(0, 10)}`
   },
   {
     title: '操作',
@@ -220,17 +157,59 @@ const columns = [
 ]
 
 const handleSearch = () => {
+  // 查询时重置到第 1 页，避免页码越界
+  const prev = current.value
   current.value = 1
+  if (prev === 1) fetchList()
 }
 
 const handleReset = () => {
+  // 重置所有查询条件，并重新拉取列表
   searchName.value = ''
-  searchStatus.value = undefined
+  const prev = current.value
   current.value = 1
+  if (prev === 1) fetchList()
 }
 
-const handleDelete = (id) => {
-  allRows.value = allRows.value.filter((r) => r.id !== id)
-  if (pagedData.value.length === 0 && current.value > 1) current.value--
+const handleDelete = async (id) => {
+  // 删除按钮入参严格校验：id 必须存在
+  if (!id) {
+    message.warning('优惠券ID不能为空')
+    return
+  }
+  const rsp = await deleteCoupon(id)
+  if (!rsp?.success) {
+    message.error(rsp?.message || '删除失败')
+    return
+  }
+  message.success('删除成功')
+  await fetchList()
 }
+
+const fetchList = async () => {
+  // 与后端 FindSmsCouponPageListReqVO 对齐
+  const reqVO = {
+    current: current.value,
+    size: size.value
+  }
+  if (searchName.value.trim()) reqVO.name = searchName.value.trim()
+  // 仅保留满减功能，固定传 type=0
+  reqVO.type = 0
+  const rsp = await fetchCouponList(reqVO)
+  if (!rsp?.success) {
+    message.error(rsp?.message || '获取优惠券列表失败')
+    return
+  }
+  allRows.value = rsp.data || []
+  total.value = rsp.total || 0
+}
+
+onMounted(() => {
+  // 页面首次进入加载
+  fetchList()
+})
+
+watch([current, size], () => {
+  fetchList()
+})
 </script>

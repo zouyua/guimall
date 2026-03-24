@@ -2,18 +2,23 @@
   <div class="p-2 box">
 
     <a-card :bordered="false" class="mb-5">
+      <!-- 查询条件：字段与后端 FindOriginPageListReqVO 保持一致 -->
       <a-form layout="inline" class="flex flex-wrap items-center gap-4">
 
         <a-form-item label="产地名称">
           <a-input v-model:value="searchName" placeholder="请输入产地名称" class="w-56" allow-clear />
         </a-form-item>
 
-        <a-form-item label="所在地区">
-          <a-select v-model:value="region" placeholder="请选择地区" class="!w-44" allow-clear>
-            <a-select-option value="广西">广西</a-select-option>
-            <a-select-option value="江西">江西</a-select-option>
-            <a-select-option value="云南">云南</a-select-option>
-          </a-select>
+        <a-form-item label="省">
+          <a-input v-model:value="searchProvince" placeholder="请输入省" class="w-44" allow-clear />
+        </a-form-item>
+
+        <a-form-item label="市">
+          <a-input v-model:value="searchCity" placeholder="请输入市" class="w-44" allow-clear />
+        </a-form-item>
+
+        <a-form-item label="区/县">
+          <a-input v-model:value="searchRegion" placeholder="请输入区/县" class="w-44" allow-clear />
         </a-form-item>
 
         <a-form-item>
@@ -49,67 +54,90 @@
 
     </a-card>
 
+    <!-- 删除拦截详情弹窗：展示该产地下已绑定的全部商品 -->
+    <a-modal
+      v-model:open="bindingModalOpen"
+      :title="`删除拦截：${bindingOriginName || '当前产地'} 已绑定商品`"
+      :footer="null"
+      width="920px"
+      destroy-on-close
+    >
+      <p class="mb-3 text-sm text-orange-600">
+        该产地已绑定 {{ bindingRows.length }} 个商品，请先在商品产地绑定模块解除关联后再删除。
+      </p>
+      <a-table
+        :dataSource="bindingRows"
+        :columns="bindingColumns"
+        :pagination="{ pageSize: 8, showSizeChanger: true, pageSizeOptions: ['8', '20', '50'] }"
+        rowKey="relationId"
+        bordered
+        size="small"
+      />
+    </a-modal>
+
   </div>
 </template>
 
 <script setup>
-import { ref, computed, h } from 'vue'
+import { ref, computed, h, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Button, Popconfirm, message } from 'ant-design-vue'
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons-vue'
+import {
+  fetchTraceOriginList,
+  deleteTraceOrigin
+} from '@/api/admin/traceOrigin'
+import { getProductBindingsByOriginId } from '@/api/admin/traceProductOrigin'
 
 const router = useRouter()
 
 const searchName = ref('')
-const region = ref()
+const searchProvince = ref('')
+const searchCity = ref('')
+const searchRegion = ref('')
 
-const allRows = ref([
-  {
-    id: 1,
-    name: '桂林砂糖橘基地',
-    region: '广西',
-    address: '广西桂林市临桂区',
-    productCount: 3,
-    createTime: '2026-03-01'
-  },
-  {
-    id: 2,
-    name: '赣南脐橙园',
-    region: '江西',
-    address: '江西赣州市',
-    productCount: 2,
-    createTime: '2026-03-05'
-  },
-  {
-    id: 3,
-    name: '高原蔬菜合作社',
-    region: '云南',
-    address: '云南昆明周边',
-    productCount: 5,
-    createTime: '2026-03-08'
-  }
-])
+const allRows = ref([])
+const total = ref(0)
 
 const current = ref(1)
 const size = ref(10)
+const pagedData = computed(() => allRows.value)
 
-const filtered = computed(() => {
-  let list = allRows.value
-  if (searchName.value.trim()) {
-    list = list.filter((r) => r.name.includes(searchName.value.trim()))
+const bindingModalOpen = ref(false)
+const bindingRows = ref([])
+const bindingOriginName = ref('')
+
+const bindingColumns = [
+  {
+    title: '序号',
+    align: 'center',
+    width: 70,
+    customRender: ({ index }) => index + 1
+  },
+  {
+    title: '商品ID',
+    dataIndex: 'productId',
+    align: 'center',
+    width: 100
+  },
+  {
+    title: '商品名称',
+    dataIndex: 'productName',
+    align: 'center'
+  },
+  {
+    title: '农户',
+    dataIndex: 'farmerName',
+    align: 'center',
+    customRender: ({ record }) => record?.farmerName || '-'
+  },
+  {
+    title: '绑定时间',
+    dataIndex: 'createTime',
+    align: 'center',
+    width: 190
   }
-  if (region.value) {
-    list = list.filter((r) => r.region === region.value)
-  }
-  return list
-})
-
-const total = computed(() => filtered.value.length)
-
-const pagedData = computed(() => {
-  const start = (current.value - 1) * size.value
-  return filtered.value.slice(start, start + size.value)
-})
+]
 
 const columns = [
   {
@@ -119,22 +147,27 @@ const columns = [
   },
   {
     title: '产地名称',
-    dataIndex: 'name',
+    dataIndex: 'originName',
     align: 'center'
   },
   {
-    title: '地区',
+    title: '省',
+    dataIndex: 'province',
+    align: 'center'
+  },
+  {
+    title: '市',
+    dataIndex: 'city',
+    align: 'center'
+  },
+  {
+    title: '区/县',
     dataIndex: 'region',
     align: 'center'
   },
   {
-    title: '详细地址',
-    dataIndex: 'address',
-    align: 'center'
-  },
-  {
-    title: '关联商品数',
-    dataIndex: 'productCount',
+    title: '产地简介',
+    dataIndex: 'description',
     align: 'center'
   },
   {
@@ -188,13 +221,19 @@ const columns = [
 ]
 
 const handleSearch = () => {
+  const prev = current.value
   current.value = 1
+  if (prev === 1) fetchList()
 }
 
 const handleReset = () => {
   searchName.value = ''
-  region.value = undefined
+  searchProvince.value = ''
+  searchCity.value = ''
+  searchRegion.value = ''
+  const prev = current.value
   current.value = 1
+  if (prev === 1) fetchList()
 }
 
 const handleAdd = () => {
@@ -205,8 +244,78 @@ const handleEdit = (record) => {
   router.push({ path: '/admin/trace/origin/update', query: { id: String(record.id) } })
 }
 
-const handleDelete = (id) => {
-  allRows.value = allRows.value.filter((r) => r.id !== id)
-  message.success('已删除（演示）')
+// 操作按钮“删除”入参：后端 DeleteMapping("/{id}")，仅需 id
+// 处理策略：
+// 1) 先调用“按产地查询绑定商品”接口（后端：GET /admin/trace/productOrigin/origin/{originId}）
+// 2) 若已绑定则弹窗拦截，展示全部绑定明细，不执行删除
+// 3) 若拦截接口调用异常（如后端未发布新接口/网关未同步），给出明确提示，避免前端直接报“请求错误”
+const handleDelete = async (id) => {
+  try {
+    // 删除前拦截：先检查是否已被商品绑定，避免误删
+    const bindRsp = await getProductBindingsByOriginId(id)
+    if (!bindRsp?.success) {
+      message.error(bindRsp?.message || '删除前校验失败，请稍后重试')
+      return
+    }
+    const bindings = bindRsp?.data || []
+    if (bindings.length > 0) {
+      bindingRows.value = bindings
+      const row = allRows.value.find((it) => it.id === id)
+      bindingOriginName.value = row?.originName || ''
+      bindingModalOpen.value = true
+      return
+    }
+  } catch (err) {
+    // 这里常见于：后端未重启/接口路径未发布/网关未同步
+    // 保留强拦截原则，直接终止删除，避免在校验缺失的情况下误删数据。
+    console.error('删除前绑定校验接口调用失败:', err)
+    message.error('删除前校验接口调用失败，请确认后端已发布 /admin/trace/productOrigin/origin/{originId} 并重启服务')
+    return
+  }
+
+  try {
+    const rsp = await deleteTraceOrigin(id)
+    if (!rsp?.success) {
+      message.error(rsp?.message || '删除产地失败')
+      return
+    }
+    message.success('删除成功')
+    if (allRows.value.length === 1 && current.value > 1) {
+      current.value--
+      return
+    }
+    await fetchList()
+  } catch (err) {
+    console.error('删除产地请求失败:', err)
+    message.error('删除请求失败，请检查后端服务与接口权限配置')
+  }
 }
+
+// 查询按钮入参与后端 FindOriginPageListReqVO 一一对应
+const fetchList = async () => {
+  const reqVO = {
+    current: current.value,
+    size: size.value
+  }
+  if (searchName.value.trim()) reqVO.originName = searchName.value.trim()
+  if (searchProvince.value.trim()) reqVO.province = searchProvince.value.trim()
+  if (searchCity.value.trim()) reqVO.city = searchCity.value.trim()
+  if (searchRegion.value.trim()) reqVO.region = searchRegion.value.trim()
+
+  const rsp = await fetchTraceOriginList(reqVO)
+  if (!rsp?.success) {
+    message.error(rsp?.message || '获取产地列表失败')
+    return
+  }
+  allRows.value = rsp.data || []
+  total.value = rsp.total || 0
+}
+
+onMounted(() => {
+  fetchList()
+})
+
+watch([current, size], () => {
+  fetchList()
+})
 </script>

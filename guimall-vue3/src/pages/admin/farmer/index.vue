@@ -12,11 +12,10 @@
           <a-input v-model:value="searchPhone" placeholder="请输入手机号" class="w-56" allow-clear />
         </a-form-item>
 
-        <a-form-item label="认证状态">
-          <a-select v-model:value="certStatus" placeholder="请选择" class="!w-40" allow-clear>
-            <a-select-option :value="1">已认证</a-select-option>
-            <a-select-option :value="0">待审核</a-select-option>
-            <a-select-option :value="2">未通过</a-select-option>
+        <a-form-item label="状态">
+          <a-select v-model:value="status" placeholder="请选择" class="!w-40" allow-clear>
+            <a-select-option :value="1">启用</a-select-option>
+            <a-select-option :value="0">禁用</a-select-option>
           </a-select>
         </a-form-item>
 
@@ -53,93 +52,90 @@
 
     </a-card>
 
+    <!-- 删除拦截详情弹窗：展示该农户已绑定的全部商品 -->
+    <a-modal
+      v-model:open="bindingModalOpen"
+      :title="`删除拦截：${bindingFarmerName || '当前农户'} 已绑定商品`"
+      :footer="null"
+      width="920px"
+      destroy-on-close
+    >
+      <p class="mb-3 text-sm text-orange-600">
+        当前农户已绑定 {{ bindingRows.length }} 个商品，请先解除绑定后再删除。
+      </p>
+      <a-table
+        :dataSource="bindingRows"
+        :columns="bindingColumns"
+        :pagination="{ pageSize: 8, showSizeChanger: true, pageSizeOptions: ['8', '20', '50'] }"
+        rowKey="relationId"
+        bordered
+        size="small"
+      />
+    </a-modal>
+
   </div>
 </template>
 
 <script setup>
-import { ref, computed, h } from 'vue'
+import { ref, computed, h, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { Image, Button, Popconfirm, Tag } from 'ant-design-vue'
+import { Image, Button, Popconfirm, Tag, message } from 'ant-design-vue'
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons-vue'
+import { fetchFarmerList, deleteFarmer } from '@/api/admin/farmer'
+import { getProductBindingsByFarmerId } from '@/api/admin/traceProductOrigin'
 
 const router = useRouter()
 
 const searchName = ref('')
 const searchPhone = ref('')
-const certStatus = ref()
+const status = ref()
 
-const allFarmers = ref([
-  {
-    id: 1,
-    name: '张三',
-    phone: '13800138001',
-    region: '广西桂林',
-    avatar: 'https://picsum.photos/seed/f1/80',
-    certStatus: 1,
-    productCount: 5,
-    createTime: '2026-03-01'
-  },
-  {
-    id: 2,
-    name: '李四',
-    phone: '13900139002',
-    region: '江西赣州',
-    avatar: 'https://picsum.photos/seed/f2/80',
-    certStatus: 1,
-    productCount: 3,
-    createTime: '2026-03-05'
-  },
-  {
-    id: 3,
-    name: '王五',
-    phone: '13700137003',
-    region: '云南昆明',
-    avatar: 'https://picsum.photos/seed/f3/80',
-    certStatus: 0,
-    productCount: 0,
-    createTime: '2026-03-12'
-  },
-  {
-    id: 4,
-    name: '赵六',
-    phone: '13600136004',
-    region: '四川成都',
-    avatar: 'https://picsum.photos/seed/f4/80',
-    certStatus: 2,
-    productCount: 1,
-    createTime: '2026-03-14'
-  }
-])
+const allFarmers = ref([])
+const total = ref(0)
+const bindingModalOpen = ref(false)
+const bindingRows = ref([])
+const bindingFarmerName = ref('')
 
 const current = ref(1)
 const size = ref(10)
 
-const certLabel = (s) => {
-  if (s === 1) return { text: '已认证', color: 'success' }
-  if (s === 0) return { text: '待审核', color: 'processing' }
-  return { text: '未通过', color: 'error' }
+const statusLabel = (s) => {
+  if (Number(s) === 1) return { text: '启用', color: 'success' }
+  return { text: '禁用', color: 'default' }
 }
 
-const filteredList = computed(() => {
-  let list = allFarmers.value
-  if (searchName.value.trim()) {
-    list = list.filter((f) => f.name.includes(searchName.value.trim()))
+const pagedData = computed(() => allFarmers.value)
+const bindingColumns = [
+  {
+    title: '序号',
+    align: 'center',
+    width: 70,
+    customRender: ({ index }) => index + 1
+  },
+  {
+    title: '商品ID',
+    dataIndex: 'productId',
+    align: 'center',
+    width: 100
+  },
+  {
+    title: '商品名称',
+    dataIndex: 'productName',
+    align: 'center'
+  },
+  {
+    title: '产地',
+    dataIndex: 'originName',
+    align: 'center',
+    customRender: ({ text }) => text || '-'
+  },
+  {
+    title: '绑定时间',
+    dataIndex: 'createTime',
+    align: 'center',
+    width: 190
   }
-  if (searchPhone.value.trim()) {
-    list = list.filter((f) => f.phone.includes(searchPhone.value.trim()))
-  }
-  if (certStatus.value != null) {
-    list = list.filter((f) => f.certStatus === certStatus.value)
-  }
-  return list
-})
-
-const total = computed(() => filteredList.value.length)
-
-const pagedData = computed(() => {
-  const start = (current.value - 1) * size.value
-  return filteredList.value.slice(start, start + size.value)
-})
+]
 
 const columns = [
   {
@@ -174,24 +170,29 @@ const columns = [
   },
   {
     title: '所在地区',
-    dataIndex: 'region',
+    align: 'center',
+    customRender: ({ record }) => {
+      const p = record.province || ''
+      const c = record.city || ''
+      const r = record.region || ''
+      return [p, c, r].filter(Boolean).join(' / ') || '-'
+    }
+  },
+  {
+    title: '农场名称',
+    dataIndex: 'farmName',
     align: 'center'
   },
   {
-    title: '认证状态',
+    title: '状态',
     align: 'center',
     customRender: ({ record }) => {
-      const { text, color } = certLabel(record.certStatus)
+      const { text, color } = statusLabel(record.status)
       return h(Tag, { color }, () => text)
     }
   },
   {
-    title: '关联商品数',
-    dataIndex: 'productCount',
-    align: 'center'
-  },
-  {
-    title: '注册时间',
+    title: '创建时间',
     dataIndex: 'createTime',
     align: 'center'
   },
@@ -242,20 +243,80 @@ const columns = [
 ]
 
 const handleSearch = () => {
+  const prev = current.value
   current.value = 1
+  if (prev === 1) fetchList()
 }
 
 const handleReset = () => {
   searchName.value = ''
   searchPhone.value = ''
-  certStatus.value = undefined
+  status.value = undefined
+  const prev = current.value
   current.value = 1
+  if (prev === 1) fetchList()
 }
 
-const handleDelete = (id) => {
-  allFarmers.value = allFarmers.value.filter((f) => f.id !== id)
-  if (pagedData.value.length === 0 && current.value > 1) {
-    current.value--
+// 删除按钮入参校验：
+// 1) 先按 farmerId 查询是否存在绑定商品（/admin/trace/productOrigin/farmer/{farmerId}）
+// 2) 无绑定才调用 /admin/farmer/{id} 删除
+const handleDelete = async (id) => {
+  try {
+    const bindRsp = await getProductBindingsByFarmerId(id)
+    if (!bindRsp?.success) {
+      message.error(bindRsp?.message || '删除前校验失败')
+      return
+    }
+    const bindings = bindRsp?.data || []
+    if (bindings.length > 0) {
+      bindingRows.value = bindings
+      const row = allFarmers.value.find((it) => it.id === id)
+      bindingFarmerName.value = row?.name || ''
+      bindingModalOpen.value = true
+      return
+    }
+  } catch (err) {
+    console.error('删除农户前校验失败', err)
+    message.error('删除前校验接口调用失败，请确认后端服务已发布最新接口')
+    return
   }
+
+  const rsp = await deleteFarmer(id)
+  if (!rsp?.success) {
+    message.error(rsp?.message || '删除农户失败')
+    return
+  }
+  message.success('删除成功')
+  if (allFarmers.value.length === 1 && current.value > 1) {
+    current.value--
+    return
+  }
+  await fetchList()
 }
+
+const fetchList = async () => {
+  const reqVO = {
+    current: current.value,
+    size: size.value
+  }
+  if (searchName.value.trim()) reqVO.name = searchName.value.trim()
+  if (searchPhone.value.trim()) reqVO.phone = searchPhone.value.trim()
+  if (status.value === 0 || status.value === 1) reqVO.status = status.value
+
+  const rsp = await fetchFarmerList(reqVO)
+  if (!rsp?.success) {
+    message.error(rsp?.message || '获取农户列表失败')
+    return
+  }
+  allFarmers.value = rsp.data || []
+  total.value = rsp.total || 0
+}
+
+onMounted(() => {
+  fetchList()
+})
+
+watch([current, size], () => {
+  fetchList()
+})
 </script>

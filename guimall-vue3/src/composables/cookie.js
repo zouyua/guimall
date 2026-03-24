@@ -14,12 +14,13 @@ export function getToken() {
 
 // 设置 Token 到 Cookie 中
 export function setToken(token) {
-    return cookie.set(TOKEN_KEY, token)
+    // 统一将 token 写到根路径，避免只在 /admin/login 等子路径下可见，导致刷新/跳转后读不到 token → 接口 401
+    return cookie.set(TOKEN_KEY, token, { path: '/' })
 }
 
 // 删除 Token
 export function removeToken() {
-    return cookie.remove(TOKEN_KEY)
+    return cookie.remove(TOKEN_KEY, { path: '/' })
 }
 
 // ============================== 标签页 ==============================
@@ -34,5 +35,5 @@ export function getTabList() {
 
 // 存储 TabList 到 Cookie 中
 export function setTabList(tabList) {
-    return cookie.set(TAB_LIST_KEY, tabList)
+    return cookie.set(TAB_LIST_KEY, tabList, { path: '/' })
 }

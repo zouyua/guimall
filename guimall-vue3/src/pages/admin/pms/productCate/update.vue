@@ -13,12 +13,14 @@
 
     <a-card :bordered="false" title="分类信息">
       <a-form
+        ref="formRef"
         :model="form"
+        :rules="rules"
         layout="horizontal"
         :label-col="{ span: 6 }"
         :wrapper-col="{ span: 16 }"
       >
-        <a-form-item label="分类名称">
+        <a-form-item name="name" label="分类名称" :required="true">
           <a-input v-model:value="form.name" placeholder="请输入分类名称" />
         </a-form-item>
 
@@ -80,107 +82,21 @@
 <script setup>
 import { reactive, ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { message } from 'ant-design-vue'
 import { ArrowLeftOutlined } from '@ant-design/icons-vue'
+import {
+  fetchProductCategoryOptions,
+  fetchProductCategoryList,
+  updateProductCategory
+} from '@/api/admin/productCategory'
 
 const router = useRouter()
 const route = useRoute()
-
-const CATEGORY_SELECT_OPTIONS = [
-  { id: 1, name: '水果' },
-  { id: 2, name: '柑橘类' },
-  { id: 3, name: '砂糖橘' },
-  { id: 4, name: '脐橙' },
-  { id: 5, name: '沃柑' },
-  { id: 6, name: '热带水果' },
-  { id: 7, name: '芒果' },
-  { id: 8, name: '香蕉' },
-  { id: 9, name: '蔬菜' },
-  { id: 10, name: '叶菜类' },
-  { id: 11, name: '生菜' },
-  { id: 12, name: '粮油副食' },
-  { id: 13, name: '大米' },
-  { id: 14, name: '食用油' }
-]
-
-const CATEGORY_DETAIL_MOCK = {
-  1: {
-    id: 1,
-    parentId: 0,
-    name: '水果',
-    productUnit: '斤',
-    navStatus: 1,
-    showStatus: 1,
-    sort: 1,
-    icon: '',
-    keywords: '水果 新鲜',
-    description: '新鲜水果分类'
-  },
-  2: {
-    id: 2,
-    parentId: 1,
-    name: '柑橘类',
-    productUnit: '斤',
-    navStatus: 1,
-    showStatus: 1,
-    sort: 2,
-    icon: '',
-    keywords: '柑橘',
-    description: '柑橘类子分类'
-  },
-  3: {
-    id: 3,
-    parentId: 2,
-    name: '砂糖橘',
-    productUnit: '斤',
-    navStatus: 1,
-    showStatus: 1,
-    sort: 3,
-    icon: '',
-    keywords: '',
-    description: ''
-  }
+const formRef = ref(null)
+const categoryList = ref([])
+const rules = {
+  name: [{ required: true, message: '请输入分类名称', trigger: 'blur' }]
 }
-
-const CATEGORY_LIST_MOCK = [
-  { id: 1, name: '水果', parentName: '一级分类', sort: 1 },
-  { id: 2, name: '柑橘类', parentName: '水果', sort: 2 },
-  { id: 3, name: '砂糖橘', parentName: '柑橘类', sort: 3 },
-  { id: 4, name: '脐橙', parentName: '柑橘类', sort: 4 },
-  { id: 5, name: '沃柑', parentName: '柑橘类', sort: 5 },
-  { id: 6, name: '热带水果', parentName: '水果', sort: 6 },
-  { id: 7, name: '芒果', parentName: '热带水果', sort: 7 },
-  { id: 8, name: '香蕉', parentName: '热带水果', sort: 8 },
-  { id: 9, name: '蔬菜', parentName: '一级分类', sort: 9 },
-  { id: 10, name: '叶菜类', parentName: '蔬菜', sort: 10 },
-  { id: 11, name: '生菜', parentName: '叶菜类', sort: 11 },
-  { id: 12, name: '粮油副食', parentName: '一级分类', sort: 12 },
-  { id: 13, name: '大米', parentName: '粮油副食', sort: 13 },
-  { id: 14, name: '食用油', parentName: '粮油副食', sort: 14 }
-]
-
-function getCategoryEditMockFromList(id) {
-  const row = CATEGORY_LIST_MOCK.find((r) => r.id === id)
-  if (!row) return null
-  let parentId = 0
-  if (row.parentName !== '一级分类') {
-    const p = CATEGORY_SELECT_OPTIONS.find((o) => o.name === row.parentName)
-    parentId = p ? p.id : 0
-  }
-  return {
-    id: row.id,
-    parentId,
-    name: row.name,
-    productUnit: '斤',
-    navStatus: 1,
-    showStatus: 1,
-    sort: row.sort,
-    icon: '',
-    keywords: '',
-    description: ''
-  }
-}
-
-const categoryList = ref([...CATEGORY_SELECT_OPTIONS])
 
 const form = reactive({
   id: null,
@@ -195,36 +111,63 @@ const form = reactive({
   description: ''
 })
 
-const loadMock = () => {
+const fetchInit = async () => {
   const id = Number(route.query.id)
-  const row =
-    CATEGORY_DETAIL_MOCK[id] ||
-    getCategoryEditMockFromList(id) ||
-    {
-      id: id || 1,
-      parentId: 0,
-      name: '分类',
-      productUnit: '斤',
-      navStatus: 1,
-      showStatus: 1,
-      sort: 1,
-      icon: '',
-      keywords: '',
-      description: ''
-    }
-  Object.assign(form, row)
+  if (!id || Number.isNaN(id)) return
+
+  const [optionsRsp, listRsp] = await Promise.all([
+    fetchProductCategoryOptions(),
+    fetchProductCategoryList({ pageNum: 1, pageSize: 1000 })
+  ])
+  categoryList.value = optionsRsp?.data || []
+  const row = (listRsp?.data || []).find((i) => Number(i.id) === id)
+  if (!row) {
+    message.error('未找到分类详情')
+    return
+  }
+
+  Object.assign(form, {
+    id: row.id,
+    parentId: row.parentId ?? 0,
+    name: row.name ?? '',
+    productUnit: row.productUnit ?? '',
+    navStatus: row.navStatus ?? 1,
+    showStatus: row.showStatus ?? 1,
+    sort: row.sort ?? 0,
+    icon: row.icon ?? '',
+    keywords: row.keywords ?? '',
+    description: row.description ?? ''
+  })
 }
 
 onMounted(() => {
-  loadMock()
+  fetchInit()
 })
 
 const goBack = () => {
   router.push('/admin/pms/productCate')
 }
 
-const handleSubmit = () => {
-  console.log('修改分类', { ...form })
+const handleSubmit = async () => {
+  try {
+    await formRef.value?.validate()
+  } catch (e) {
+    return
+  }
+  await updateProductCategory({
+    id: form.id,
+    parentId: form.parentId,
+    name: form.name.trim(),
+    level: form.parentId && form.parentId !== 0 ? 1 : 0,
+    productUnit: form.productUnit?.trim() || null,
+    navStatus: form.navStatus,
+    showStatus: form.showStatus,
+    sort: form.sort,
+    icon: form.icon?.trim() || null,
+    keywords: form.keywords?.trim() || null,
+    description: form.description?.trim() || null
+  })
+  message.success('保存成功')
   goBack()
 }
 </script>

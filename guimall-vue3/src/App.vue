@@ -1,27 +1,23 @@
-<script setup>
+<!-- <script setup>
 import router from './router';
 
   // js代码，setup标识通常和组合式API搭配使用，用于告诉Vue需要再编译时进行一些处理，让我们可以更简洁地使用组合式 API
   //引入自定义组件
 // import HelloWorld from './components/HelloWorld.vue'
 // import TheWelcome from './components/TheWelcome.vue'
-</script>
+</script> -->
 
 <template>
-  <!-- html代码 -->
-   <router-view></router-view>
-  <!-- <header>
-    <img alt="Vue logo" class="logo" src="./assets/logo.svg" width="125" height="125" />
-
-    <div class="wrapper">
-      <HelloWorld msg="You did it!" />
-    </div>
-  </header>
-
-  <main>
-    <TheWelcome />
-  </main> -->
+  <a-config-provider :locale="zhCN">
+    <router-view />
+  </a-config-provider>
 </template>
+
+<script setup>
+
+import zhCN from 'ant-design-vue/es/locale/zh_CN'
+
+</script>
 
 <style>
 /* 自定义顶部加载 Loading颜色 */

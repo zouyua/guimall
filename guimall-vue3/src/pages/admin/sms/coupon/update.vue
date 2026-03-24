@@ -12,70 +12,64 @@
     </a-card>
 
     <a-card :bordered="false" title="基本信息">
-      <a-form
-        :model="form"
-        layout="horizontal"
-        :label-col="{ span: 6 }"
-        :wrapper-col="{ span: 14 }"
-      >
-        <a-form-item label="优惠券名称" required>
+      <a-form ref="formRef" :model="form" :rules="rules" layout="horizontal" :label-col="{ span: 6 }" :wrapper-col="{ span: 14 }">
+        <a-form-item label="优惠券名称" name="name" required>
           <a-input v-model:value="form.name" allow-clear />
         </a-form-item>
-
-        <a-form-item label="类型" required>
-          <a-radio-group v-model:value="form.type">
-            <a-radio value="满减">满减</a-radio>
-            <a-radio value="折扣">折扣</a-radio>
-          </a-radio-group>
+        <a-form-item label="优惠类型">
+          <a-tag color="processing">满减券（固定）</a-tag>
         </a-form-item>
-
-        <a-form-item v-if="form.type === '满减'" label="满减规则" required>
-          <div class="flex flex-wrap items-center gap-2">
-            <span>满</span>
-            <a-input-number v-model:value="form.minAmount" :min="0" :precision="2" class="!w-32" />
-            <span>元，减</span>
-            <a-input-number v-model:value="form.reduceAmount" :min="0" :precision="2" class="!w-32" />
-            <span>元</span>
-          </div>
-        </a-form-item>
-
-        <a-form-item v-if="form.type === '折扣'" label="折扣规则" required>
-          <div class="flex flex-wrap items-center gap-2">
-            <span>满</span>
-            <a-input-number v-model:value="form.minAmount" :min="0" :precision="2" class="!w-32" />
-            <span>元，打</span>
-            <a-input-number v-model:value="form.discount" :min="0.1" :max="9.9" :step="0.1" :precision="1" class="!w-28" />
-            <span>折</span>
-          </div>
-        </a-form-item>
-
-        <a-form-item label="发行数量" required>
-          <a-input-number v-model:value="form.totalCount" :min="1" class="w-full max-w-xs" />
-        </a-form-item>
-
-        <a-form-item label="已领取">
-          <a-input-number v-model:value="form.received" :min="0" disabled class="w-full max-w-xs" />
-        </a-form-item>
-
-        <a-form-item label="开始时间" required>
-          <a-input v-model:value="form.startTime" allow-clear />
-        </a-form-item>
-
-        <a-form-item label="结束时间" required>
-          <a-input v-model:value="form.endTime" allow-clear />
-        </a-form-item>
-
-        <a-form-item label="状态" required>
-          <a-select v-model:value="form.status" class="w-full max-w-xs">
-            <a-select-option value="未开始">未开始</a-select-option>
-            <a-select-option value="进行中">进行中</a-select-option>
-            <a-select-option value="已结束">已结束</a-select-option>
-            <a-select-option value="已停用">已停用</a-select-option>
+        <a-form-item label="使用平台" name="platform" required>
+          <a-select v-model:value="form.platform" class="w-full max-w-xs">
+            <a-select-option :value="0">全部</a-select-option>
+            <a-select-option :value="1">移动端</a-select-option>
+            <a-select-option :value="2">WEB</a-select-option>
           </a-select>
         </a-form-item>
-
+        <a-form-item label="发行总量" name="count" required>
+          <a-input-number v-model:value="form.count" :min="1" class="w-full max-w-xs" />
+        </a-form-item>
+        <a-form-item label="已领取">
+          <a-input-number v-model:value="form.receiveCount" :min="0" disabled class="w-full max-w-xs" />
+        </a-form-item>
+        <a-form-item label="优惠金额" name="amount" required>
+          <a-input-number v-model:value="form.amount" :min="0" :precision="2" class="w-full max-w-xs" />
+        </a-form-item>
+        <a-form-item label="最低消费金额" name="minPoint" required>
+          <a-input-number v-model:value="form.minPoint" :min="0" :precision="2" class="w-full max-w-xs" />
+        </a-form-item>
+        <a-form-item label="每人限领数量" name="perLimit" required>
+          <a-input-number v-model:value="form.perLimit" :min="1" class="w-full max-w-xs" />
+        </a-form-item>
+        <a-form-item label="使用范围" name="useType" required>
+          <a-select v-model:value="form.useType" class="w-full max-w-xs">
+            <a-select-option :value="0">全场</a-select-option>
+            <a-select-option :value="1">指定分类</a-select-option>
+            <a-select-option :value="2">指定商品</a-select-option>
+          </a-select>
+        </a-form-item>
+        <a-form-item label="开始时间" name="startTime" required>
+          <a-date-picker
+            v-model:value="form.startTime"
+            show-time
+            format="YYYY-MM-DD HH:mm:ss"
+            value-format="YYYY-MM-DD HH:mm:ss"
+            class="w-full max-w-xs"
+            placeholder="请选择开始时间"
+          />
+        </a-form-item>
+        <a-form-item label="结束时间" name="endTime" required>
+          <a-date-picker
+            v-model:value="form.endTime"
+            show-time
+            format="YYYY-MM-DD HH:mm:ss"
+            value-format="YYYY-MM-DD HH:mm:ss"
+            class="w-full max-w-xs"
+            placeholder="请选择结束时间"
+          />
+        </a-form-item>
         <a-form-item label="备注">
-          <a-textarea v-model:value="form.remark" :rows="3" allow-clear />
+          <a-textarea v-model:value="form.note" :rows="3" allow-clear />
         </a-form-item>
       </a-form>
 
@@ -89,95 +83,109 @@
 </template>
 
 <script setup>
-import { reactive, onMounted } from 'vue'
+// 编辑优惠券页
+// 职责：加载详情 + 表单校验 + 保存更新
+import { reactive, onMounted, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { ArrowLeftOutlined } from '@ant-design/icons-vue'
+import { getCouponDetail, updateCoupon } from '@/api/admin/coupon'
 
 const router = useRouter()
 const route = useRoute()
 
+// 表单引用（用于 validate）
+const formRef = ref()
+// 表单数据（字段与 UpdateSmsCouponReqVO 对齐）
 const form = reactive({
-  id: null,
+  id: undefined,
   name: '',
-  type: '满减',
-  minAmount: undefined,
-  reduceAmount: undefined,
-  discount: 8.8,
-  totalCount: 0,
-  received: 0,
-  startTime: '',
-  endTime: '',
-  status: '进行中',
-  remark: ''
+  type: 0,
+  platform: 0,
+  count: 1,
+  amount: undefined,
+  perLimit: 1,
+  minPoint: undefined,
+  useType: 0,
+  startTime: undefined,
+  endTime: undefined,
+  note: '',
+  receiveCount: 0
 })
 
-const mockById = {
-  1: {
-    id: 1,
-    name: '新客满50减10',
-    type: '满减',
-    minAmount: 50,
-    reduceAmount: 10,
-    discount: 8.8,
-    totalCount: 1000,
-    received: 326,
-    startTime: '2026-03-01 00:00:00',
-    endTime: '2026-06-30 23:59:59',
-    status: '进行中',
-    remark: ''
-  },
-  2: {
-    id: 2,
-    name: '果蔬88折券',
-    type: '折扣',
-    minAmount: 30,
-    reduceAmount: 0,
-    discount: 8.8,
-    totalCount: 500,
-    received: 88,
-    startTime: '2026-04-01 00:00:00',
-    endTime: '2026-05-01 23:59:59',
-    status: '未开始',
-    remark: '限生鲜分类'
-  },
-  3: {
-    id: 3,
-    name: '春节满减',
-    type: '满减',
-    minAmount: 100,
-    reduceAmount: 20,
-    discount: 8.8,
-    totalCount: 200,
-    received: 200,
-    startTime: '2026-01-01 00:00:00',
-    endTime: '2026-02-01 23:59:59',
-    status: '已结束',
-    remark: ''
-  }
+// 表单规则（必填项提示）
+const rules = {
+  name: [{ required: true, message: '请输入优惠券名称', trigger: 'blur' }],
+  platform: [{ required: true, message: '请选择使用平台', trigger: 'change' }],
+  count: [{ required: true, message: '请输入发行总量', trigger: 'change' }],
+  amount: [{ required: true, message: '请输入优惠金额', trigger: 'change' }],
+  perLimit: [{ required: true, message: '请输入每人限领数量', trigger: 'change' }],
+  minPoint: [{ required: true, message: '请输入最低消费金额', trigger: 'change' }],
+  useType: [{ required: true, message: '请选择使用范围', trigger: 'change' }],
+  startTime: [{ required: true, message: '请选择开始时间', trigger: 'change' }],
+  endTime: [{ required: true, message: '请选择结束时间', trigger: 'change' }]
 }
 
-const loadMock = () => {
+const loadDetail = async () => {
+  // 从路由 query 读取 id，并加载优惠券详情
   const id = Number(route.query.id)
-  const row = mockById[id] || mockById[1]
-  Object.assign(form, row)
+  if (!id) {
+    message.warning('优惠券ID不能为空')
+    goBack()
+    return
+  }
+  const rsp = await getCouponDetail(id)
+  if (!rsp?.success || !rsp?.data) {
+    message.error(rsp?.message || '获取优惠券详情失败')
+    return
+  }
+  Object.assign(form, rsp.data, {
+    type: 0,
+    startTime: rsp.data.startTime || undefined,
+    endTime: rsp.data.endTime || undefined
+  })
 }
 
 onMounted(() => {
-  loadMock()
+  // 首次进入页面自动加载
+  loadDetail()
 })
 
 const goBack = () => {
   router.push('/admin/sms/coupon')
 }
 
-const handleSubmit = () => {
-  if (!form.name?.trim()) {
-    message.warning('请输入优惠券名称')
+const handleSubmit = async () => {
+  // 保存按钮入参校验：id 必须存在
+  if (!form.id) {
+    message.warning('优惠券ID不能为空')
     return
   }
-  console.log('保存优惠券', { ...form })
-  message.success('保存成功（演示数据）')
+  try {
+    await formRef.value?.validate()
+  } catch (e) {
+    return
+  }
+  // 提交入参与后端 VO 严格对齐
+  const payload = {
+    type: Number(form.type),
+    name: form.name.trim(),
+    platform: Number(form.platform),
+    count: Number(form.count),
+    amount: Number(form.amount),
+    perLimit: Number(form.perLimit),
+    minPoint: Number(form.minPoint),
+    startTime: form.startTime,
+    endTime: form.endTime,
+    useType: Number(form.useType),
+    note: form.note?.trim() || ''
+  }
+  const rsp = await updateCoupon(form.id, payload)
+  if (!rsp?.success) {
+    message.error(rsp?.message || '保存失败')
+    return
+  }
+  message.success('保存成功')
   goBack()
 }
 </script>

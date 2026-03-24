@@ -2,6 +2,8 @@ package com.gg.guimall.admin.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.gg.guimall.admin.model.vo.trace.BindProductOriginReqVO;
+import com.gg.guimall.admin.model.vo.trace.FindFarmerBindingRspVO;
+import com.gg.guimall.admin.model.vo.trace.FindOriginBindingRspVO;
 import com.gg.guimall.admin.model.vo.trace.FindProductOriginRspVO;
 import com.gg.guimall.admin.service.TraceProductOriginService;
 import com.gg.guimall.common.domain.dos.PmsFarmerDO;
@@ -20,6 +22,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Objects;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 商品产地关联 Service 实现类（基于 trace_product_origin 表）
@@ -119,6 +123,72 @@ public class TraceProductOriginServiceImpl implements TraceProductOriginService 
         rspVO.setFarmerName(Objects.nonNull(farmerDO) ? farmerDO.getName() : null);
 
         return Response.success(rspVO);
+    }
+
+    @Override
+    public Response findByOriginId(Long originId) {
+
+        if (Objects.isNull(originId) || originId <= 0) {
+            throw new BizException(ResponseCodeEnum.PARAM_NOT_VALID);
+        }
+
+        TraceOriginDO originDO = traceOriginMapper.selectById(originId);
+        if (Objects.isNull(originDO)) {
+            throw new BizException(ResponseCodeEnum.ORIGIN_NOT_FOUND);
+        }
+
+        List<TraceProductOriginDO> relations = traceProductOriginMapper.selectByOriginId(originId);
+        List<FindOriginBindingRspVO> rspList = relations.stream().map(relation -> {
+            PmsProductDO productDO = pmsProductMapper.selectById(relation.getProductId());
+            PmsFarmerDO farmerDO = Objects.nonNull(relation.getFarmerId())
+                    ? pmsFarmerMapper.selectById(relation.getFarmerId())
+                    : null;
+            return FindOriginBindingRspVO.builder()
+                    .relationId(relation.getId())
+                    .productId(relation.getProductId())
+                    .productName(Objects.nonNull(productDO) ? productDO.getName() : null)
+                    .originId(relation.getOriginId())
+                    .originName(originDO.getOriginName())
+                    .farmerId(relation.getFarmerId())
+                    .farmerName(Objects.nonNull(farmerDO) ? farmerDO.getName() : null)
+                    .createTime(relation.getCreateTime())
+                    .build();
+        }).collect(Collectors.toList());
+
+        return Response.success(rspList);
+    }
+
+    @Override
+    public Response findByFarmerId(Long farmerId) {
+
+        if (Objects.isNull(farmerId) || farmerId <= 0) {
+            throw new BizException(ResponseCodeEnum.PARAM_NOT_VALID);
+        }
+
+        PmsFarmerDO farmerDO = pmsFarmerMapper.selectById(farmerId);
+        if (Objects.isNull(farmerDO)) {
+            throw new BizException(ResponseCodeEnum.FARMER_NOT_FOUND);
+        }
+
+        List<TraceProductOriginDO> relations = traceProductOriginMapper.selectByFarmerId(farmerId);
+        List<FindFarmerBindingRspVO> rspList = relations.stream().map(relation -> {
+            PmsProductDO productDO = pmsProductMapper.selectById(relation.getProductId());
+            TraceOriginDO originDO = Objects.nonNull(relation.getOriginId())
+                    ? traceOriginMapper.selectById(relation.getOriginId())
+                    : null;
+            return FindFarmerBindingRspVO.builder()
+                    .relationId(relation.getId())
+                    .productId(relation.getProductId())
+                    .productName(Objects.nonNull(productDO) ? productDO.getName() : null)
+                    .originId(relation.getOriginId())
+                    .originName(Objects.nonNull(originDO) ? originDO.getOriginName() : null)
+                    .farmerId(relation.getFarmerId())
+                    .farmerName(farmerDO.getName())
+                    .createTime(relation.getCreateTime())
+                    .build();
+        }).collect(Collectors.toList());
+
+        return Response.success(rspList);
     }
 
     @Override

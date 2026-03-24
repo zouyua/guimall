@@ -13,37 +13,15 @@
 
     <a-card :bordered="false" title="类型信息">
       <a-form
+        ref="formRef"
         :model="form"
+        :rules="rules"
         layout="horizontal"
         :label-col="{ span: 6 }"
         :wrapper-col="{ span: 16 }"
       >
-        <a-form-item label="类型名称">
-          <a-input v-model:value="form.name" placeholder="如：规格、颜色、产地" />
-        </a-form-item>
-
-        <a-form-item label="关联分类">
-          <a-select v-model:value="form.categoryId" placeholder="请选择分类" class="w-full">
-            <a-select-option :value="1">水果</a-select-option>
-            <a-select-option :value="2">蔬菜</a-select-option>
-            <a-select-option :value="3">粮油副食</a-select-option>
-          </a-select>
-        </a-form-item>
-
-        <a-form-item label="录入方式">
-          <a-select v-model:value="form.inputType" placeholder="请选择" class="w-full">
-            <a-select-option value="唯一文本">唯一文本</a-select-option>
-            <a-select-option value="单选">单选</a-select-option>
-            <a-select-option value="多选">多选</a-select-option>
-          </a-select>
-        </a-form-item>
-
-        <a-form-item label="排序">
-          <a-input-number v-model:value="form.sort" :min="0" class="w-full" />
-        </a-form-item>
-
-        <a-form-item label="备注">
-          <a-textarea v-model:value="form.remark" :rows="3" placeholder="选填" />
+        <a-form-item name="name" label="类型名称" :required="true">
+          <a-input v-model:value="form.name" placeholder="如：规格、参数、产地类型" />
         </a-form-item>
       </a-form>
 
@@ -57,78 +35,63 @@
 </template>
 
 <script setup>
-import { reactive, onMounted } from 'vue'
+import { reactive, onMounted, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { message } from 'ant-design-vue'
 import { ArrowLeftOutlined } from '@ant-design/icons-vue'
+import {
+  fetchProductAttrCategoryList,
+  updateProductAttrCategory
+} from '@/api/admin/productAttrCategory'
 
 const router = useRouter()
 const route = useRoute()
+const formRef = ref(null)
+
+const rules = {
+  name: [{ required: true, message: '请输入类型名称', trigger: 'blur' }]
+}
 
 const form = reactive({
   id: null,
-  name: '',
-  categoryId: undefined,
-  inputType: '单选',
-  sort: 0,
-  remark: ''
+  name: ''
 })
-
-const categoryNameToId = {
-  水果: 1,
-  蔬菜: 2,
-  粮油副食: 3
-}
-
-const mockById = {
-  1: {
-    id: 1,
-    name: '规格',
-    categoryName: '水果',
-    inputType: '多选',
-    sort: 1,
-    remark: '如：大果、中果'
-  },
-  2: {
-    id: 2,
-    name: '产地',
-    categoryName: '水果',
-    inputType: '唯一文本',
-    sort: 2,
-    remark: ''
-  },
-  3: {
-    id: 3,
-    name: '包装',
-    categoryName: '蔬菜',
-    inputType: '单选',
-    sort: 1,
-    remark: '箱装/袋装'
-  }
-}
-
-const loadMock = () => {
+const fetchDetail = async () => {
   const id = Number(route.query.id)
-  const row = mockById[id] || mockById[1]
+  if (!id || Number.isNaN(id)) return
+
+  const rsp = await fetchProductAttrCategoryList({ current: 1, size: 1000 })
+  const row = (rsp?.data || []).find((i) => Number(i.id) === id)
+  if (!row) {
+    message.error('未找到商品类型')
+    return
+  }
+
   Object.assign(form, {
     id: row.id,
-    name: row.name,
-    categoryId: categoryNameToId[row.categoryName],
-    inputType: row.inputType,
-    sort: row.sort,
-    remark: row.remark
+    name: row.name ?? ''
   })
 }
 
 onMounted(() => {
-  loadMock()
+  fetchDetail()
 })
 
 const goBack = () => {
   router.push('/admin/pms/productAttr/productAttrList')
 }
 
-const handleSubmit = () => {
-  console.log('更新商品类型', { ...form })
+const handleSubmit = async () => {
+  try {
+    await formRef.value?.validate()
+  } catch (e) {
+    return
+  }
+  await updateProductAttrCategory({
+    id: form.id,
+    name: form.name.trim()
+  })
+  message.success('保存成功')
   goBack()
 }
 </script>

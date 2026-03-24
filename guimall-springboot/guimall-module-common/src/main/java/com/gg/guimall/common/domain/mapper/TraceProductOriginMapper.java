@@ -31,4 +31,10 @@ public interface TraceProductOriginMapper extends BaseMapper<TraceProductOriginD
                 .eq(Objects.nonNull(originId), TraceProductOriginDO::getOriginId, originId)
                 .orderByDesc(TraceProductOriginDO::getCreateTime));
     }
+
+    default List<TraceProductOriginDO> selectByFarmerId(Long farmerId) {
+        return selectList(new LambdaQueryWrapper<TraceProductOriginDO>()
+                .eq(Objects.nonNull(farmerId), TraceProductOriginDO::getFarmerId, farmerId)
+                .orderByDesc(TraceProductOriginDO::getCreateTime));
+    }
 }

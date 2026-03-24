@@ -16,6 +16,10 @@ public interface TraceProductOriginService {
 
     Response findByProductId(Long productId);
 
+    Response findByOriginId(Long originId);
+
+    Response findByFarmerId(Long farmerId);
+
     Response unbind(Long productId);
 }
 

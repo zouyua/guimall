@@ -61,9 +61,15 @@
 </template>
 
 <script setup>
-
-import { ref, computed, h } from 'vue'
+import { ref, computed, h, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { message } from 'ant-design-vue'
+import {
+  fetchProductCategoryList,
+  fetchProductCategoryTree,
+  deleteProductCategory,
+  fetchProductCategoryOptions
+} from '@/api/admin/productCategory'
 
 import {
   Button,
@@ -84,83 +90,10 @@ const searchName = ref('')
 const selectedTree = ref(null)
 
 
-/* ================= 分类树数据 ================= */
-
-const categoryTree = ref([
-  {
-    title: '水果',
-    key: 1,
-    children: [
-      {
-        title: '柑橘类',
-        key: 2,
-        children: [
-          { title: '砂糖橘', key: 3 },
-          { title: '脐橙', key: 4 },
-          { title: '沃柑', key: 5 }
-        ]
-      },
-      {
-        title: '热带水果',
-        key: 6,
-        children: [
-          { title: '芒果', key: 7 },
-          { title: '香蕉', key: 8 }
-        ]
-      }
-    ]
-  },
-
-  {
-    title: '蔬菜',
-    key: 9,
-    children: [
-      {
-        title: '叶菜类',
-        key: 10,
-        children: [
-          { title: '生菜', key: 11 },
-          { title: '菠菜', key: 12 }
-        ]
-      }
-    ]
-  },
-
-  {
-    title: '粮油副食',
-    key: 13,
-    children: [
-      { title: '大米', key: 14 },
-      { title: '食用油', key: 15 },
-      { title: '蜂蜜', key: 16 }
-    ]
-  }
-])
-
-
-/* ================= 分类表格数据 ================= */
-
-const allCategories = ref([
-
-  { id: 1, name: '水果', parentName: '一级分类', sort: 1, createTime: '2026-03-10' },
-  { id: 2, name: '柑橘类', parentName: '水果', sort: 2, createTime: '2026-03-10' },
-  { id: 3, name: '砂糖橘', parentName: '柑橘类', sort: 3, createTime: '2026-03-11' },
-  { id: 4, name: '脐橙', parentName: '柑橘类', sort: 4, createTime: '2026-03-11' },
-  { id: 5, name: '沃柑', parentName: '柑橘类', sort: 5, createTime: '2026-03-11' },
-
-  { id: 6, name: '热带水果', parentName: '水果', sort: 6, createTime: '2026-03-12' },
-  { id: 7, name: '芒果', parentName: '热带水果', sort: 7, createTime: '2026-03-12' },
-  { id: 8, name: '香蕉', parentName: '热带水果', sort: 8, createTime: '2026-03-12' },
-
-  { id: 9, name: '蔬菜', parentName: '一级分类', sort: 9, createTime: '2026-03-13' },
-  { id: 10, name: '叶菜类', parentName: '蔬菜', sort: 10, createTime: '2026-03-13' },
-  { id: 11, name: '生菜', parentName: '叶菜类', sort: 11, createTime: '2026-03-13' },
-
-  { id: 12, name: '粮油副食', parentName: '一级分类', sort: 12, createTime: '2026-03-15' },
-  { id: 13, name: '大米', parentName: '粮油副食', sort: 13, createTime: '2026-03-15' },
-  { id: 14, name: '食用油', parentName: '粮油副食', sort: 14, createTime: '2026-03-15' }
-
-])
+/* ================= 分类树数据 & 表格数据 ================= */
+const categoryTree = ref([])
+const allCategories = ref([])
+const categoryNameMap = ref({})
 
 
 /* ================= 分页 ================= */
@@ -169,38 +102,9 @@ const current = ref(1)
 const size = ref(10)
 
 
-/* ================= 数据过滤 ================= */
-
-const filteredData = computed(() => {
-
-  let list = allCategories.value
-
-  const keyword = searchName.value.trim()
-
-  if (keyword) {
-    list = list.filter(c => c.name.includes(keyword))
-  }
-
-  if (selectedTree.value) {
-    list = list.filter(c => c.id === selectedTree.value)
-  }
-
-  return list
-
-})
-
-
-const total = computed(() => filteredData.value.length)
-
-
-const pagedData = computed(() => {
-
-  const start = (current.value - 1) * size.value
-  const end = start + size.value
-
-  return filteredData.value.slice(start, end)
-
-})
+/* ================= 分页数据 ================= */
+const total = ref(0)
+const pagedData = computed(() => allCategories.value)
 
 
 /* ================= 表格列 ================= */
@@ -222,18 +126,18 @@ const columns = [
 
   {
     title: '父分类',
-    dataIndex: 'parentName',
-    align: 'center'
+    align: 'center',
+    customRender: ({ record }) => {
+      if (!record.parentId || Number(record.parentId) === 0) return '一级分类'
+      return categoryNameMap.value[record.parentId] || '父级分类不存在'
+    }
   },
 
   {
     title: '分类级别',
     align: 'center',
     customRender: ({ record }) => {
-      if (record.parentName === '一级分类') {
-        return '一级分类'
-      }
-      return '二级分类'
+      return Number(record.level) === 0 ? '一级分类' : '二级分类'
     }
   },
 
@@ -301,13 +205,17 @@ const columns = [
 /* ================= 方法 ================= */
 
 const handleSearch = () => {
+  const prev = current.value
   current.value = 1
+  if (prev === 1) fetchList()
 }
 
 const handleReset = () => {
   searchName.value = ''
   selectedTree.value = null
+  const prev = current.value
   current.value = 1
+  if (prev === 1) fetchList()
 }
 
 /* 新增分类 */
@@ -322,19 +230,77 @@ const handleEdit = (record) => {
 
 /* 树选择 */
 const handleTreeSelect = (keys) => {
-  selectedTree.value = keys[0]
+  selectedTree.value = keys?.[0] ? Number(keys[0]) : null
+  const prev = current.value
+  current.value = 1
+  if (prev === 1) fetchList()
 }
 
 /* 删除 */
-const handleDelete = (id) => {
-
-  allCategories.value =
-    allCategories.value.filter(c => c.id !== id)
-
-  if (pagedData.value.length === 1 && current.value > 1) {
+const handleDelete = async (id) => {
+  await deleteProductCategory(id)
+  message.success('删除成功')
+  if (allCategories.value.length === 1 && current.value > 1) {
     current.value--
+    return
+  }
+  await fetchTree()
+  await fetchList()
+}
+
+const toTreeNodes = (list = []) => {
+  return list.map((item) => ({
+    title: item.name || item.title,
+    key: String(item.id || item.key),
+    children: toTreeNodes(item.children || [])
+  }))
+}
+
+const fetchTree = async () => {
+  const rsp = await fetchProductCategoryTree()
+  const treeRaw = Array.isArray(rsp) ? rsp : rsp?.data || []
+  categoryTree.value = toTreeNodes(treeRaw)
+}
+
+const fetchCategoryNameMap = async () => {
+  const rsp = await fetchProductCategoryOptions()
+  const rows = rsp?.data || []
+  const nextMap = {}
+  rows.forEach((item) => {
+    if (item?.id != null) nextMap[item.id] = item.name || ''
+  })
+  categoryNameMap.value = nextMap
+}
+
+const fetchList = async () => {
+  const reqVO = {
+    pageNum: current.value,
+    pageSize: size.value
+  }
+  if (searchName.value.trim()) reqVO.name = searchName.value.trim()
+  // 通过树节点选择时，只筛选分类名（后端当前无 parentId 条件）
+  if (selectedTree.value) {
+    const selectedName = categoryNameMap.value[selectedTree.value]
+    if (selectedName) reqVO.name = selectedName
   }
 
+  const rsp = await fetchProductCategoryList(reqVO)
+  if (!rsp?.success) {
+    message.error(rsp?.message || '获取分类列表失败')
+    return
+  }
+  allCategories.value = rsp.data || []
+  total.value = rsp.total || 0
 }
+
+onMounted(async () => {
+  await fetchCategoryNameMap()
+  await fetchTree()
+  await fetchList()
+})
+
+watch([current, size], () => {
+  fetchList()
+})
 
 </script>
