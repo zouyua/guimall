@@ -17,7 +17,9 @@
         <a-descriptions-item label="分类">{{ detail.categoryName }}</a-descriptions-item>
         <a-descriptions-item label="关联农户">{{ detail.farmerName }}</a-descriptions-item>
         <a-descriptions-item label="销售价格">¥ {{ detail.price }}</a-descriptions-item>
-        <a-descriptions-item label="库存">{{ detail.stock }} {{ detail.unit }}</a-descriptions-item>
+        <a-descriptions-item label="库存">
+          {{ displayStock }}<span v-if="displayUnit">&nbsp;{{ displayUnit }}</span>
+        </a-descriptions-item>
         <a-descriptions-item label="销量">{{ detail.sale }}</a-descriptions-item>
         <a-descriptions-item label="创建时间">{{ detail.createTime }}</a-descriptions-item>
         <a-descriptions-item label="上架">{{ detail.publishStatus ? '是' : '否' }}</a-descriptions-item>
@@ -41,11 +43,12 @@
 </template>
 
 <script setup>
-import { reactive, onMounted } from 'vue'
+import { reactive, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { ArrowLeftOutlined } from '@ant-design/icons-vue'
 import { getProductDetail } from '@/api/admin/product'
+import { getFarmerDetail } from '@/api/admin/farmer'
 
 const router = useRouter()
 const route = useRoute()
@@ -66,6 +69,20 @@ const detail = reactive({
   createTime: '',
   description: ''
 })
+
+// 库存展示：保证为数字；单位若缺失/异常（如乱码或问号）则不展示，避免页面出现“?”。
+const displayStock = computed(() => {
+  const n = Number(detail.stock)
+  return Number.isFinite(n) ? n : 0
+})
+
+const displayUnit = computed(() => {
+  const unit = String(detail.unit ?? '').trim()
+  if (!unit || unit === 'null' || unit === 'undefined') return ''
+  if (/[?�]/.test(unit)) return ''
+  return unit
+})
+
 const loadDetail = async () => {
   const id = Number(route.query.id)
   if (!id || Number.isNaN(id)) return
@@ -81,7 +98,7 @@ const loadDetail = async () => {
     name: rsp.data.name ?? '',
     pic: rsp.data.pic ?? '',
     categoryName: rsp.data.categoryName ?? '',
-    farmerName: rsp.data.farmerName ?? '',
+    farmerName: rsp.data.farmerName ?? rsp.data?.farmer?.name ?? '',
     price: rsp.data.price ?? 0,
     stock: rsp.data.stock ?? 0,
     sale: rsp.data.sale ?? 0,
@@ -90,6 +107,17 @@ const loadDetail = async () => {
     createTime: rsp.data.createTime ?? '',
     description: rsp.data.description ?? ''
   })
+
+  // 兼容：部分后端详情接口未返回 farmerName，仅返回 farmerId
+  if (!detail.farmerName) {
+    const farmerId = rsp.data.farmerId ?? rsp.data?.farmer?.id
+    if (farmerId != null) {
+      const farmerRsp = await getFarmerDetail(farmerId)
+      if (farmerRsp?.success && farmerRsp?.data) {
+        detail.farmerName = farmerRsp.data.name ?? farmerRsp.data.realName ?? ''
+      }
+    }
+  }
 }
 
 onMounted(() => {

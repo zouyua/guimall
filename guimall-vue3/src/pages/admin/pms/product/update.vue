@@ -11,6 +11,7 @@
       </div>
     </a-card>
 
+    <!-- 基本信息 -->
     <a-card :bordered="false" title="基本信息">
       <a-form
         ref="formRef"
@@ -20,60 +21,73 @@
         :label-col="{ span: 6 }"
         :wrapper-col="{ span: 14 }"
       >
-        <a-form-item name="name" label="商品名称" :required="true">
-          <a-input v-model:value="form.name" placeholder="请输入商品名称" />
+
+        <a-form-item name="name" label="商品名称">
+          <a-input v-model:value="form.name" class="gm-field" />
         </a-form-item>
 
-        <a-form-item name="productCategoryId" label="商品分类" :required="true">
-          <a-select v-model:value="form.productCategoryId" placeholder="请选择分类" class="w-full" allow-clear>
-            <a-select-option v-for="item in categoryOptions" :key="item.id" :value="item.id">
+        <a-form-item name="productCategoryId" label="商品分类">
+          <a-select v-model:value="form.productCategoryId" allow-clear class="gm-field">
+            <a-select-option
+              v-for="item in categoryOptions"
+              :key="item.id"
+              :value="item.id"
+            >
               {{ item.name }}
             </a-select-option>
           </a-select>
         </a-form-item>
 
         <a-form-item label="属性分类">
-          <a-select v-model:value="form.productAttributeCategoryId" placeholder="可选" class="w-full" allow-clear>
-            <a-select-option v-for="item in attrCategoryOptions" :key="item.id" :value="item.id">
+          <a-select v-model:value="form.productAttributeCategoryId" allow-clear class="gm-field">
+            <a-select-option
+              v-for="item in attrCategoryOptions"
+              :key="item.id"
+              :value="item.id"
+            >
               {{ item.name }}
             </a-select-option>
           </a-select>
         </a-form-item>
 
-        <a-form-item name="farmerId" label="关联农户" :required="true">
-          <a-select v-model:value="form.farmerId" placeholder="请选择农户" class="w-full" allow-clear>
-            <a-select-option v-for="item in farmerOptions" :key="item.id" :value="item.id">
+        <a-form-item name="farmerId" label="关联农户">
+          <a-select v-model:value="form.farmerId" allow-clear class="gm-field">
+            <a-select-option
+              v-for="item in farmerOptions"
+              :key="item.id"
+              :value="item.id"
+            >
               {{ item.name }}
             </a-select-option>
           </a-select>
         </a-form-item>
 
-        <a-form-item name="productSn" label="商品货号" :required="true">
-          <a-input v-model:value="form.productSn" placeholder="请输入商品货号" />
+        <a-form-item name="productSn" label="商品货号">
+          <a-input v-model:value="form.productSn" class="gm-field" />
         </a-form-item>
 
         <a-form-item label="主图地址">
-          <a-input v-model:value="form.pic" placeholder="图片 URL" />
+          <a-input v-model:value="form.pic" class="gm-field" />
         </a-form-item>
 
-        <a-form-item name="price" label="销售价格" :required="true">
-          <a-input-number v-model:value="form.price" :min="0" :precision="2" class="w-full" />
+        <a-form-item name="price" label="销售价格">
+          <a-input-number v-model:value="form.price" :min="0" :precision="2" class="gm-field" />
         </a-form-item>
 
         <a-form-item label="市场价">
-          <a-input-number v-model:value="form.originalPrice" :min="0" :precision="2" class="w-full" />
+          <a-input-number v-model:value="form.originalPrice" :min="0" class="gm-field" />
         </a-form-item>
 
-        <a-form-item name="stock" label="库存" :required="true">
-          <a-input-number v-model:value="form.stock" :min="0" class="w-full" />
+        <a-form-item name="stock" label="库存">
+          <a-input-number v-model:value="form.stock" :min="0" class="gm-field" />
         </a-form-item>
 
         <a-form-item label="销量">
-          <a-input-number v-model:value="form.sale" :min="0" class="w-full" disabled />
+          <a-input-number v-model:value="form.sale" disabled class="gm-field" />
         </a-form-item>
 
         <a-form-item label="单位">
-          <a-input v-model:value="form.unit" placeholder="如：斤、箱" />
+          <a-input v-model:value="form.unit" class="gm-field" />
         </a-form-item>
 
         <a-form-item label="上架">
@@ -81,45 +95,85 @@
         </a-form-item>
 
         <a-form-item label="商品描述">
-          <a-textarea v-model:value="form.description" :rows="4" placeholder="请输入商品描述" />
+          <a-textarea v-model:value="form.description" :rows="4" class="gm-field" />
         </a-form-item>
+
       </a-form>
 
       <div class="mt-6 flex justify-center gap-3">
         <a-button type="primary" @click="handleSubmit">保存</a-button>
         <a-button @click="goBack">取消</a-button>
       </div>
+
+    </a-card>
+
+    <!-- SKU库存 -->
+    <a-card title="SKU库存管理" class="mt-5">
+
+      <div class="mb-4">
+        <a-button @click="handleAddSku">新增SKU</a-button>
+        <a-button
+          type="primary"
+          :loading="skuSaveLoading"
+          @click="handleSaveSku"
+          style="margin-left:10px"
+        >
+          保存SKU库存
+        </a-button>
+      </div>
+
+      <a-table
+        :dataSource="skuRows"
+        :columns="skuColumns"
+        rowKey="tempKey"
+        :pagination="false"
+        bordered
+      />
+
     </a-card>
 
   </div>
 </template>
 
 <script setup>
-import { reactive, onMounted, ref } from 'vue'
+import { reactive, ref, onMounted, h } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { message } from 'ant-design-vue'
+import { message, Input, InputNumber, Button, Popconfirm } from 'ant-design-vue'
 import { ArrowLeftOutlined } from '@ant-design/icons-vue'
-import { getProductDetail, updateProduct, publishProduct, unpublishProduct } from '@/api/admin/product'
-import { fetchProductCategoryOptions } from '@/api/admin/productCategory'
+
+import {
+  getProductDetail,
+  updateProduct,
+  publishProduct,
+  unpublishProduct
+} from '@/api/admin/product'
+
+import {
+  fetchProductCategoryOptions
+} from '@/api/admin/productCategory'
+
 import { fetchFarmerOptions } from '@/api/admin/farmer'
 import { fetchProductAttrCategoryOptions } from '@/api/admin/productAttrCategory'
 
+import {
+  fetchSkuListByProductId,
+  saveSkuList,
+  deleteSku
+} from '@/api/admin/productSku'
+
 const router = useRouter()
 const route = useRoute()
-const formRef = ref(null)
-const publishChecked = ref(false)
+
+const formRef = ref()
+
 const categoryOptions = ref([])
 const farmerOptions = ref([])
 const attrCategoryOptions = ref([])
 
-const rules = {
-  name: [{ required: true, message: '请输入商品名称', trigger: 'blur' }],
-  productCategoryId: [{ required: true, message: '请选择商品分类', trigger: 'change' }],
-  farmerId: [{ required: true, message: '请选择关联农户', trigger: 'change' }],
-  productSn: [{ required: true, message: '请输入商品货号', trigger: 'blur' }],
-  price: [{ required: true, message: '请输入销售价格', trigger: 'change' }],
-  stock: [{ required: true, message: '请输入库存', trigger: 'change' }]
-}
+const publishChecked = ref(false)
+
+const skuRows = ref([])
+const skuSaveLoading = ref(false)
 
 const form = reactive({
   id: null,
@@ -138,17 +192,35 @@ const form = reactive({
   description: ''
 })
 
-onMounted(() => {
-  fetchInit()
-})
+const normalizeUnit = (v) => {
+  const unit = String(v ?? '').trim()
+  if (!unit || unit === 'null' || unit === 'undefined') return '斤'
+  // 常见乱码/占位符：问号、替换字符等
+  if (/[?\uFF1F\uFFFD�]/.test(unit)) return '斤'
+  return unit
+}
+
+const rules = {
+  name: [{ required: true, message: '请输入商品名称' }],
+  productCategoryId: [{ required: true, message: '请选择分类' }],
+  farmerId: [{ required: true, message: '请选择农户' }],
+  productSn: [{ required: true, message: '请输入商品货号' }],
+  price: [{ required: true, message: '请输入价格' }],
+  stock: [{ required: true, message: '请输入库存' }]
+}
 
 const goBack = () => {
   router.push('/admin/pms/product')
 }
 
-const fetchInit = async () => {
+onMounted(() => {
+  init()
+})
+
+const init = async () => {
+
   const id = Number(route.query.id)
-  if (!id || Number.isNaN(id)) return
+  if (!id) return
 
   const [categoryRsp, farmerRsp, attrRsp, detailRsp] = await Promise.all([
     fetchProductCategoryOptions(),
@@ -161,50 +233,164 @@ const fetchInit = async () => {
   farmerOptions.value = farmerRsp?.data || []
   attrCategoryOptions.value = attrRsp?.data || []
 
-  if (!detailRsp?.success || !detailRsp?.data) {
-    message.error(detailRsp?.message || '获取商品详情失败')
+  Object.assign(form, detailRsp.data)
+  form.unit = normalizeUnit(form.unit)
+
+  publishChecked.value = form.publishStatus === 1
+
+  await fetchSkuList()
+}
+
+const fetchSkuList = async () => {
+
+  const rsp = await fetchSkuListByProductId(form.id)
+
+  if (!rsp?.success) {
+    message.error('获取SKU失败')
     return
   }
 
-  Object.assign(form, {
-    id: detailRsp.data.id,
-    name: detailRsp.data.name ?? '',
-    productCategoryId: detailRsp.data.productCategoryId,
-    productAttributeCategoryId: detailRsp.data.productAttributeCategoryId,
-    farmerId: detailRsp.data.farmerId,
-    productSn: detailRsp.data.productSn ?? '',
-    pic: detailRsp.data.pic ?? '',
-    price: detailRsp.data.price,
-    originalPrice: detailRsp.data.originalPrice,
-    stock: detailRsp.data.stock ?? 0,
-    sale: detailRsp.data.sale ?? 0,
-    unit: detailRsp.data.unit ?? '斤',
-    publishStatus: detailRsp.data.publishStatus ?? 0,
-    description: detailRsp.data.description ?? ''
+  skuRows.value = (rsp.data || []).map((item, i) => {
+
+    let spec = ''
+
+    try {
+      const arr = JSON.parse(item.spData || '[]')
+      spec = arr?.[0]?.value || ''
+    } catch {}
+
+    return {
+      ...item,
+      spec,
+      tempKey: item.id || `${Date.now()}-${i}`,
+      price: item.price ? Number(item.price) : undefined,
+      stock: item.stock ? Number(item.stock) : 0
+    }
   })
-  publishChecked.value = Number(form.publishStatus) === 1
+}
+
+const skuColumns = [
+  {
+    title: '规格',
+    customRender: ({ record }) =>
+      h(Input, {
+        class: 'gm-field',
+        value: record.spec,
+        onChange: e => (record.spec = e.target.value)
+      })
+  },
+  {
+    title: 'SKU编码',
+    customRender: ({ record }) =>
+      h(Input, {
+        class: 'gm-field',
+        value: record.skuCode,
+        onChange: e => (record.skuCode = e.target.value)
+      })
+  },
+  {
+    title: '价格',
+    customRender: ({ record }) =>
+      h(InputNumber, {
+        class: 'gm-field',
+        value: record.price,
+        onChange: v => (record.price = v)
+      })
+  },
+  {
+    title: '库存',
+    customRender: ({ record }) =>
+      h(InputNumber, {
+        class: 'gm-field',
+        value: record.stock,
+        onChange: v => (record.stock = v)
+      })
+  },
+  {
+    title: '操作',
+    customRender: ({ record }) =>
+      h(
+        Popconfirm,
+        {
+          title: '确认删除?',
+          onConfirm: () => handleDeleteSku(record)
+        },
+        {
+          default: () =>
+            h(Button, { danger: true, size: 'small' }, () => '删除')
+        }
+      )
+  }
+]
+
+const handleAddSku = () => {
+  skuRows.value.push({
+    tempKey: Date.now(),
+    productId: form.id,
+    skuCode: '',
+    spec: '',
+    price: undefined,
+    stock: 0
+  })
+}
+
+const handleDeleteSku = async record => {
+
+  if (!record.id) {
+    skuRows.value = skuRows.value.filter(r => r.tempKey !== record.tempKey)
+    return
+  }
+
+  await deleteSku(record.id)
+
+  message.success('删除成功')
+
+  fetchSkuList()
+}
+
+const handleSaveSku = async () => {
+
+  skuSaveLoading.value = true
+
+  try {
+
+    const payload = skuRows.value.map(row => ({
+      id: row.id,
+      productId: form.id,
+      skuCode: row.skuCode,
+      price: row.price,
+      stock: row.stock,
+      promotionPrice: null,
+      lowStock: 0,
+      pic: '',
+      spData: JSON.stringify([
+        { key: '规格', value: row.spec }
+      ])
+    }))
+
+    const rsp = await saveSkuList(form.id, payload)
+
+    if (!rsp.success) {
+      message.error('保存失败')
+      return
+    }
+
+    message.success('SKU保存成功')
+
+    fetchSkuList()
+
+  } finally {
+    skuSaveLoading.value = false
+  }
 }
 
 const handleSubmit = async () => {
-  try {
-    await formRef.value?.validate()
-  } catch (e) {
-    return
-  }
+
+  await formRef.value.validate()
 
   await updateProduct({
-    id: form.id,
-    productCategoryId: form.productCategoryId,
-    productAttributeCategoryId: form.productAttributeCategoryId,
-    farmerId: form.farmerId,
-    name: form.name.trim(),
-    productSn: form.productSn.trim(),
-    pic: form.pic?.trim() || null,
-    description: form.description?.trim() || null,
-    price: form.price,
-    originalPrice: form.originalPrice,
-    stock: form.stock,
-    unit: form.unit?.trim() || null,
+    ...form,
+    unit: normalizeUnit(form.unit),
     publishStatus: publishChecked.value ? 1 : 0
   })
 
@@ -213,45 +399,80 @@ const handleSubmit = async () => {
   } else {
     await unpublishProduct(form.id)
   }
+
   message.success('保存成功')
+
   goBack()
 }
 </script>
 
 <style scoped>
-:deep(.ant-input),
-:deep(.ant-input-number),
-:deep(.ant-select-selector),
-:deep(.ant-input-affix-wrapper) {
-  border: 1px solid #d9d9d9 !important;
-  border-radius: 6px !important;
+/* 统一把“更改商品信息”页的表单控件改成浅灰圆角风格 */
+:deep(.gm-field .ant-input),
+:deep(.gm-field.ant-input),
+:deep(.gm-field .ant-input-number),
+:deep(.gm-field.ant-input-number),
+:deep(.gm-field .ant-input-number-input),
+:deep(.gm-field .ant-select-selector),
+:deep(.gm-field .ant-select-selection-search-input),
+:deep(.gm-field.ant-select .ant-select-selector),
+:deep(.gm-field .ant-input-affix-wrapper),
+:deep(.gm-field.ant-input-affix-wrapper),
+:deep(.gm-field textarea.ant-input) {
+  background: #f5f6f8;
+  border-radius: 10px;
+  color: rgba(0, 0, 0, 0.88);
 }
 
-:deep(.ant-input:hover),
-:deep(.ant-select-selector:hover),
-:deep(.ant-input-number:hover) {
-  border-color: #bfbfbf !important;
+:deep(.gm-field .ant-input),
+:deep(.gm-field.ant-input),
+:deep(.gm-field .ant-input-number),
+:deep(.gm-field.ant-input-number),
+:deep(.gm-field .ant-input-affix-wrapper),
+:deep(.gm-field.ant-input-affix-wrapper),
+:deep(.gm-field .ant-select-selector),
+:deep(.gm-field.ant-select .ant-select-selector),
+:deep(.gm-field textarea.ant-input) {
+  border-color: #cfd3dc;
 }
 
-:deep(.ant-input:focus),
-:deep(.ant-input-focused),
-:deep(.ant-select-focused .ant-select-selector),
-:deep(.ant-input-number-focused) {
-  border-color: #4096ff !important;
-  box-shadow: 0 0 0 2px rgba(64, 150, 255, 0.15);
+:deep(.gm-field .ant-input:hover),
+:deep(.gm-field.ant-input:hover),
+:deep(.gm-field .ant-input-number:hover),
+:deep(.gm-field.ant-input-number:hover),
+:deep(.gm-field .ant-input-affix-wrapper:hover),
+:deep(.gm-field.ant-input-affix-wrapper:hover),
+:deep(.gm-field.ant-select:hover .ant-select-selector),
+:deep(.gm-field textarea.ant-input:hover) {
+  border-color: #b8bcc7;
 }
 
-:deep(.ant-select-selector) {
-  height: 32px !important;
-  display: flex;
-  align-items: center;
+:deep(.gm-field .ant-input:focus),
+:deep(.gm-field .ant-input-focused),
+:deep(.gm-field .ant-input-number-focused),
+:deep(.gm-field.ant-select-focused .ant-select-selector),
+:deep(.gm-field textarea.ant-input:focus) {
+  border-color: #aeb4c2;
+  box-shadow: 0 0 0 2px rgba(207, 211, 220, 0.35);
 }
 
-:deep(.ant-input-number) {
-  width: 100%;
+:deep(.gm-field .ant-select-selection-item),
+:deep(.gm-field .ant-select-selection-placeholder),
+:deep(.gm-field .ant-select-selection-search-input),
+:deep(.gm-field .ant-input-number-input),
+:deep(.gm-field .ant-input::placeholder),
+:deep(.gm-field textarea.ant-input::placeholder) {
+  color: rgba(0, 0, 0, 0.45);
 }
 
-:deep(textarea.ant-input) {
-  border-radius: 6px !important;
+:deep(.gm-field .ant-select-selection-item) {
+  color: rgba(0, 0, 0, 0.88);
+}
+
+:deep(.gm-field .ant-input[disabled]),
+:deep(.gm-field .ant-input-number-disabled),
+:deep(.gm-field textarea.ant-input[disabled]) {
+  background: #f1f2f5;
+  color: rgba(0, 0, 0, 0.45);
 }
 </style>

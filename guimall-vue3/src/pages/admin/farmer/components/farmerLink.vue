@@ -215,10 +215,9 @@ const columns = [
   }
 ]
 
-const handleSearch = () => {
-  const prev = current.value
+const handleSearch = async () => {
   current.value = 1
-  if (prev === 1) applyFilters()
+  await fetchRows()
 }
 
 const handleReset = () => {
@@ -291,12 +290,17 @@ const fetchOptions = async () => {
 
 const applyFilters = () => {
   let list = fullRows.value
+
   if (searchFarmer.value.trim()) {
-    list = list.filter((r) => (r.farmerName || '').includes(searchFarmer.value.trim()))
+    list = list.filter(r =>
+      (r.farmerName || '').includes(searchFarmer.value.trim())
+    )
   }
-  if (linkStatus.value === 1 || linkStatus.value === 0) {
-    list = list.filter((r) => r.linkStatus === linkStatus.value)
+
+  if (linkStatus.value !== undefined) {
+    list = list.filter(r => r.linkStatus === linkStatus.value)
   }
+
   allRows.value = list
   total.value = list.length
 }

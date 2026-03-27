@@ -82,7 +82,7 @@ import {
   publishProduct,
   unpublishProduct
 } from '@/api/admin/product'
-import { fetchProductCategoryOptions } from '@/api/admin/productCategory'
+import { fetchProductCategoryTree } from '@/api/admin/productCategory'
 import {
   fetchHomeNewProductList,
   createHomeNewProduct,
@@ -101,8 +101,10 @@ const searchProductName = ref('')
 const categoryId = ref()
 const publishStatus = ref()
 const categoryOptions = ref([])
+const categoryDescendantIdsMap = ref({})
 const allProducts = ref([])
 const total = ref(0)
+const clientPaging = ref(false)
 
 // 通过 productId 反查“新品推荐表 / 人气推荐表”主键，便于删除时走正确接口入参
 const homeNewIdMap = ref({})
@@ -166,7 +168,16 @@ const columns = [
   {
     title: '库存',
     dataIndex: 'stock',
-    align: 'center'
+    align: 'center',
+    customRender: ({ text }) => {
+      // Handle null, undefined, and ensure proper number display
+      if (text === null || text === undefined) {
+        return '0'
+      }
+      // Convert to number if it's a string, then back to string for display
+      const numValue = typeof text === 'string' ? parseInt(text, 10) : text
+      return isNaN(numValue) ? '0' : numValue.toString()
+    }
   },
 
   {
@@ -290,11 +301,34 @@ const columns = [
 const current = ref(1)
 const size = ref(10)
 
-const pagedData = computed(() => allProducts.value)
+const pagedData = computed(() => {
+  if (!clientPaging.value) return allProducts.value
+  const start = (current.value - 1) * size.value
+  return allProducts.value.slice(start, start + size.value)
+})
 
 const fetchCategories = async () => {
-  const rsp = await fetchProductCategoryOptions()
-  categoryOptions.value = rsp?.data || []
+  const rsp = await fetchProductCategoryTree()
+  const tree = Array.isArray(rsp) ? rsp : rsp?.data || []
+
+  // 下拉框仅展示一级分类
+  categoryOptions.value = tree.map((n) => ({
+    id: n.id,
+    name: n.name,
+    children: n.children || []
+  }))
+
+  // 构建：一级分类 -> 所有叶子分类ID（用于查询时展开到二级/多级）
+  const map = {}
+  const collectLeaves = (node) => {
+    const children = node?.children || []
+    if (!children.length) return [node.id]
+    return children.flatMap(collectLeaves)
+  }
+  categoryOptions.value.forEach((n) => {
+    if (n?.id != null) map[n.id] = collectLeaves(n)
+  })
+  categoryDescendantIdsMap.value = map
 }
 
 const fetchStatusRelations = async () => {
@@ -327,8 +361,49 @@ const fetchProducts = async () => {
     size: size.value
   }
   if (searchProductName.value.trim()) reqVO.name = searchProductName.value.trim()
-  if (categoryId.value != null) reqVO.categoryId = categoryId.value
   if (publishStatus.value === 0 || publishStatus.value === 1) reqVO.publishStatus = publishStatus.value
+
+  const selectedId = categoryId.value
+  const descendantIds = selectedId != null ? (categoryDescendantIdsMap.value[selectedId] || [selectedId]) : []
+
+  // 选了一级分类且存在子类：展开为多个分类并合并结果（后端只支持单 categoryId 精确过滤）
+  if (selectedId != null && descendantIds.length > 1) {
+    clientPaging.value = true
+
+    const calls = descendantIds.map((cid) =>
+      fetchProductList({
+        ...reqVO,
+        current: 1,
+        size: 1000,
+        categoryId: cid
+      })
+    )
+
+    const rsps = await Promise.all(calls)
+    const rows = []
+    rsps.forEach((r) => {
+      if (r?.success && Array.isArray(r.data)) rows.push(...r.data)
+    })
+
+    const uniq = new Map()
+    rows.forEach((item) => {
+      if (item?.id != null && !uniq.has(item.id)) uniq.set(item.id, item)
+    })
+
+    const merged = Array.from(uniq.values()).map((item) => ({
+      ...item,
+      stock: typeof item.stock === 'string' ? parseInt(item.stock, 10) : (item.stock || 0),
+      newStatus: !!homeNewIdMap.value[item.id],
+      recommendStatus: !!homeRecommendIdMap.value[item.id]
+    }))
+
+    allProducts.value = merged
+    total.value = merged.length
+    return
+  }
+
+  clientPaging.value = false
+  if (selectedId != null) reqVO.categoryId = selectedId
 
   const rsp = await fetchProductList(reqVO)
   if (!rsp?.success) {
@@ -338,6 +413,7 @@ const fetchProducts = async () => {
 
   allProducts.value = (rsp.data || []).map((item) => ({
     ...item,
+    stock: typeof item.stock === 'string' ? parseInt(item.stock, 10) : (item.stock || 0),
     newStatus: !!homeNewIdMap.value[item.id],
     recommendStatus: !!homeRecommendIdMap.value[item.id]
   }))

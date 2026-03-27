@@ -473,6 +473,21 @@ CREATE TABLE `pms_sku_stock`  (
 -- ----------------------------
 INSERT INTO `pms_sku_stock` VALUES (6, 10, 'GLSTJ-5J', 39.90, 35.90, 200, 10, 0, 'https://static.example.com/pic/stj-5j.jpg', 0, '[{\"key\":\"净含量\",\"value\":\"5斤\"}]');
 INSERT INTO `pms_sku_stock` VALUES (7, 10, 'GLSTJ-10J', 69.90, 59.90, 120, 10, 0, 'https://static.example.com/pic/stj-10j.jpg', 0, '[{\"key\":\"净含量\",\"value\":\"10斤\"}]');
+INSERT INTO `pms_sku_stock` (`product_id`, `sku_code`, `price`, `promotion_price`, `stock`, `low_stock`, `lock_stock`, `pic`, `sale`, `sp_data`) VALUES
+(9, 'SKU-9-A', 19.90, NULL, 300, 10, 0, 'https://img.example.com/product/lipy.png', 0, '[{\"key\":\"默认\",\"value\":\"A\"}]'),
+(9, 'SKU-9-B', 21.89, NULL, 180, 10, 0, 'https://img.example.com/product/lipy.png', 0, '[{\"key\":\"默认\",\"value\":\"B\"}]'),
+(14, 'SKU-14-A', 26.80, NULL, 250, 10, 0, 'https://static.example.com/pic/mifen-main.jpg', 0, '[{\"key\":\"默认\",\"value\":\"A\"}]'),
+(14, 'SKU-14-B', 29.48, NULL, 160, 10, 0, 'https://static.example.com/pic/mifen-main.jpg', 0, '[{\"key\":\"默认\",\"value\":\"B\"}]'),
+(15, 'SKU-15-A', 79.90, NULL, 120, 10, 0, 'https://static.example.com/pic/teaoil-main.jpg', 0, '[{\"key\":\"默认\",\"value\":\"A\"}]'),
+(15, 'SKU-15-B', 87.89, NULL, 80, 10, 0, 'https://static.example.com/pic/teaoil-main.jpg', 0, '[{\"key\":\"默认\",\"value\":\"B\"}]'),
+(16, 'SKU-16-A', 18.90, NULL, 220, 10, 0, 'https://static.example.com/pic/chili-main.jpg', 0, '[{\"key\":\"默认\",\"value\":\"A\"}]'),
+(16, 'SKU-16-B', 20.79, NULL, 140, 10, 0, 'https://static.example.com/pic/chili-main.jpg', 0, '[{\"key\":\"默认\",\"value\":\"B\"}]'),
+(17, 'SKU-17-A', 42.80, NULL, 190, 10, 0, 'https://static.example.com/pic/gongcheng-shizi-main.jpg', 0, '[{\"key\":\"默认\",\"value\":\"A\"}]'),
+(17, 'SKU-17-B', 47.08, NULL, 110, 10, 0, 'https://static.example.com/pic/gongcheng-shizi-main.jpg', 0, '[{\"key\":\"默认\",\"value\":\"B\"}]'),
+(18, 'SKU-18-A', 23.90, NULL, 210, 10, 0, 'https://static.example.com/pic/tomato-main.jpg', 0, '[{\"key\":\"默认\",\"value\":\"A\"}]'),
+(18, 'SKU-18-B', 26.29, NULL, 130, 10, 0, 'https://static.example.com/pic/tomato-main.jpg', 0, '[{\"key\":\"默认\",\"value\":\"B\"}]'),
+(19, 'SKU-19-A', 16.90, NULL, 240, 10, 0, 'https://static.example.com/pic/douchi-main.jpg', 0, '[{\"key\":\"默认\",\"value\":\"A\"}]'),
+(19, 'SKU-19-B', 18.59, NULL, 150, 10, 0, 'https://static.example.com/pic/douchi-main.jpg', 0, '[{\"key\":\"默认\",\"value\":\"B\"}]');
 
 -- ----------------------------
 -- Table structure for sms_coupon
