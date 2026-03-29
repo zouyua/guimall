@@ -6,6 +6,7 @@ import com.gg.guimall.common.domain.dos.PmsProductDO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -35,7 +36,7 @@ public interface PmsProductMapper extends BaseMapper<PmsProductDO> {
                 .like(Objects.nonNull(name), PmsProductDO::getName, name)
                 .eq(Objects.nonNull(categoryId), PmsProductDO::getProductCategoryId, categoryId)
                 .eq(Objects.nonNull(publishStatus), PmsProductDO::getPublishStatus, publishStatus)
-                .eq(PmsProductDO::getDeleteStatus, 0)
+                .eq(PmsProductDO::getIsDeleted, 0)
                 .orderByDesc(PmsProductDO::getCreateTime);
 
         return selectPage(page, wrapper);
@@ -53,7 +54,7 @@ public interface PmsProductMapper extends BaseMapper<PmsProductDO> {
             long current,
             long size,
             String keyword,
-            Long categoryId,
+            List<Long> categoryIds,
             Integer sortType
     ) {
         Page<PmsProductDO> page = new Page<>(current, size);
@@ -62,8 +63,11 @@ public interface PmsProductMapper extends BaseMapper<PmsProductDO> {
         wrapper
                 .like(Objects.nonNull(keyword) && keyword.trim().length() > 0, PmsProductDO::getName, keyword)
                 .eq(PmsProductDO::getPublishStatus, 1)
-                .eq(PmsProductDO::getDeleteStatus, 0)
-                .eq(Objects.nonNull(categoryId), PmsProductDO::getProductCategoryId, categoryId);
+                .eq(PmsProductDO::getIsDeleted, 0);
+
+        if (Objects.nonNull(categoryIds) && !categoryIds.isEmpty()) {
+            wrapper.in(PmsProductDO::getProductCategoryId, categoryIds);
+        }
 
         int type = sortType == null ? 0 : sortType;
         switch (type) {
@@ -91,7 +95,7 @@ public interface PmsProductMapper extends BaseMapper<PmsProductDO> {
         wrapper
                 .like(PmsProductDO::getName, keyword)
                 .eq(PmsProductDO::getPublishStatus, 1)
-                .eq(PmsProductDO::getDeleteStatus, 0)
+                .eq(PmsProductDO::getIsDeleted, 0)
                 .orderByDesc(PmsProductDO::getSale);
 
         return selectList(wrapper);
@@ -107,7 +111,7 @@ public interface PmsProductMapper extends BaseMapper<PmsProductDO> {
         wrapper
                 .eq(PmsProductDO::getProductCategoryId, categoryId)
                 .eq(PmsProductDO::getPublishStatus, 1)
-                .eq(PmsProductDO::getDeleteStatus, 0)
+                .eq(PmsProductDO::getIsDeleted, 0)
                 .orderByDesc(PmsProductDO::getSale);
 
         return selectList(wrapper);
@@ -122,7 +126,7 @@ public interface PmsProductMapper extends BaseMapper<PmsProductDO> {
 
         wrapper
                 .eq(PmsProductDO::getPublishStatus, 1)
-                .eq(PmsProductDO::getDeleteStatus, 0)
+                .eq(PmsProductDO::getIsDeleted, 0)
                 .orderByDesc(PmsProductDO::getCreateTime);
 
         return selectList(wrapper);

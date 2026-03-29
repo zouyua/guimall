@@ -41,7 +41,7 @@ public interface OmsOrderMapper extends BaseMapper<OmsOrderDO> {
                 .eq(Objects.nonNull(status), OmsOrderDO::getStatus, status)
                 .ge(Objects.nonNull(beginTime), OmsOrderDO::getCreateTime, beginTime)
                 .le(Objects.nonNull(endTime), OmsOrderDO::getCreateTime, endTime)
-                .eq(OmsOrderDO::getDeleteStatus, 0)
+                .eq(OmsOrderDO::getIsDeleted, 0)
                 .orderByDesc(OmsOrderDO::getCreateTime);
 
         return selectPage(page, wrapper);

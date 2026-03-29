@@ -46,25 +46,8 @@ public class OmsOrderItemDO {
 
     private String productSkuCode;
 
-    private Long productCategoryId;
-
-    private String promotionName;
-
-    private BigDecimal promotionAmount;
-
-    private BigDecimal couponAmount;
-
-    private BigDecimal integrationAmount;
+    private String productAttr;
 
     private BigDecimal realAmount;
-
-    private Integer giftIntegration;
-
-    private Integer giftGrowth;
-
-    /**
-     * 商品销售属性(JSON)
-     */
-    private String productAttr;
 }
 

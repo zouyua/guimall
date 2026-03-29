@@ -36,7 +36,7 @@ public class FindSmsCouponDetailRspVO {
 
     private Integer perLimit;
 
-    private BigDecimal minPoint;
+    private BigDecimal minAmount;
 
     private LocalDateTime startTime;
 

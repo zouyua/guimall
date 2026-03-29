@@ -55,10 +55,12 @@ public class SmsCouponServiceImpl implements SmsCouponService {
             return Response.success(new ArrayList<>());
         }
 
-        // 查询会员已领取的优惠券
+        // 查询会员已领取的优惠券，转为 Set 实现 O(1) 查找
         LambdaQueryWrapper<SmsCouponHistoryDO> historyWrapper = Wrappers.lambdaQuery();
         historyWrapper.eq(SmsCouponHistoryDO::getMemberId, memberId);
         List<SmsCouponHistoryDO> historyList = couponHistoryMapper.selectList(historyWrapper);
+        java.util.Set<Long> receivedCouponIds = historyList.stream()
+                .map(SmsCouponHistoryDO::getCouponId).collect(java.util.stream.Collectors.toSet());
 
         // 转换为响应VO
         List<FindCouponListRspVO> result = couponList.stream().map(coupon -> {
@@ -69,7 +71,7 @@ public class SmsCouponServiceImpl implements SmsCouponService {
                     .platform(coupon.getPlatform())
                     .amount(coupon.getAmount())
                     .perLimit(coupon.getPerLimit())
-                    .minPoint(coupon.getMinPoint())
+                    .minAmount(coupon.getMinAmount())
                     .startTime(coupon.getStartTime())
                     .endTime(coupon.getEndTime())
                     .useType(coupon.getUseType())
@@ -85,11 +87,8 @@ public class SmsCouponServiceImpl implements SmsCouponService {
             int remainCount = coupon.getPublishCount() - coupon.getReceiveCount();
             vo.setRemainCount(Math.max(remainCount, 0));
 
-            // 判断是否已领取
-            long receivedCount = historyList.stream()
-                    .filter(h -> h.getCouponId().equals(coupon.getId()))
-                    .count();
-            vo.setReceived(receivedCount > 0);
+            // O(1) 查找是否已领取
+            vo.setReceived(receivedCouponIds.contains(coupon.getId()));
 
             return vo;
         }).collect(Collectors.toList());
@@ -198,7 +197,7 @@ public class SmsCouponServiceImpl implements SmsCouponService {
                     .couponName(coupon.getName())
                     .couponCode(history.getCouponCode())
                     .amount(coupon.getAmount())
-                    .minPoint(coupon.getMinPoint())
+                    .minAmount(coupon.getMinAmount())
                     .startTime(coupon.getStartTime())
                     .endTime(coupon.getEndTime())
                     .useType(coupon.getUseType())
@@ -307,7 +306,7 @@ public class SmsCouponServiceImpl implements SmsCouponService {
                     }
 
                     // 检查是否满足最低消费金额
-                    if (totalAmount.compareTo(coupon.getMinPoint()) < 0) {
+                    if (totalAmount.compareTo(coupon.getMinAmount()) < 0) {
                         return null;
                     }
 
@@ -317,7 +316,7 @@ public class SmsCouponServiceImpl implements SmsCouponService {
                             .couponName(coupon.getName())
                             .couponCode(history.getCouponCode())
                             .amount(coupon.getAmount())
-                            .minPoint(coupon.getMinPoint())
+                            .minAmount(coupon.getMinAmount())
                             .startTime(coupon.getStartTime())
                             .endTime(coupon.getEndTime())
                             .useType(coupon.getUseType())

@@ -51,6 +51,7 @@
       <mybatis-plus.version>3.5.2</mybatis-plus.version>
       <p6spy.version>3.9.1</p6spy.version>
       <jjwt.version>0.11.2</jjwt.version>
+      <alipay.version>4.38.10.ALL</alipay.version>
   </properties>
 
 <!--  统一依赖管理-->
@@ -136,6 +137,11 @@
               <groupId>io.jsonwebtoken</groupId>
               <artifactId>jjwt-jackson</artifactId>
               <version>${jjwt.version}</version>
+          </dependency>
+          <dependency>
+              <groupId>com.alipay.sdk</groupId>
+              <artifactId>alipay-sdk-java</artifactId>
+              <version>${alipay.version}</version>
           </dependency>
       </dependencies>
   </dependencyManagement>

@@ -73,7 +73,7 @@ public class OmsOrderServiceImpl implements OmsOrderService {
         }
 
         OmsOrderDO orderDO = orderMapper.selectById(id);
-        if (Objects.isNull(orderDO) || Objects.equals(orderDO.getDeleteStatus(), 1)) {
+        if (Objects.isNull(orderDO) || Objects.equals(orderDO.getIsDeleted(), 1)) {
             throw new BizException(ResponseCodeEnum.ORDER_NOT_FOUND);
         }
 
@@ -156,7 +156,7 @@ public class OmsOrderServiceImpl implements OmsOrderService {
             throw new BizException(ResponseCodeEnum.PARAM_NOT_VALID);
         }
         OmsOrderDO orderDO = orderMapper.selectById(id);
-        if (Objects.isNull(orderDO) || Objects.equals(orderDO.getDeleteStatus(), 1)) {
+        if (Objects.isNull(orderDO) || Objects.equals(orderDO.getIsDeleted(), 1)) {
             throw new BizException(ResponseCodeEnum.ORDER_NOT_FOUND);
         }
         return orderDO;

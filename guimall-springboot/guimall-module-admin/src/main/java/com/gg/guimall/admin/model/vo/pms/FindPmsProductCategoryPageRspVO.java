@@ -46,28 +46,16 @@ public class FindPmsProductCategoryPageRspVO {
     private Integer level;
 
     /**
-     * 商品数量
-     */
-    @ApiModelProperty(value = "商品数量")
-    private Integer productCount;
-
-    /**
      * 商品单位
      */
     @ApiModelProperty(value = "商品单位")
     private String productUnit;
 
     /**
-     * 导航栏显示状态
+     * 启用状态：0禁用 1启用
      */
-    @ApiModelProperty(value = "导航栏显示状态")
-    private Integer navStatus;
-
-    /**
-     * 显示状态
-     */
-    @ApiModelProperty(value = "显示状态")
-    private Integer showStatus;
+    @ApiModelProperty(value = "启用状态")
+    private Integer status;
 
     /**
      * 排序

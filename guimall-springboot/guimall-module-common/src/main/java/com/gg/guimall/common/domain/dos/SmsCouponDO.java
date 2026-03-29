@@ -58,9 +58,9 @@ public class SmsCouponDO {
     private Integer perLimit;
 
     /**
-     * 最低消费金额
+     * 使用门槛（满X元可用，0表示无门槛）
      */
-    private BigDecimal minPoint;
+    private BigDecimal minAmount;
 
     /**
      * 开始时间

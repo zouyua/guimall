@@ -63,6 +63,10 @@ public class PmsFarmerDO {
     /** 状态：0禁用 1启用 */
     private Integer status;
 
+    /** 是否删除：0否 1是 */
+    @com.baomidou.mybatisplus.annotation.TableLogic(value = "0", delval = "1")
+    private Integer isDeleted;
+
     /** 创建时间 */
     private LocalDateTime createTime;
 

@@ -44,7 +44,7 @@ public class FindPmsProductDetailRspVO {
 
     private BigDecimal price;
 
-    private BigDecimal originalPrice;
+    private BigDecimal marketPrice;
 
     private BigDecimal promotionPrice;
 
@@ -64,11 +64,11 @@ public class FindPmsProductDetailRspVO {
 
     private String note;
 
-    private String detailTitle;
-
-    private String detailDesc;
-
     private String detailHtml;
+
+    private Integer isNew;
+
+    private Integer isRecommend;
 
     private Integer promotionType;
 

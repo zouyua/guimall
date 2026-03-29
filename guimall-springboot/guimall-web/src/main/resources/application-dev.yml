@@ -3,9 +3,9 @@ spring:
     #  指定数据库驱动类
     driver-class-name: com.p6spy.engine.spy.P6SpyDriver
     # 数据库连接信息
-    url: jdbc:p6spy:mysql://127.0.0.1:3306/guimall?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&useSSL=false&zeroDateTimeBehavior=convertToNull
-    username: root
-    password: 1234
+    url: jdbc:p6spy:mysql://175.178.0.51:3306/guimall?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&useSSL=false&zeroDateTimeBehavior=convertToNull
+    username: guimall
+    password: MTAMZP3XjcZ5kyCe
     hikari: # 数据库连接池使用 Hikari
       minimum-idle: 5 # 连接池中最小空闲连接数
       maximum-pool-size: 20 # 连接池中允许的最大连接数
@@ -19,3 +19,21 @@ spring:
     user:
       name: admin #登录用户名
       password: admin #登录密码
+
+alipay:
+   # 应用ID
+  app-id: 9021000162647538
+   # 应用私钥（从密钥工具生成）
+  private-key: MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDEMfpBpj3OwU+M40zYKLIaeeiihQg3C1RMUO8Nw25+Wnax8LOx/Y1hZYjokN3YNZGu2MYE/Gd/PFWHfJ9I2zGUWi5Lu9d8M4Ph9Y6NlIdV9q23FtnRXSkJH87kHb0gRk3IGswpHDKLEweU88aXswOeANsDm2Gcef9+9Oo0wtuHZS3opCIgvxsTK6mOKJFU1U6Gj+qk8N6tadHPHSxEyDPNfmhxir0Zv9FFTzE/VKgzEcARCudVCcb/6DjRiazQqP+GSQtW4e5jqyR0oHhwbwZ3yRuNihPW6I0VKMEsxoAH2nRgQnzNbwtDbKX+iyalXvkPdUSIOARgJwPkckQbLTfxAgMBAAECggEAUiSWocvnjtwy4Ur9jncjcqBd/UVzlhBBQB6WqA2OAor/rSqZIcmF2yR2uOCGcZKkJy+NYOMItiXdrXdI/WkAjhtfzMedxduPuRhlkfOA4kYAn2qK0fSOTMqrhajJ2Wx1/nTxy7iJlN7nyr5yBGun9Qxopk71BF2z0kTaljKLVVkUu/u5wLF614hTThD+CgtUMTYItS9Afv/cMrdyRYOiOVANEWYz6tPJgBM+zsNiXOQka8XnI/lxXEoS1eOClW+ZQ+spc5RNyJrmCpvNm8Nn/mOJFf29y+M3rd96i4xAhxvnLNFW2ImwbNy+LOGsN/D1QCzIPPnD4lUxdULkOrf+3QKBgQDjLiCKCHak/aunnnhf+2XWHvBlrlJWrpzm4BdrcZX1oszGkNo5SnphzH1SGDvnbZbbFq+wm3HOWBjAIL2bMHVxeVNgfD6wg1FJ600mRiS5xGvcCJFYAMfigAmIL9nF7Dxjz+hOfhshQc7E7YKsyrGPZ4TzfRej4GYpUqWnYc3xjwKBgQDdFZZNhJmF1SHcubZxV46EhOXbfr3AbcjGAEIGFJIqMTQYtPx8ABZh3G+yCKbc9qSwYJ34HSo9liLB3U5rkyNS538eo5zk4WFW5dKKNpiY8hCXFXkThW8kqXM5XslnWWxaWxMLXvgGfozhRBZNQu1BMQVeu4ZTKBI/sNrYSgJ+fwKBgQCg+YBpDpIzWuQVA788E8EXNhkVk64YaeYX2lX99iBSS6daVC2tRs7tGZ77Wtynogmw+KRJOfwsQFRZX1m6611sqJGh3qf1HzesbyTdp/pB/6KF6TRD7Vm1bxBSBcYD7t7jwuBTLhw/NogzFjDwCzhB6xJUDiGAJ3N8eGmU70KklQKBgFvA/MsZMBoCFXakwJoTi3tmKHtLA3dcWMoMC1q4qNzH5OYoHu1bn+5nbRfHTXFBD6J/xq/VctVyfORWc5hjzXI3z2Mo5hF7lElbQmDIPdakB8ycRc6bP0BI7yAtPYsd6sEpMSMz+92+IbvP5S2VjB/VN3RUgW/7nm8+d+Tx+k0DAoGBAKyS+Eo5PhiI3CDgxU30zARQkaukHILkD6Ha2/q1qopchJovMDNxELOF2jwrIm1Ly6rLguMOo40Sve2jLvJ+gShVJ/ubv/dsX64wfbOin4X0CFDGxxOm0toGBIOPvJH4mo8RcNPPvCyY0iNd4pI631fcZGzJkq4aku06EqiVVAYZ
+  # 支付宝公钥（从开放平台获取）
+  alipay-public-key: MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAiEsDK+6PvjcdwmxLBu0F7rlpmZeBeIHASJoCkCX7fO0rV4CE5ykLmA/OhInTgxfhDxXP4NCMzq3d0fKAMoYre4R4Ss/f9vDd5WqIZM+4DN9xTOiDXk/VWBgYWyoLVO6fBqCPN8kozjRE6Yd5Mg9qcGd/HCJngoVPTN6fnhlnuW/Qvj7Z9cwqwIElxOew+NvUJOBWwkhqz4Hnla3lF8cBkshueXPyS8Q8WvmKCPp6IStcohusxyRm7f1qKL0udwmTw6EmOo8mJ6Qd11rBpO0L+IIopDFjI6NBee0z22f4JWzrJUfcHNa+Caaxs1F99emi6k30pxJJ45uFD7Lxr9B8ywIDAQAB
+  # 服务器异步通知页面路径
+  notify-url: "http://你的域名/alipay/notify"
+   # 页面跳转同步通知页面路径
+  return-url: "http://你的域名/alipay/return"
+   # 签名方式
+  sign-type: "RSA2"
+  # 字符编码格式
+  charset: "UTF-8"
+  # 支付宝网关（沙箱环境）
+  gateway-url: "https://openapi-sandbox.dl.alipaydev.com/gateway.do"

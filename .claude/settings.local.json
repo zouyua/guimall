@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mvn compile:*)",
+      "Bash(mvn spring-boot:run -pl guimall-web -am)",
+      "Bash(\"D:\\\\Java\\\\Project\\\\guimall\\\\guimall_v2.sql\":*)",
+      "Bash(grep -h '@TableName' D:JavaProjectguimallguimall-springbootguimall-module-commonsrcmainjavacomggguimallcommondomaindos*.java)",
+      "Bash(\"D:/Java/Project/guimall/guimall_v2.sql\":*)",
+      "Bash(mysql -u root -p guimall -e \"DESCRIBE pms_product;\")"
+    ]
+  }
+}

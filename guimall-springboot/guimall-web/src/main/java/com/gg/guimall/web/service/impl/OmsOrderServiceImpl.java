@@ -109,14 +109,6 @@ public class OmsOrderServiceImpl implements OmsOrderService {
                 .payType(0)
                 .sourceType(0)
                 .status(0)
-                .orderType(0)
-                .autoConfirmDay(null)
-                .integration(0)
-                .growth(0)
-                .promotionInfo(null)
-                .billType(null)
-                .billHeader(null)
-                .billContent(null)
                 .receiverName(reqVO.getReceiverName())
                 .receiverPhone(reqVO.getReceiverPhone())
                 .receiverPostCode(reqVO.getReceiverPostCode())
@@ -126,7 +118,7 @@ public class OmsOrderServiceImpl implements OmsOrderService {
                 .receiverDetailAddress(reqVO.getReceiverDetailAddress())
                 .note(reqVO.getNote())
                 .confirmStatus(0)
-                .deleteStatus(0)
+                .isDeleted(0)
                 .build();
 
         orderMapper.insert(orderDO);
@@ -155,14 +147,7 @@ public class OmsOrderServiceImpl implements OmsOrderService {
                     .productQuantity(item.getQuantity())
                     .productSkuId(item.getProductSkuId())
                     .productSkuCode(item.getProductSkuCode())
-                    .productCategoryId(item.getProductCategoryId())
-                    .promotionName(null)
-                    .promotionAmount(BigDecimal.ZERO)
-                    .couponAmount(BigDecimal.ZERO)
-                    .integrationAmount(BigDecimal.ZERO)
                     .realAmount(realAmount)
-                    .giftIntegration(0)
-                    .giftGrowth(0)
                     .productAttr(item.getProductAttr())
                     .build();
 
@@ -219,7 +204,7 @@ public class OmsOrderServiceImpl implements OmsOrderService {
         }
 
         OmsOrderDO orderDO = orderMapper.selectById(reqVO.getId());
-        if (Objects.isNull(orderDO) || Objects.equals(orderDO.getDeleteStatus(), 1)
+        if (Objects.isNull(orderDO) || Objects.equals(orderDO.getIsDeleted(), 1)
                 || !Objects.equals(orderDO.getMemberId(), reqVO.getMemberId())) {
             throw new BizException(ResponseCodeEnum.ORDER_NOT_FOUND);
         }

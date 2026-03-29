@@ -1,13 +1,3 @@
-import Index from '@/pages/frontend/index.vue'
-import Login from '@/pages/admin/login.vue'
-import AdminIndex from '@/pages/admin/index.vue'
-// import AdminDashboard from '@/pages/admin/dashboard/index.vue'
-// import AdminFarmer from '@/pages/admin/farmer/index.vue'
-// import AdminOms from '@/pages/admin/oms'
-// import AdminPms from '@/pages/admin/product/index.vue'
-// import AdminSms from '@/pages/admin/sms'
-// import AdminTrace from '@/pages/admin/trace'
-// import AdminUms from '@/pages/admin/ums'
 import { createRouter, createWebHashHistory } from 'vue-router'
 import Admin from '@/layouts/admin/admin.vue'
 
@@ -15,16 +5,47 @@ import Admin from '@/layouts/admin/admin.vue'
 const routes = [
     {
         path: '/', // 路由地址
-        component: Index, // 对应组件
+        component: () => import('@/pages/frontend/home/index.vue'), // 对应组件
         meta: { // meta 信息
             title: 'guimall 首页' // 页面标题
         }
     },
     {
+        path: '/trace/:productId', // 溯源详情页
+        component: () => import('@/pages/frontend/trace/index.vue'),
+        meta: {
+            title: '商品溯源'
+        }
+    },
+    {
+        path: '/category', // 商品分类
+        component: () => import('@/pages/frontend/product/category.vue'),
+        meta: { title: '商品分类' }
+    },
+    {
+        path: '/support', // 助农专区
+        component: () => import('@/pages/frontend/common/placeholder.vue'),
+        props: { title: '助农专区', description: '本专区直连桂林贫困县区农户，展示各类扶贫产品和助农故事，支持产地直发。' },
+        meta: { title: '助农专区' }
+    },
+    {
+        path: '/about', // 关于我们
+        component: () => import('@/pages/frontend/common/placeholder.vue'),
+        props: { title: '关于我们', description: 'GUIMALL 致力于通过数字化手段，让桂林深山里的好物走向全国，助力农户增收。' },
+        meta: { title: '关于我们' }
+    },
+    {
         path: '/login',//登录页
-        component: Login,
+        component: () => import('@/pages/admin/login.vue'),
         meta: {
             title: 'guimall 登录页'
+        }
+    },
+    {
+        path: '/product/detail', // 前台商品详情页
+        component: () => import('@/pages/frontend/product/detail.vue'),
+        meta: {
+            title: '商品详情'
         }
     },
     {
@@ -34,7 +55,7 @@ const routes = [
         children: [
             {
                 path: '/admin/index',
-                component: AdminIndex,
+                component: () => import('@/pages/admin/index.vue'),
                 meta: { title: '仪表盘' }
             },
             {

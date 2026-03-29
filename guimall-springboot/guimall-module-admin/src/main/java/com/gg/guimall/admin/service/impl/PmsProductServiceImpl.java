@@ -21,7 +21,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -87,18 +89,17 @@ public class PmsProductServiceImpl implements PmsProductService {
                 .albumPics(reqVO.getAlbumPics())
                 .description(reqVO.getDescription())
                 .price(reqVO.getPrice())
-                .originalPrice(reqVO.getOriginalPrice())
+                .marketPrice(reqVO.getMarketPrice())
                 .stock(reqVO.getStock())
                 .unit(reqVO.getUnit())
                 .weight(reqVO.getWeight())
                 .keywords(reqVO.getKeywords())
                 .note(reqVO.getNote())
-                .detailTitle(reqVO.getDetailTitle())
-                .detailDesc(reqVO.getDetailDesc())
                 .detailHtml(reqVO.getDetailHtml())
                 .publishStatus(0) // 默认下架状态
-                .verifyStatus(0) // 默认未审核
-                .deleteStatus(0) // 默认未删除
+                .isNew(reqVO.getIsNew() != null ? reqVO.getIsNew() : 0)
+                .isRecommend(reqVO.getIsRecommend() != null ? reqVO.getIsRecommend() : 0)
+                .isDeleted(0) // 默认未删除
                 .sort(reqVO.getSort() != null ? reqVO.getSort() : 0)
                 .build();
 
@@ -122,53 +123,53 @@ public class PmsProductServiceImpl implements PmsProductService {
                 reqVO.getPublishStatus()
         );
 
+        if (page.getRecords().isEmpty()) {
+            return PageResponse.success(page, Collections.emptyList());
+        }
+
+        // 批量查询分类名
+        List<Long> catIds = page.getRecords().stream()
+                .map(PmsProductDO::getProductCategoryId).filter(Objects::nonNull).distinct().collect(Collectors.toList());
+        Map<Long, String> catNameMap = catIds.isEmpty() ? Collections.emptyMap() :
+                pmsProductCategoryMapper.selectBatchIds(catIds).stream()
+                        .collect(Collectors.toMap(PmsProductCategoryDO::getId, PmsProductCategoryDO::getName));
+
+        // 批量查询农户名
+        List<Long> farmerIds = page.getRecords().stream()
+                .map(PmsProductDO::getFarmerId).filter(Objects::nonNull).distinct().collect(Collectors.toList());
+        Map<Long, String> farmerNameMap = farmerIds.isEmpty() ? Collections.emptyMap() :
+                pmsFarmerMapper.selectBatchIds(farmerIds).stream()
+                        .collect(Collectors.toMap(PmsFarmerDO::getId, PmsFarmerDO::getName));
+
+        // 批量查询属性分类名
+        List<Long> attrCatIds = page.getRecords().stream()
+                .map(PmsProductDO::getProductAttributeCategoryId).filter(Objects::nonNull).distinct().collect(Collectors.toList());
+        Map<Long, String> attrCatNameMap = attrCatIds.isEmpty() ? Collections.emptyMap() :
+                pmsProductAttributeCategoryMapper.selectBatchIds(attrCatIds).stream()
+                        .collect(Collectors.toMap(PmsProductAttributeCategoryDO::getId, PmsProductAttributeCategoryDO::getName));
+
         List<FindPmsProductPageListRspVO> voList = page.getRecords().stream()
-                .map(this::convertToPageListRspVO)
+                .map(product -> FindPmsProductPageListRspVO.builder()
+                        .id(product.getId())
+                        .productCategoryId(product.getProductCategoryId())
+                        .categoryName(catNameMap.get(product.getProductCategoryId()))
+                        .productAttributeCategoryId(product.getProductAttributeCategoryId())
+                        .productAttributeCategoryName(attrCatNameMap.get(product.getProductAttributeCategoryId()))
+                        .farmerId(product.getFarmerId())
+                        .farmerName(farmerNameMap.get(product.getFarmerId()))
+                        .name(product.getName())
+                        .subTitle(product.getSubTitle())
+                        .productSn(product.getProductSn())
+                        .pic(product.getPic())
+                        .price(product.getPrice())
+                        .stock(product.getStock())
+                        .publishStatus(product.getPublishStatus())
+                        .sale(product.getSale())
+                        .createTime(product.getCreateTime())
+                        .build())
                 .collect(Collectors.toList());
 
         return PageResponse.success(page, voList);
-    }
-
-    /**
-     * 将商品 DO 转为分页列表 VO，并填充分类名、农户名、属性分类名
-     */
-    private FindPmsProductPageListRspVO convertToPageListRspVO(PmsProductDO product) {
-        FindPmsProductPageListRspVO vo = FindPmsProductPageListRspVO.builder()
-                .id(product.getId())
-                .productCategoryId(product.getProductCategoryId())
-                .productAttributeCategoryId(product.getProductAttributeCategoryId())
-                .farmerId(product.getFarmerId())
-                .name(product.getName())
-                .subTitle(product.getSubTitle())
-                .productSn(product.getProductSn())
-                .pic(product.getPic())
-                .price(product.getPrice())
-                .stock(product.getStock())
-                .publishStatus(product.getPublishStatus())
-                .sale(product.getSale())
-                .createTime(product.getCreateTime())
-                .build();
-
-        if (Objects.nonNull(product.getProductCategoryId())) {
-            PmsProductCategoryDO category = pmsProductCategoryMapper.selectById(product.getProductCategoryId());
-            if (category != null) {
-                vo.setCategoryName(category.getName());
-            }
-        }
-        if (Objects.nonNull(product.getFarmerId())) {
-            PmsFarmerDO farmer = pmsFarmerMapper.selectById(product.getFarmerId());
-            if (farmer != null) {
-                vo.setFarmerName(farmer.getName());
-            }
-        }
-        if (Objects.nonNull(product.getProductAttributeCategoryId())) {
-            PmsProductAttributeCategoryDO attrCategory = pmsProductAttributeCategoryMapper.selectById(product.getProductAttributeCategoryId());
-            if (attrCategory != null) {
-                vo.setProductAttributeCategoryName(attrCategory.getName());
-            }
-        }
-
-        return vo;
     }
 
     /**
@@ -270,15 +271,15 @@ public class PmsProductServiceImpl implements PmsProductService {
                 .albumPics(reqVO.getAlbumPics())
                 .description(reqVO.getDescription())
                 .price(reqVO.getPrice())
-                .originalPrice(reqVO.getOriginalPrice())
+                .marketPrice(reqVO.getMarketPrice())
                 .stock(reqVO.getStock())
                 .unit(reqVO.getUnit())
                 .weight(reqVO.getWeight())
                 .keywords(reqVO.getKeywords())
                 .note(reqVO.getNote())
-                .detailTitle(reqVO.getDetailTitle())
-                .detailDesc(reqVO.getDetailDesc())
                 .detailHtml(reqVO.getDetailHtml())
+                .isNew(reqVO.getIsNew())
+                .isRecommend(reqVO.getIsRecommend())
                 .publishStatus(reqVO.getPublishStatus())
                 .sort(reqVO.getSort())
                 .updateTime(LocalDateTime.now())

@@ -59,8 +59,8 @@ public class PmsProductUpdateReqVO {
     @NotNull(message = "商品价格不能为空")
     private BigDecimal price;
 
-    @ApiModelProperty(value = "原价")
-    private BigDecimal originalPrice;
+    @ApiModelProperty(value = "市场价/原价（划线价）")
+    private BigDecimal marketPrice;
 
     @ApiModelProperty(value = "库存")
     @NotNull(message = "库存不能为空")
@@ -84,11 +84,11 @@ public class PmsProductUpdateReqVO {
     @ApiModelProperty(value = "备注")
     private String note;
 
-    @ApiModelProperty(value = "详情标题")
-    private String detailTitle;
+    @ApiModelProperty(value = "是否新品推荐：0否 1是")
+    private Integer isNew;
 
-    @ApiModelProperty(value = "详情描述")
-    private String detailDesc;
+    @ApiModelProperty(value = "是否人气推荐：0否 1是")
+    private Integer isRecommend;
 
     @ApiModelProperty(value = "商品详情HTML")
     private String detailHtml;

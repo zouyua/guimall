@@ -71,25 +71,9 @@ public class OmsOrderDO {
      */
     private Integer status;
 
-    private Integer orderType;
-
     private String deliveryCompany;
 
     private String deliverySn;
-
-    private Integer autoConfirmDay;
-
-    private Integer integration;
-
-    private Integer growth;
-
-    private String promotionInfo;
-
-    private Integer billType;
-
-    private String billHeader;
-
-    private String billContent;
 
     private String receiverName;
 
@@ -107,17 +91,19 @@ public class OmsOrderDO {
 
     private String note;
 
+    private String adminNote;
+
     private Integer confirmStatus;
 
-    @TableLogic
-    private Integer deleteStatus;
+    @TableLogic(value = "0", delval = "1")
+    private Integer isDeleted;
 
     private LocalDateTime paymentTime;
+
+    private String paymentSn;
 
     private LocalDateTime deliveryTime;
 
     private LocalDateTime receiveTime;
-
-    private LocalDateTime commentTime;
 }
 

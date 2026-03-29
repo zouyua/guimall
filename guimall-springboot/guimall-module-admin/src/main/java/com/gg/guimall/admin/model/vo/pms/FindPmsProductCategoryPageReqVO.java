@@ -35,11 +35,9 @@ public class FindPmsProductCategoryPageReqVO {
     private String name;
 
     /**
-     * 显示状态
-     * 0 = 不显示
-     * 1 = 显示
+     * 启用状态：0禁用 1启用
      */
-    @ApiModelProperty(value = "显示状态")
-    private Integer showStatus;
+    @ApiModelProperty(value = "启用状态：0禁用 1启用")
+    private Integer status;
 
 }

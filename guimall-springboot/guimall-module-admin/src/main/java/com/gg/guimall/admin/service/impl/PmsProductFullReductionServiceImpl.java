@@ -60,7 +60,7 @@ public class PmsProductFullReductionServiceImpl implements PmsProductFullReducti
     public Response saveFullReductionList(Long productId, List<PmsProductFullReductionVO> fullReductionList) {
         // 校验商品是否存在
         PmsProductDO productDO = productMapper.selectById(productId);
-        if (productDO == null || productDO.getDeleteStatus() != 0) {
+        if (productDO == null || !Objects.equals(productDO.getIsDeleted(), 0)) {
             throw new BizException(ResponseCodeEnum.PRODUCT_NOT_FOUND);
         }
 

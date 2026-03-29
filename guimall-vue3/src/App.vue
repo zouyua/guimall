@@ -22,33 +22,10 @@ import zhCN from 'ant-design-vue/es/locale/zh_CN'
 <style>
 /* 自定义顶部加载 Loading颜色 */
 #nprogress .bar {
-  background: #e2ffe4 !important;
+  background: #10b981 !important; /* 调整为与主题一致的翡翠绿 */
 }
-  /* css代码，scoped表示节点内css样式只针对此组件有效，不影响其他组件 */
-/* header {
-  line-height: 1.5;
+/* 隐藏右上角的旋转光圈 */
+#nprogress .spinner {
+  display: none !important;
 }
-
-.logo {
-  display: block;
-  margin: 0 auto 2rem;
-}
-
-@media (min-width: 1024px) {
-  header {
-    display: flex;
-    place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
-  }
-
-  .logo {
-    margin: 0 2rem 0 0;
-  }
-
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
-  }
-} */
 </style>

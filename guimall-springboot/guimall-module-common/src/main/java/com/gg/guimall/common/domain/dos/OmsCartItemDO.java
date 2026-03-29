@@ -51,8 +51,8 @@ public class OmsCartItemDO {
 
     private LocalDateTime updateTime;
 
-    @TableLogic
-    private Integer deleteStatus;
+    @TableLogic(value = "0", delval = "1")
+    private Integer isDeleted;
 
     private Long productCategoryId;
 

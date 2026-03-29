@@ -42,24 +42,14 @@ public class PmsProductCategoryDO {
     private Integer level;
 
     /**
-     * 商品数量
-     */
-    private Integer productCount;
-
-    /**
      * 单位
      */
     private String productUnit;
 
     /**
-     * 是否显示在导航栏：0->不显示；1->显示
+     * 启用状态：0禁用 1启用（合并原 navStatus + showStatus）
      */
-    private Integer navStatus;
-
-    /**
-     * 是否显示状态：0->不显示；1->显示
-     */
-    private Integer showStatus;
+    private Integer status;
 
     /**
      * 排序
@@ -85,4 +75,9 @@ public class PmsProductCategoryDO {
      * 创建时间
      */
     private LocalDateTime createTime;
+
+    /**
+     * 更新时间
+     */
+    private LocalDateTime updateTime;
 }

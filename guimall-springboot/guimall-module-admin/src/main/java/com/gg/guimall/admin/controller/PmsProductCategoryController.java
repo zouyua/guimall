@@ -78,9 +78,9 @@ public class PmsProductCategoryController {
      */
     @GetMapping("/tree")
     @ApiOperation("查询商品分类树")
-    public List<FindPmsProductCategoryTreeRspVO> findCategoryTree() {
+    public Response findCategoryTree() {
 
-        return categoryService.findCategoryTree();
+        return Response.success(categoryService.findCategoryTree());
     }
 
     /**
