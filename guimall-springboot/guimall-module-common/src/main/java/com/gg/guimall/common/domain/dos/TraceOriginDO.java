@@ -42,6 +42,15 @@ public class TraceOriginDO {
     /** 产地介绍 */
     private String description;
 
+    /** 经度（GIS定位） */
+    private java.math.BigDecimal longitude;
+
+    /** 纬度（GIS定位） */
+    private java.math.BigDecimal latitude;
+
     /** 创建时间 */
     private LocalDateTime createTime;
+
+    /** 更新时间 */
+    private LocalDateTime updateTime;
 }

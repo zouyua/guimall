@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * @author: wly
@@ -51,6 +52,10 @@ public class PmsSkuStockVO {
     @ApiModelProperty(value = "展示图片")
     private String pic;
 
-    @ApiModelProperty(value = "销售属性JSON，如：[{\"key\":\"颜色\",\"value\":\"红色\"}]")
+    @ApiModelProperty(value = "规格列表（替代 spData）")
+    private List<PmsSkuSpecItemVO> specs;
+
+    @Deprecated
+    @ApiModelProperty(value = "销售属性JSON（已废弃，请使用 specs 字段）", hidden = true)
     private String spData;
 }

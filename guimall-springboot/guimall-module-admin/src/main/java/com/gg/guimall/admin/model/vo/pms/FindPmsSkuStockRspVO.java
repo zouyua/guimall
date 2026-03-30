@@ -8,6 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * @author: wly
@@ -52,6 +53,10 @@ public class FindPmsSkuStockRspVO {
     @ApiModelProperty(value = "销量")
     private Integer sale;
 
-    @ApiModelProperty(value = "销售属性JSON")
+    @ApiModelProperty(value = "规格列表")
+    private List<PmsSkuSpecItemVO> specs;
+
+    @Deprecated
+    @ApiModelProperty(value = "销售属性JSON（已废弃）", hidden = true)
     private String spData;
 }

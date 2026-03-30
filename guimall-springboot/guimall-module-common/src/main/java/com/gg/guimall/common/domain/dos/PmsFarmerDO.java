@@ -60,6 +60,15 @@ public class PmsFarmerDO {
     /** 农户介绍 */
     private String description;
 
+    /** 认证类型：如 绿色食品基地、扶贫帮扶对象、有机认证农场等 */
+    private String certType;
+
+    /** 认证描述 */
+    private String certDesc;
+
+    /** 认证图片URL（逗号分隔） */
+    private String certPic;
+
     /** 状态：0禁用 1启用 */
     private Integer status;
 

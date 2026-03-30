@@ -68,7 +68,7 @@
                   </div>
                 </div>
                 <div class="flex gap-2">
-                   <button class="px-6 py-3 bg-stone-100 text-stone-600 rounded-2xl font-bold hover:bg-stone-200 transition-all">联系农户</button>
+                   <button @click="showContact = true" class="px-6 py-3 bg-stone-100 text-stone-600 rounded-2xl font-bold hover:bg-stone-200 transition-all">联系农户</button>
                 </div>
               </div>
             </div>
@@ -195,6 +195,37 @@
     <footer class="mt-20 py-12 text-center text-stone-300 text-sm font-bold uppercase tracking-[0.2em]">
       &copy; 2026 GUIMALL · Guangxi Guilin Agriculture Empowerment Platform
     </footer>
+
+    <!-- 联系农户弹窗 -->
+    <div v-if="showContact" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" @click.self="showContact = false">
+      <div class="bg-white rounded-[2.5rem] p-10 shadow-2xl w-full max-w-md mx-4 relative">
+        <button @click="showContact = false" class="absolute top-6 right-6 w-10 h-10 bg-stone-100 rounded-xl flex items-center justify-center text-stone-400 hover:bg-stone-200 transition-all">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg>
+        </button>
+        <div class="flex items-center gap-4 mb-8">
+          <img :src="farmer.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Farmer'" class="w-16 h-16 rounded-2xl border-2 border-emerald-100" />
+          <div>
+            <h3 class="text-2xl font-black text-stone-900">{{ farmer.name }}</h3>
+            <p class="text-stone-400">{{ farmer.farmName }}</p>
+          </div>
+        </div>
+        <div class="space-y-4">
+          <div v-if="farmer.phone" class="flex items-center gap-4 p-5 bg-emerald-50 rounded-2xl">
+            <div class="w-12 h-12 bg-emerald-600 rounded-xl flex items-center justify-center shrink-0">
+              <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg>
+            </div>
+            <div>
+              <p class="text-xs text-stone-400 font-bold uppercase tracking-widest mb-0.5">联系电话</p>
+              <a :href="'tel:' + farmer.phone" class="text-2xl font-black text-emerald-600 hover:text-emerald-700">{{ farmer.phone }}</a>
+            </div>
+          </div>
+          <div v-else class="p-5 bg-stone-50 rounded-2xl text-center text-stone-400 font-bold">
+            暂未提供联系方式
+          </div>
+          <p class="text-xs text-stone-300 text-center">点击电话号码可直接拨打 · 平台已对农户资质进行审核</p>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -219,8 +250,11 @@ const farmer = ref({
   id: '',
   name: '加载中...',
   farmName: '',
-  avatar: ''
+  avatar: '',
+  phone: ''
 })
+
+const showContact = ref(false)
 
 const origin = ref({
   id: '',
@@ -253,7 +287,8 @@ const loadTraceDetail = async () => {
         id: data.farmerId,
         name: data.farmerName || '签约农户',
         farmName: (data.originName || '桂林') + '助农基地',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + (data.farmerName || 'Farmer')
+        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + (data.farmerName || 'Farmer'),
+        phone: data.farmerPhone || ''
       }
 
       origin.value = {

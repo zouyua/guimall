@@ -88,13 +88,9 @@ public class TraceServiceImpl implements TraceService {
 
         TraceQrcodeDO qrcodeDO = traceQrcodeMapper.selectByProductId(productId);
         if (Objects.nonNull(qrcodeDO)) {
-            Integer scanCount = Objects.nonNull(qrcodeDO.getScanCount()) ? qrcodeDO.getScanCount() : 0;
-            TraceQrcodeDO update = TraceQrcodeDO.builder()
-                    .id(qrcodeDO.getId())
-                    .scanCount(scanCount + 1)
-                    .build();
-            traceQrcodeMapper.updateById(update);
-            qrcodeDO.setScanCount(scanCount + 1);
+            // 原子自增，避免先查再改的并发问题
+            traceQrcodeMapper.incrementScanCount(qrcodeDO.getId());
+            qrcodeDO.setScanCount((qrcodeDO.getScanCount() == null ? 0 : qrcodeDO.getScanCount()) + 1);
         }
 
         TraceDetailRspVO rspVO = new TraceDetailRspVO();
@@ -104,6 +100,7 @@ public class TraceServiceImpl implements TraceService {
 
         rspVO.setFarmerId(productDO.getFarmerId());
         rspVO.setFarmerName(Objects.nonNull(farmerDO) ? farmerDO.getName() : null);
+        rspVO.setFarmerPhone(Objects.nonNull(farmerDO) ? farmerDO.getPhone() : null);
 
         if (Objects.nonNull(originDO)) {
             rspVO.setOriginId(originDO.getId());

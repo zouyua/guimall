@@ -3,7 +3,7 @@ package com.gg.guimall.admin.model.vo.ums.admin;
 import io.swagger.annotations.ApiModel;
 import lombok.Data;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 
 /**
  * 后台账号分页查询响应 VO
@@ -24,6 +24,6 @@ public class FindUmsAdminPageListRspVO {
      */
     private Integer status;
 
-    private Date createTime;
+    private LocalDateTime createTime;
 }
 

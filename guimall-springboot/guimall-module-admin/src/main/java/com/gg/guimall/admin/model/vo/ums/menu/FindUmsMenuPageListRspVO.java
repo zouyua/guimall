@@ -3,7 +3,7 @@ package com.gg.guimall.admin.model.vo.ums.menu;
 import io.swagger.annotations.ApiModel;
 import lombok.Data;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 
 /**
  * 菜单分页查询响应 VO
@@ -30,6 +30,6 @@ public class FindUmsMenuPageListRspVO {
 
     private Long parentId;
 
-    private Date createTime;
+    private LocalDateTime createTime;
 }
 

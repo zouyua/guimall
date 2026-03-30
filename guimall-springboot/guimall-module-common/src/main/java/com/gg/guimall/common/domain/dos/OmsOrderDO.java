@@ -98,7 +98,8 @@ public class OmsOrderDO {
     @TableLogic(value = "0", delval = "1")
     private Integer isDeleted;
 
-    private LocalDateTime paymentTime;
+    /** 支付时间（对应 SQL pay_time） */
+    private LocalDateTime payTime;
 
     private String paymentSn;
 

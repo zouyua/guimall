@@ -33,5 +33,8 @@ public class FindPmsProductPageListReqVO extends BasePageQuery {
      * 2: 销售价格倒序
      */
     private Integer sortType;
+
+    /** 是否助农商品：1=只查助农商品，null=不过滤 */
+    private Integer isAidAgriculture;
 }
 

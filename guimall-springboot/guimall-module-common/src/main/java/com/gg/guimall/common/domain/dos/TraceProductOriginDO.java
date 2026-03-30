@@ -36,6 +36,9 @@ public class TraceProductOriginDO {
     /** 农户ID */
     private Long farmerId;
 
+    /** 是否主产地：0否 1是 */
+    private Integer isPrimary;
+
     /** 创建时间 */
     private LocalDateTime createTime;
 }

@@ -2,13 +2,14 @@ package com.gg.guimall.common.domain.dos;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 
 /*
 * @author:wly
@@ -31,9 +32,10 @@ public class UserDO {
 
     private String avatar;
 
-    private Date createTime;
+    private LocalDateTime createTime;
 
-    private Date updateTime;
+    private LocalDateTime updateTime;
 
+    @TableLogic(value = "false", delval = "true")
     private Boolean isDeleted;
 }

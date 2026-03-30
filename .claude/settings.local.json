@@ -6,7 +6,12 @@
       "Bash(\"D:\\\\Java\\\\Project\\\\guimall\\\\guimall_v2.sql\":*)",
       "Bash(grep -h '@TableName' D:JavaProjectguimallguimall-springbootguimall-module-commonsrcmainjavacomggguimallcommondomaindos*.java)",
       "Bash(\"D:/Java/Project/guimall/guimall_v2.sql\":*)",
-      "Bash(mysql -u root -p guimall -e \"DESCRIBE pms_product;\")"
+      "Bash(mysql -u root -p guimall -e \"DESCRIBE pms_product;\")",
+      "Bash(\"D:/Java/Project/guimall/guimall_test_data.sql\":*)",
+      "Bash(mysql:*)",
+      "Bash(1:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)"
     ]
   }
 }

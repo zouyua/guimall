@@ -47,6 +47,16 @@ export function getTraceDetail(productId) {
   return axios.get(`/trace/${productId}`);
 }
 
+// 获取助农商品列表
+export function getAidAgricultureProducts(data) {
+  return axios.post('/pms/product/list', { ...data, isAidAgriculture: 1 })
+}
+
+// 获取签约帮扶农户列表
+export function getSupportFarmers() {
+  return axios.get('/support/farmers')
+}
+
 /**
  * 购物车相关接口
  */

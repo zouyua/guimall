@@ -4,12 +4,14 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.gg.guimall.common.domain.dos.PmsFarmerDO;
 import com.gg.guimall.common.domain.dos.PmsProductCategoryDO;
 import com.gg.guimall.common.domain.dos.PmsProductDO;
+import com.gg.guimall.common.domain.dos.PmsSkuSpecDO;
 import com.gg.guimall.common.domain.dos.PmsSkuStockDO;
 import com.gg.guimall.common.domain.dos.PmsProductAttributeCategoryDO;
 import com.gg.guimall.common.domain.mapper.PmsFarmerMapper;
 import com.gg.guimall.common.domain.mapper.PmsProductAttributeCategoryMapper;
 import com.gg.guimall.common.domain.mapper.PmsProductCategoryMapper;
 import com.gg.guimall.common.domain.mapper.PmsProductMapper;
+import com.gg.guimall.common.domain.mapper.PmsSkuSpecMapper;
 import com.gg.guimall.common.domain.mapper.PmsSkuStockMapper;
 import com.gg.guimall.common.enums.ResponseCodeEnum;
 import com.gg.guimall.common.exception.BizException;
@@ -46,6 +48,9 @@ public class PmsProductServiceImpl implements PmsProductService {
 
     @Autowired
     private PmsSkuStockMapper pmsSkuStockMapper;
+
+    @Autowired
+    private PmsSkuSpecMapper pmsSkuSpecMapper;
 
     // 这里并不强依赖属性分类名称，但保留字段扩展时可用
     @Autowired(required = false)
@@ -111,7 +116,8 @@ public class PmsProductServiceImpl implements PmsProductService {
                 reqVO.getSize(),
                 reqVO.getKeyword(),
                 categoryIds,
-                reqVO.getSortType()
+                reqVO.getSortType(),
+                reqVO.getIsAidAgriculture()
         );
 
         if (page.getRecords().isEmpty()) {
@@ -198,16 +204,24 @@ public class PmsProductServiceImpl implements PmsProductService {
             }
         }
 
-        // SKU 列表
+        // SKU 列表（含规格明细）
         List<PmsSkuStockDO> skuList = pmsSkuStockMapper.selectByProductId(id);
         if (Objects.isNull(skuList) || skuList.isEmpty()) {
             rspVO.setSkus(Collections.emptyList());
         } else {
+            // 批量查询规格，按 skuId 分组
+            List<PmsSkuSpecDO> allSpecs = pmsSkuSpecMapper.selectByProductId(id);
+            java.util.Map<Long, List<com.gg.guimall.web.model.vo.pms.SkuSpecItemVO>> specMap = allSpecs.stream()
+                    .collect(Collectors.groupingBy(PmsSkuSpecDO::getSkuId,
+                            Collectors.mapping(s -> com.gg.guimall.web.model.vo.pms.SkuSpecItemVO.builder()
+                                    .specKey(s.getSpecKey())
+                                    .specValue(s.getSpecValue())
+                                    .sort(s.getSort())
+                                    .build(), Collectors.toList())));
+
             List<ProductSkuStockItemVO> skuVOList = skuList.stream()
+                    .filter(Objects::nonNull)
                     .map(sku -> {
-                        if (Objects.isNull(sku)) {
-                            return null;
-                        }
                         ProductSkuStockItemVO vo = new ProductSkuStockItemVO();
                         vo.setId(sku.getId());
                         vo.setProductId(sku.getProductId());
@@ -219,10 +233,9 @@ public class PmsProductServiceImpl implements PmsProductService {
                         vo.setLockStock(sku.getLockStock());
                         vo.setPic(sku.getPic());
                         vo.setSale(sku.getSale());
-                        vo.setSpData(sku.getSpData());
+                        vo.setSpecs(specMap.getOrDefault(sku.getId(), Collections.emptyList()));
                         return vo;
                     })
-                    .filter(Objects::nonNull)
                     .collect(Collectors.toList());
             rspVO.setSkus(skuVOList);
         }

@@ -24,8 +24,7 @@ const routes = [
     },
     {
         path: '/support', // 助农专区
-        component: () => import('@/pages/frontend/common/placeholder.vue'),
-        props: { title: '助农专区', description: '本专区直连桂林贫困县区农户，展示各类扶贫产品和助农故事，支持产地直发。' },
+        component: () => import('@/pages/frontend/support/index.vue'),
         meta: { title: '助农专区' }
     },
     {

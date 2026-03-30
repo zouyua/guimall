@@ -13,7 +13,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
-import java.util.Date;
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -46,7 +46,7 @@ public class UmsPermissionDataInitializer implements CommandLineRunner {
             return;
         }
 
-        Date now = new Date();
+        LocalDateTime now = LocalDateTime.now();
 
         // 1) 菜单树（id 在前端里有“删除按钮禁用”演示逻辑，所以保持稳定）
         List<UmsMenuDO> menus = Arrays.asList(
@@ -137,7 +137,7 @@ public class UmsPermissionDataInitializer implements CommandLineRunner {
         }
     }
 
-    private void upsertUser(String username, String password, String nickname, boolean isDeleted, Date now) {
+    private void upsertUser(String username, String password, String nickname, boolean isDeleted, LocalDateTime now) {
         UserDO existed = userMapper.findByUsername(username);
         if (existed != null) {
             existed.setAvatar(nickname);
@@ -156,7 +156,7 @@ public class UmsPermissionDataInitializer implements CommandLineRunner {
                 .build());
     }
 
-    private void bindUserRole(String username, String roleCode, Date now) {
+    private void bindUserRole(String username, String roleCode, LocalDateTime now) {
         // 单角色：先清再写
         userRoleMapper.delete(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<UserRoleDO>()
                 .eq(UserRoleDO::getUsername, username));

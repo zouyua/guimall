@@ -55,7 +55,8 @@ public interface PmsProductMapper extends BaseMapper<PmsProductDO> {
             long size,
             String keyword,
             List<Long> categoryIds,
-            Integer sortType
+            Integer sortType,
+            Integer isAidAgriculture
     ) {
         Page<PmsProductDO> page = new Page<>(current, size);
 
@@ -63,7 +64,8 @@ public interface PmsProductMapper extends BaseMapper<PmsProductDO> {
         wrapper
                 .like(Objects.nonNull(keyword) && keyword.trim().length() > 0, PmsProductDO::getName, keyword)
                 .eq(PmsProductDO::getPublishStatus, 1)
-                .eq(PmsProductDO::getIsDeleted, 0);
+                .eq(PmsProductDO::getIsDeleted, 0)
+                .eq(Objects.nonNull(isAidAgriculture), PmsProductDO::getIsAidAgriculture, isAidAgriculture);
 
         if (Objects.nonNull(categoryIds) && !categoryIds.isEmpty()) {
             wrapper.in(PmsProductDO::getProductCategoryId, categoryIds);

@@ -61,6 +61,9 @@ CREATE TABLE `pms_farmer` (
   `detail_address` varchar(255) NULL     DEFAULT NULL               COMMENT '详细地址',
   `main_product`   varchar(255) NULL     DEFAULT NULL               COMMENT '主营产品描述',
   `description`    varchar(1000) NULL    DEFAULT NULL               COMMENT '农户/基地简介',
+  `cert_type`      varchar(255)  NULL    DEFAULT NULL               COMMENT '认证类型（逗号分隔，如：绿色食品基地,扶贫帮扶对象）',
+  `cert_desc`      varchar(500)  NULL    DEFAULT NULL               COMMENT '认证描述',
+  `cert_pic`       varchar(2000) NULL    DEFAULT NULL               COMMENT '认证图片URL（逗号分隔）',
   `status`         tinyint(1)   NOT NULL DEFAULT 1                  COMMENT '状态：0禁用 1正常',
   `is_deleted`     tinyint(1)   NOT NULL DEFAULT 0                  COMMENT '是否删除：0否 1是',
   `create_time`    datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP  COMMENT '创建时间',
@@ -138,6 +141,9 @@ CREATE TABLE `pms_product` (
   `sale`                         int            NOT NULL DEFAULT 0      COMMENT '已售数量',
   `keywords`                     varchar(255)   NULL     DEFAULT NULL   COMMENT '关键词',
   `note`                         varchar(500)   NULL     DEFAULT NULL   COMMENT '备注（内部使用）',
+  `is_aid_agriculture`           tinyint(1)     NOT NULL DEFAULT 0      COMMENT '是否助农商品：0否 1是',
+  `cert_type`                    varchar(255)   NULL     DEFAULT NULL   COMMENT '认证类型（逗号分隔，如：绿色食品,有机认证,地理标志）',
+  `cert_desc`                    varchar(500)   NULL     DEFAULT NULL   COMMENT '认证描述',
   `promotion_type`               tinyint        NULL     DEFAULT NULL   COMMENT '促销类型：0无 1满减 2会员价',
   `promotion_start_time`         datetime       NULL     DEFAULT NULL   COMMENT '促销开始时间',
   `promotion_end_time`           datetime       NULL     DEFAULT NULL   COMMENT '促销结束时间',
@@ -217,6 +223,8 @@ CREATE TABLE `oms_cart_item` (
   `product_sub_title` varchar(255)  NULL     DEFAULT NULL  COMMENT '副标题快照',
   `product_sku_code`  varchar(64)   NULL     DEFAULT NULL  COMMENT 'SKU编码快照',
   `product_attr`      varchar(500)  NULL     DEFAULT NULL  COMMENT '销售属性快照（JSON）',
+  `product_category_id` bigint       NULL     DEFAULT NULL  COMMENT '商品分类ID快照',
+  `product_sn`        varchar(64)   NULL     DEFAULT NULL  COMMENT '商品货号快照',
   `price`             decimal(10,2) NOT NULL               COMMENT '加购时单价',
   `quantity`          int           NOT NULL DEFAULT 1     COMMENT '数量',
   `is_deleted`        tinyint(1)    NOT NULL DEFAULT 0     COMMENT '是否删除',
@@ -233,9 +241,9 @@ DROP TABLE IF EXISTS `oms_company_address`;
 CREATE TABLE `oms_company_address` (
   `id`             bigint       NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `address_name`   varchar(128) NOT NULL               COMMENT '地址别名',
-  `is_default_send`    tinyint(1) NOT NULL DEFAULT 0   COMMENT '是否默认发货地',
-  `is_default_receive` tinyint(1) NOT NULL DEFAULT 0   COMMENT '是否默认退货地',
-  `contact_name`   varchar(64)  NOT NULL               COMMENT '联系人',
+  `send_status`    tinyint(1)   NOT NULL DEFAULT 0     COMMENT '是否默认发货地',
+  `receive_status` tinyint(1)   NOT NULL DEFAULT 0     COMMENT '是否默认退货地',
+  `name`           varchar(64)  NOT NULL               COMMENT '联系人',
   `phone`          varchar(20)  NOT NULL               COMMENT '联系电话',
   `province`       varchar(64)  NOT NULL               COMMENT '省',
   `city`           varchar(64)  NOT NULL               COMMENT '市',
@@ -627,6 +635,7 @@ CREATE TABLE `trace_product_origin` (
   `id`         bigint NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `product_id` bigint NOT NULL               COMMENT '商品ID',
   `origin_id`  bigint NOT NULL               COMMENT '产地ID',
+  `farmer_id`  bigint NULL     DEFAULT NULL  COMMENT '农户ID',
   `is_primary` tinyint(1) NOT NULL DEFAULT 1 COMMENT '是否主产地：0否 1是',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   PRIMARY KEY (`id`),
@@ -884,3 +893,19 @@ INSERT INTO `pms_sku_stock` (`product_id`,`sku_code`,`price`,`promotion_price`,`
 INSERT INTO `sms_home_advertise` (`name`,`type`,`pic`,`url`,`sort`,`status`) VALUES
 ('荔浦芋头地理标志产品', 0, 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1200&q=80', '/category?categoryId=13', 1, 1),
 ('阳朔金桔产地直供', 0,
+
+-- ----------------------------
+-- pms_sku_spec SKU规格明细（替代 sp_data JSON 字段）
+-- ----------------------------
+DROP TABLE IF EXISTS `pms_sku_spec`;
+CREATE TABLE `pms_sku_spec` (
+  `id`          bigint       NOT NULL AUTO_INCREMENT COMMENT '规格ID',
+  `sku_id`      bigint       NOT NULL               COMMENT 'SKU ID',
+  `product_id`  bigint       NOT NULL               COMMENT '商品ID（冗余）',
+  `spec_key`    varchar(64)  NOT NULL               COMMENT '规格名，如：重量、颜色',
+  `spec_value`  varchar(128) NOT NULL               COMMENT '规格值，如：3斤、红色',
+  `sort`        int          NOT NULL DEFAULT 0     COMMENT '排序（升序）',
+  PRIMARY KEY (`id`),
+  INDEX `idx_sku` (`sku_id`),
+  INDEX `idx_product` (`product_id`)
+) ENGINE = InnoDB AUTO_INCREMENT = 1 DEFAULT CHARSET = utf8mb4 COMMENT = 'SKU规格明细';

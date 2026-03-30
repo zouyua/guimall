@@ -77,7 +77,7 @@
                  @click="selectSku(sku)"
                  :class="selectedSku?.id === sku.id ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-stone-600 border-stone-200 hover:border-emerald-500'"
                  class="px-6 py-3 rounded-2xl border-2 font-bold transition-all text-sm">
-                 {{ formatSku(sku.spData) }}
+                 {{ formatSku(sku) }}
                </button>
              </div>
              <p v-if="selectedSku" class="text-sm text-stone-400">
@@ -155,13 +155,17 @@ const loadDetail = async () => {
   }
 }
 
-const formatSku = (spData) => {
-  if (!spData) return '默认规格'
+const formatSku = (sku) => {
+  if (sku.specs && sku.specs.length > 0) {
+    return sku.specs.map(s => s.specValue).join(' / ')
+  }
+  // 兼容旧 spData JSON 格式
+  if (!sku.spData) return '默认规格'
   try {
-    const arr = JSON.parse(spData)
+    const arr = JSON.parse(sku.spData)
     return arr.map(item => item.value).join(' / ')
   } catch (e) {
-    return spData
+    return sku.spData
   }
 }
 

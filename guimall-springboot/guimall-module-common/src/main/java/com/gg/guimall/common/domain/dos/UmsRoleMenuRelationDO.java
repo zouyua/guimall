@@ -3,14 +3,18 @@ package com.gg.guimall.common.domain.dos;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * 角色-菜单关系：t_role_menu_relation
  */
 @Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @TableName("t_role_menu_relation")
 public class UmsRoleMenuRelationDO {
 

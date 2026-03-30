@@ -155,6 +155,21 @@ public class PmsProductDO {
     private String detailHtml;
 
     /**
+     * 是否助农商品：0否 1是（用于助农专区展示）
+     */
+    private Integer isAidAgriculture;
+
+    /**
+     * 认证类型：如 绿色食品、有机认证、地理标志等（逗号分隔）
+     */
+    private String certType;
+
+    /**
+     * 认证描述
+     */
+    private String certDesc;
+
+    /**
      * 促销类型：0没有促销使用原价；1使用满减价格；2使用会员价
      */
     private Integer promotionType;

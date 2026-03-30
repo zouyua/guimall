@@ -4,15 +4,19 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
-import java.util.Date;
+import lombok.NoArgsConstructor;
+import java.time.LocalDateTime;
 
 /**
  * 后台菜单表：t_menu
  */
 @Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @TableName("t_menu")
 public class UmsMenuDO {
 
@@ -41,6 +45,6 @@ public class UmsMenuDO {
     private Integer hidden;
 
     @TableField("create_time")
-    private Date createTime;
+    private LocalDateTime createTime;
 }
 

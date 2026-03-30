@@ -31,6 +31,9 @@ public class TraceDetailRspVO {
 
     private String farmerName;
 
+    /** 农户联系电话（用于前台联系农户功能） */
+    private String farmerPhone;
+
     private Long originId;
 
     private String originName;
