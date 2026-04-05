@@ -54,14 +54,22 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-        // 从请求头中获取 key 为 Authorization 的值
+        // 优先从 Authorization 获取管理员 Token
         String header = request.getHeader(tokenHeaderKey);
+
+        // 如果 Authorization 为空，尝试从 MemberToken 获取前台会员 Token
+        if (StringUtils.isBlank(header) || !StringUtils.startsWith(header, tokenPrefix)) {
+            String memberHeader = request.getHeader("MemberToken");
+            if (StringUtils.startsWith(memberHeader, tokenPrefix)) {
+                header = memberHeader;
+            }
+        }
 
         // 判断 value 值是否以 Bearer 开头
         if (StringUtils.startsWith(header, tokenPrefix)) {
             // 截取 Token 令牌
             String token = StringUtils.substring(header, 7);
-            log.info("Token: {}", token);
+            log.debug("Token: {}", token);
 
             // 判空 Token
             if (StringUtils.isNotBlank(token)) {
@@ -82,26 +90,29 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
 
                 if (StringUtils.isNotBlank(username)
                         && Objects.isNull(SecurityContextHolder.getContext().getAuthentication())) {
-                    // 根据用户名获取用户详情信息
-                    try {
-                        UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+                    // 前台会员 token 的 subject 为纯数字 ID，跳过 admin 用户表查询
+                    if (StringUtils.isNumeric(username)) {
+                        log.debug("Token subject is numeric (memberId={}), skip admin authentication", username);
+                    } else {
+                        // 根据用户名获取用户详情信息
+                        try {
+                            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
-                        // 将用户信息存入 authentication，方便后续校验
-                        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userDetails, null,
-                                userDetails.getAuthorities());
-                        authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                        // 将 authentication 存入 ThreadLocal，方便后续获取用户信息
-                        SecurityContextHolder.getContext().setAuthentication(authentication);
-                    } catch (Exception e) {
-                        // token 可能来自前台会员等「不在 admin 用户表」的场景。
-                        // 对于这种情况，不应当直接阻断请求，只要不写入 SecurityContext 即可。
-                        log.info("Token subject not found in admin user table, ignore authentication. subject={}", username);
+                            // 将用户信息存入 authentication，方便后续校验
+                            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userDetails, null,
+                                    userDetails.getAuthorities());
+                            authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                            // 将 authentication 存入 ThreadLocal，方便后续获取用户信息
+                            SecurityContextHolder.getContext().setAuthentication(authentication);
+                        } catch (Exception e) {
+                            log.info("Token subject not found in admin user table, ignore authentication. subject={}", username);
+                        }
                     }
                 }
             }
         }
 
-        // 继续执行写一个过滤器
+        // 继续执行下一个过滤器
         filterChain.doFilter(request, response);
     }
 }

@@ -1,14 +1,20 @@
 package com.gg.guimall.web.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.gg.guimall.common.domain.dos.OmsCartItemDO;
 import com.gg.guimall.common.domain.dos.OmsOrderDO;
 import com.gg.guimall.common.domain.dos.OmsOrderItemDO;
 import com.gg.guimall.common.domain.dos.PmsProductDO;
+import com.gg.guimall.common.domain.dos.SmsCouponDO;
+import com.gg.guimall.common.domain.dos.SmsCouponHistoryDO;
 import com.gg.guimall.common.domain.mapper.OmsCartItemMapper;
 import com.gg.guimall.common.domain.mapper.OmsOrderItemMapper;
 import com.gg.guimall.common.domain.mapper.OmsOrderMapper;
 import com.gg.guimall.common.domain.mapper.PmsProductMapper;
+import com.gg.guimall.common.domain.mapper.SmsCouponHistoryMapper;
+import com.gg.guimall.common.domain.mapper.SmsCouponMapper;
 import com.gg.guimall.common.enums.ResponseCodeEnum;
 import com.gg.guimall.common.exception.BizException;
 import com.gg.guimall.common.utils.PageResponse;
@@ -20,10 +26,14 @@ import com.gg.guimall.web.model.vo.oms.FindOmsOrderPageListRspVO;
 import com.gg.guimall.web.model.vo.oms.FindOmsOrderDetailRspVO.OrderItem;
 import com.gg.guimall.web.model.vo.oms.SubmitOmsOrderReqVO;
 import com.gg.guimall.web.model.vo.oms.SubmitOmsOrderRspVO;
+import com.gg.guimall.web.constants.MQConstants;
+import com.gg.guimall.web.model.dto.OrderTimeoutMessageDTO;
 import com.gg.guimall.web.service.OmsOrderService;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.rocketmq.spring.core.RocketMQTemplate;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,6 +61,15 @@ public class OmsOrderServiceImpl implements OmsOrderService {
 
     @Autowired
     private PmsProductMapper pmsProductMapper;
+
+    @Autowired
+    private SmsCouponMapper smsCouponMapper;
+
+    @Autowired
+    private SmsCouponHistoryMapper smsCouponHistoryMapper;
+
+    @Autowired
+    private RocketMQTemplate rocketMQTemplate;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -89,23 +108,59 @@ public class OmsOrderServiceImpl implements OmsOrderService {
             throw new BizException(ResponseCodeEnum.PARAM_NOT_VALID);
         }
 
+        // ========== 优惠券逻辑 ==========
+        BigDecimal couponAmount = BigDecimal.ZERO;
+        Long couponId = reqVO.getCouponId();
+        SmsCouponHistoryDO matchedHistory = null;
+
+        if (Objects.nonNull(couponId) && couponId > 0) {
+            SmsCouponDO coupon = smsCouponMapper.selectById(couponId);
+            if (Objects.nonNull(coupon)
+                    && totalAmount.compareTo(coupon.getMinAmount()) >= 0
+                    && now.isAfter(coupon.getStartTime())
+                    && now.isBefore(coupon.getEndTime())) {
+                // 查询该会员对此优惠券的未使用领取记录
+                LambdaQueryWrapper<SmsCouponHistoryDO> historyWrapper = Wrappers.lambdaQuery();
+                historyWrapper.eq(SmsCouponHistoryDO::getCouponId, couponId)
+                        .eq(SmsCouponHistoryDO::getMemberId, reqVO.getMemberId())
+                        .eq(SmsCouponHistoryDO::getUseStatus, 0)
+                        .last("LIMIT 1");
+                matchedHistory = smsCouponHistoryMapper.selectOne(historyWrapper);
+
+                if (Objects.nonNull(matchedHistory)) {
+                    couponAmount = coupon.getAmount();
+                    // 原子递增使用数量
+                    smsCouponMapper.incrementUseCount(couponId);
+                } else {
+                    // 会员未领取或已使用该优惠券，忽略couponId
+                    couponId = null;
+                }
+            } else {
+                // 优惠券不存在、不满足门槛或不在有效期内，忽略couponId
+                couponId = null;
+            }
+        }
+
+        BigDecimal payAmount = totalAmount.subtract(couponAmount);
+        if (payAmount.compareTo(BigDecimal.ZERO) < 0) {
+            payAmount = BigDecimal.ZERO;
+        }
+
         String orderSn = "SN" + System.currentTimeMillis() + "_" + reqVO.getMemberId();
 
         OmsOrderDO orderDO = OmsOrderDO.builder()
                 .memberId(reqVO.getMemberId())
                 .farmerId(farmerId)
-                .couponId(null)
+                .couponId(couponId)
                 .orderSn(orderSn)
                 .createTime(now)
                 .updateTime(now)
                 .memberUsername(null)
                 .totalAmount(totalAmount)
-                .payAmount(totalAmount)
+                .payAmount(payAmount)
                 .freightAmount(BigDecimal.ZERO)
                 .promotionAmount(BigDecimal.ZERO)
-                .integrationAmount(BigDecimal.ZERO)
-                .couponAmount(BigDecimal.ZERO)
-                .discountAmount(BigDecimal.ZERO)
+                .couponAmount(couponAmount)
                 .payType(0)
                 .sourceType(0)
                 .status(0)
@@ -127,6 +182,25 @@ public class OmsOrderServiceImpl implements OmsOrderService {
             throw new BizException(ResponseCodeEnum.SYSTEM_ERROR);
         }
 
+        // 标记优惠券领取记录为已使用
+        if (Objects.nonNull(matchedHistory)) {
+            matchedHistory.setUseStatus(1);
+            matchedHistory.setUseTime(now);
+            matchedHistory.setOrderId(orderId);
+            matchedHistory.setOrderSn(orderSn);
+            smsCouponHistoryMapper.updateById(matchedHistory);
+        }
+
+        // 发送 RocketMQ 延迟消息，30 分钟后自动取消未支付订单
+        OrderTimeoutMessageDTO msgDTO = new OrderTimeoutMessageDTO(orderId, orderSn);
+        rocketMQTemplate.syncSend(
+                MQConstants.ORDER_TIMEOUT_TOPIC + ":" + MQConstants.ORDER_TIMEOUT_TAG,
+                MessageBuilder.withPayload(msgDTO).build(),
+                3000,
+                MQConstants.ORDER_TIMEOUT_DELAY_LEVEL
+        );
+        log.info("订单超时延迟消息已发送, orderSn={}, delayLevel={}", orderSn, MQConstants.ORDER_TIMEOUT_DELAY_LEVEL);
+
         BigDecimal realAmount;
         for (OmsCartItemDO item : cartItems) {
             if (Objects.isNull(item) || Objects.isNull(item.getQuantity()) || item.getQuantity() <= 0) {
@@ -142,7 +216,6 @@ public class OmsOrderServiceImpl implements OmsOrderService {
                     .productId(item.getProductId())
                     .productPic(item.getProductPic())
                     .productName(item.getProductName())
-                    .productSn(item.getProductSn())
                     .productPrice(price)
                     .productQuantity(item.getQuantity())
                     .productSkuId(item.getProductSkuId())
@@ -161,7 +234,7 @@ public class OmsOrderServiceImpl implements OmsOrderService {
         rspVO.setOrderId(orderId);
         rspVO.setOrderSn(orderSn);
         rspVO.setTotalAmount(totalAmount);
-        rspVO.setPayAmount(totalAmount);
+        rspVO.setPayAmount(payAmount);
         rspVO.setCreateTime(now);
         return Response.success(rspVO);
     }

@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * @author wly
@@ -65,4 +66,10 @@ public class FindFarmerDetailRspVO {
 
     /** 更新时间 */
     private LocalDateTime updateTime;
+
+    /** 关联产地ID列表 */
+    private List<Long> originIds;
+
+    /** 关联产地名称列表（仅用于展示） */
+    private List<String> originNames;
 }

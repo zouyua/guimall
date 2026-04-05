@@ -34,11 +34,6 @@ public class PmsProductDO {
     private Long productCategoryId;
 
     /**
-     * 商品属性分类ID
-     */
-    private Long productAttributeCategoryId;
-
-    /**
      * 农户ID
      */
     private Long farmerId;

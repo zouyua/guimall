@@ -4,13 +4,16 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.gg.guimall.common.domain.dos.PmsFarmerDO;
 import com.gg.guimall.common.domain.dos.PmsProductCategoryDO;
 import com.gg.guimall.common.domain.dos.PmsProductDO;
+import com.gg.guimall.common.domain.dos.PmsProductParamDO;
+import com.gg.guimall.common.domain.dos.PmsParamDefinitionDO;
 import com.gg.guimall.common.domain.dos.PmsSkuSpecDO;
 import com.gg.guimall.common.domain.dos.PmsSkuStockDO;
-import com.gg.guimall.common.domain.dos.PmsProductAttributeCategoryDO;
+import com.gg.guimall.common.domain.dos.PmsFarmerDO;
 import com.gg.guimall.common.domain.mapper.PmsFarmerMapper;
-import com.gg.guimall.common.domain.mapper.PmsProductAttributeCategoryMapper;
 import com.gg.guimall.common.domain.mapper.PmsProductCategoryMapper;
 import com.gg.guimall.common.domain.mapper.PmsProductMapper;
+import com.gg.guimall.common.domain.mapper.PmsProductParamMapper;
+import com.gg.guimall.common.domain.mapper.PmsParamDefinitionMapper;
 import com.gg.guimall.common.domain.mapper.PmsSkuSpecMapper;
 import com.gg.guimall.common.domain.mapper.PmsSkuStockMapper;
 import com.gg.guimall.common.enums.ResponseCodeEnum;
@@ -52,9 +55,11 @@ public class PmsProductServiceImpl implements PmsProductService {
     @Autowired
     private PmsSkuSpecMapper pmsSkuSpecMapper;
 
-    // 这里并不强依赖属性分类名称，但保留字段扩展时可用
-    @Autowired(required = false)
-    private PmsProductAttributeCategoryMapper pmsProductAttributeCategoryMapper;
+    @Autowired
+    private PmsProductParamMapper pmsProductParamMapper;
+
+    @Autowired
+    private PmsParamDefinitionMapper pmsParamDefinitionMapper;
 
     @Override
     public List<ProductCategoryTreeVO> findCategoryTree() {
@@ -202,6 +207,25 @@ public class PmsProductServiceImpl implements PmsProductService {
             if (farmer != null) {
                 rspVO.setFarmerName(farmer.getName());
             }
+        }
+
+        // 查询商品参数（关联参数定义表拿参数名）
+        List<PmsProductParamDO> paramDOs = pmsProductParamMapper.selectByProductId(id);
+        if (paramDOs != null && !paramDOs.isEmpty()) {
+            List<Long> paramIds = paramDOs.stream()
+                    .map(PmsProductParamDO::getParamId).distinct().collect(Collectors.toList());
+            Map<Long, String> paramNameMap = paramIds.isEmpty() ? Collections.emptyMap() :
+                    pmsParamDefinitionMapper.selectBatchIds(paramIds).stream()
+                            .collect(Collectors.toMap(PmsParamDefinitionDO::getId, PmsParamDefinitionDO::getParamName));
+
+            List<ProductParamItemVO> paramVOs = paramDOs.stream()
+                    .map(p -> ProductParamItemVO.builder()
+                            .paramId(p.getParamId())
+                            .key(paramNameMap.getOrDefault(p.getParamId(), ""))
+                            .value(p.getParamValue())
+                            .build())
+                    .collect(Collectors.toList());
+            rspVO.setProductParams(paramVOs);
         }
 
         // SKU 列表（含规格明细）

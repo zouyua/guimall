@@ -50,11 +50,7 @@ public class OmsOrderDO {
 
     private BigDecimal promotionAmount;
 
-    private BigDecimal integrationAmount;
-
     private BigDecimal couponAmount;
-
-    private BigDecimal discountAmount;
 
     /**
      * 支付方式:0未支付1支付宝2微信

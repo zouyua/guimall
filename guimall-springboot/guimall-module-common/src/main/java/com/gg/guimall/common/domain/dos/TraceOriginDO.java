@@ -48,6 +48,15 @@ public class TraceOriginDO {
     /** 纬度（GIS定位） */
     private java.math.BigDecimal latitude;
 
+    /** 海拔高度（如 240m-450m） */
+    private String altitude;
+
+    /** 年日照时长（如 1650h/年） */
+    private String sunshineHours;
+
+    /** 土壤类型（如 富硒红壤） */
+    private String soilType;
+
     /** 创建时间 */
     private LocalDateTime createTime;
 

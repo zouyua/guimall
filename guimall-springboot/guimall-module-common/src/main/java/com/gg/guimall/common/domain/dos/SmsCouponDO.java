@@ -43,11 +43,6 @@ public class SmsCouponDO {
     private Integer platform;
 
     /**
-     * 总数量
-     */
-    private Integer count;
-
-    /**
      * 优惠金额
      */
     private BigDecimal amount;
@@ -88,6 +83,11 @@ public class SmsCouponDO {
     private Integer publishCount;
 
     /**
+     * 发放总数量（0不限）
+     */
+    private Integer totalCount;
+
+    /**
      * 已使用数量
      */
     private Integer useCount;
@@ -111,6 +111,11 @@ public class SmsCouponDO {
      * 会员等级限制
      */
     private Integer memberLevel;
+
+    /**
+     * 状态：0禁用 1启用
+     */
+    private Integer status;
 
     private LocalDateTime createTime;
 

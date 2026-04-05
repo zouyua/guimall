@@ -27,7 +27,10 @@ public class TraceRecordRspVO {
 
     private Long farmerId;
 
-    private String recordType;
+    private Long recordTypeId;
+
+    /** 类型名称（从trace_record_type表关联查询） */
+    private String recordTypeName;
 
     private String content;
 

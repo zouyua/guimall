@@ -8,34 +8,31 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 /**
- * @author: wly
- * @url: www.gg.com
- * @date: 2026/3/13
- * @description: 商品属性分类表
- **/
+ * 农户-产地关联表 pms_farmer_origin (M:N)
+ * 一个农户可以在多个产地种植，一个产地可以有多个农户
+ *
+ * @author wly
+ * @date 2026/4/4
+ */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("pms_product_attribute_category")
-public class PmsProductAttributeCategoryDO {
+@TableName("pms_farmer_origin")
+public class PmsFarmerOriginDO {
 
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    /**
-     * 属性分类名称
-     */
-    private String name;
+    /** 农户ID */
+    private Long farmerId;
 
-    /**
-     * 属性数量（规格数量）
-     */
-    private Integer attributeCount;
+    /** 产地ID */
+    private Long originId;
 
-    /**
-     * 参数数量
-     */
-    private Integer paramCount;
+    /** 创建时间 */
+    private LocalDateTime createTime;
 }

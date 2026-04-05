@@ -7,7 +7,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.validator.constraints.Length;
 
-import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 
@@ -30,9 +29,8 @@ public class CreateTraceRecordReqVO {
 
     private Long farmerId;
 
-    @NotBlank(message = "记录类型不能为空")
-    @Length(max = 100, message = "记录类型最长100个字符")
-    private String recordType;
+    @NotNull(message = "记录类型不能为空")
+    private Long recordTypeId;
 
     private String content;
 

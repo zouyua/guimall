@@ -46,6 +46,15 @@ public class TraceDetailRspVO {
 
     private String originDescription;
 
+    /** 海拔高度 */
+    private String altitude;
+
+    /** 年日照时长 */
+    private String sunshineHours;
+
+    /** 土壤类型 */
+    private String soilType;
+
     private String traceUrl;
 
     private String qrcodeUrl;

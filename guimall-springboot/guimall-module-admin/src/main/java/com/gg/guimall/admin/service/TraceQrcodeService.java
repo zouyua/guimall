@@ -14,8 +14,12 @@ public interface TraceQrcodeService {
 
     Response upsert(UpsertTraceQrcodeReqVO reqVO);
 
+    /**
+     * 根据商品ID自动生成溯源二维码（ZXing 生成 → MinIO 上传 → 入库）
+     */
+    Response generate(Long productId);
+
     Response findByProductId(Long productId);
 
     Response deleteByProductId(Long productId);
 }
-

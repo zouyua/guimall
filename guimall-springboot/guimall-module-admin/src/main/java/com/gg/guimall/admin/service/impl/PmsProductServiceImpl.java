@@ -3,14 +3,16 @@ package com.gg.guimall.admin.service.impl;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.gg.guimall.admin.model.vo.pms.*;
 import com.gg.guimall.admin.service.PmsProductService;
-import com.gg.guimall.common.domain.dos.PmsProductAttributeCategoryDO;
 import com.gg.guimall.common.domain.dos.PmsProductDO;
 import com.gg.guimall.common.domain.dos.PmsProductCategoryDO;
+import com.gg.guimall.common.domain.dos.PmsProductParamDO;
+import com.gg.guimall.common.domain.dos.PmsParamDefinitionDO;
 import com.gg.guimall.common.domain.dos.PmsFarmerDO;
 import com.gg.guimall.common.domain.mapper.PmsFarmerMapper;
-import com.gg.guimall.common.domain.mapper.PmsProductAttributeCategoryMapper;
 import com.gg.guimall.common.domain.mapper.PmsProductCategoryMapper;
 import com.gg.guimall.common.domain.mapper.PmsProductMapper;
+import com.gg.guimall.common.domain.mapper.PmsProductParamMapper;
+import com.gg.guimall.common.domain.mapper.PmsParamDefinitionMapper;
 import com.gg.guimall.common.enums.ResponseCodeEnum;
 import com.gg.guimall.common.exception.BizException;
 import com.gg.guimall.common.utils.PageResponse;
@@ -19,6 +21,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -45,12 +49,15 @@ public class PmsProductServiceImpl implements PmsProductService {
     @Autowired
     private PmsFarmerMapper pmsFarmerMapper;
     @Autowired
-    private PmsProductAttributeCategoryMapper pmsProductAttributeCategoryMapper;
+    private PmsProductParamMapper pmsProductParamMapper;
+    @Autowired
+    private PmsParamDefinitionMapper pmsParamDefinitionMapper;
 
     /**
      * 创建商品
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Response createProduct(PmsProductCreateReqVO reqVO) {
         // 校验商品分类是否存在
         if (Objects.nonNull(reqVO.getProductCategoryId())) {
@@ -68,19 +75,9 @@ public class PmsProductServiceImpl implements PmsProductService {
             }
         }
 
-        // 校验商品属性分类是否存在（如果传入了）
-        if (Objects.nonNull(reqVO.getProductAttributeCategoryId())) {
-            PmsProductAttributeCategoryDO attrCategoryDO =
-                    pmsProductAttributeCategoryMapper.selectById(reqVO.getProductAttributeCategoryId());
-            if (Objects.isNull(attrCategoryDO)) {
-                throw new BizException(ResponseCodeEnum.INVALID_PRODUCT_DATA);
-            }
-        }
-
         // 构建商品 DO
         PmsProductDO productDO = PmsProductDO.builder()
                 .productCategoryId(reqVO.getProductCategoryId())
-                .productAttributeCategoryId(reqVO.getProductAttributeCategoryId())
                 .farmerId(reqVO.getFarmerId())
                 .name(reqVO.getName())
                 .subTitle(reqVO.getSubTitle())
@@ -105,6 +102,9 @@ public class PmsProductServiceImpl implements PmsProductService {
 
         // 插入数据库
         pmsProductMapper.insert(productDO);
+
+        // 保存商品参数
+        saveProductParams(productDO.getId(), reqVO.getProductParams());
 
         return Response.success();
     }
@@ -141,20 +141,11 @@ public class PmsProductServiceImpl implements PmsProductService {
                 pmsFarmerMapper.selectBatchIds(farmerIds).stream()
                         .collect(Collectors.toMap(PmsFarmerDO::getId, PmsFarmerDO::getName));
 
-        // 批量查询属性分类名
-        List<Long> attrCatIds = page.getRecords().stream()
-                .map(PmsProductDO::getProductAttributeCategoryId).filter(Objects::nonNull).distinct().collect(Collectors.toList());
-        Map<Long, String> attrCatNameMap = attrCatIds.isEmpty() ? Collections.emptyMap() :
-                pmsProductAttributeCategoryMapper.selectBatchIds(attrCatIds).stream()
-                        .collect(Collectors.toMap(PmsProductAttributeCategoryDO::getId, PmsProductAttributeCategoryDO::getName));
-
         List<FindPmsProductPageListRspVO> voList = page.getRecords().stream()
                 .map(product -> FindPmsProductPageListRspVO.builder()
                         .id(product.getId())
                         .productCategoryId(product.getProductCategoryId())
                         .categoryName(catNameMap.get(product.getProductCategoryId()))
-                        .productAttributeCategoryId(product.getProductAttributeCategoryId())
-                        .productAttributeCategoryName(attrCatNameMap.get(product.getProductAttributeCategoryId()))
                         .farmerId(product.getFarmerId())
                         .farmerName(farmerNameMap.get(product.getFarmerId()))
                         .name(product.getName())
@@ -173,7 +164,7 @@ public class PmsProductServiceImpl implements PmsProductService {
     }
 
     /**
-     * 查询商品详情（含关联展示：分类名称、农户名称、属性分类名称）
+     * 查询商品详情（含关联展示：分类名称、农户名称）
      */
     @Override
     public Response findProductDetail(Long id) {
@@ -207,12 +198,24 @@ public class PmsProductServiceImpl implements PmsProductService {
             }
         }
 
-        // 关联查询并填充属性分类名称
-        if (Objects.nonNull(productDO.getProductAttributeCategoryId())) {
-            PmsProductAttributeCategoryDO attrCategory = pmsProductAttributeCategoryMapper.selectById(productDO.getProductAttributeCategoryId());
-            if (attrCategory != null) {
-                rspVO.setProductAttributeCategoryName(attrCategory.getName());
-            }
+        // 查询商品参数（关联参数定义表拿参数名）
+        List<PmsProductParamDO> paramDOs = pmsProductParamMapper.selectByProductId(id);
+        if (!CollectionUtils.isEmpty(paramDOs)) {
+            // 批量查询参数定义名称
+            List<Long> paramIds = paramDOs.stream()
+                    .map(PmsProductParamDO::getParamId).distinct().collect(Collectors.toList());
+            Map<Long, String> paramNameMap = paramIds.isEmpty() ? Collections.emptyMap() :
+                    pmsParamDefinitionMapper.selectBatchIds(paramIds).stream()
+                            .collect(Collectors.toMap(PmsParamDefinitionDO::getId, PmsParamDefinitionDO::getParamName));
+
+            List<ProductParamItemVO> paramVOs = paramDOs.stream()
+                    .map(p -> ProductParamItemVO.builder()
+                            .paramId(p.getParamId())
+                            .key(paramNameMap.getOrDefault(p.getParamId(), ""))
+                            .value(p.getParamValue())
+                            .build())
+                    .collect(Collectors.toList());
+            rspVO.setProductParams(paramVOs);
         }
 
         return Response.success(rspVO);
@@ -222,6 +225,7 @@ public class PmsProductServiceImpl implements PmsProductService {
      * 修改商品
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Response updateProduct(PmsProductUpdateReqVO reqVO) {
         // 参数校验
         if (Objects.isNull(reqVO.getId()) || reqVO.getId() <= 0) {
@@ -250,19 +254,9 @@ public class PmsProductServiceImpl implements PmsProductService {
             }
         }
 
-        // 校验商品属性分类是否存在（如果传入了）
-        if (Objects.nonNull(reqVO.getProductAttributeCategoryId())) {
-            PmsProductAttributeCategoryDO attrCategoryDO =
-                    pmsProductAttributeCategoryMapper.selectById(reqVO.getProductAttributeCategoryId());
-            if (Objects.isNull(attrCategoryDO)) {
-                throw new BizException(ResponseCodeEnum.INVALID_PRODUCT_DATA);
-            }
-        }
-
         PmsProductDO productDO = PmsProductDO.builder()
                 .id(reqVO.getId())
                 .productCategoryId(reqVO.getProductCategoryId())
-                .productAttributeCategoryId(reqVO.getProductAttributeCategoryId())
                 .farmerId(reqVO.getFarmerId())
                 .name(reqVO.getName())
                 .subTitle(reqVO.getSubTitle())
@@ -287,12 +281,12 @@ public class PmsProductServiceImpl implements PmsProductService {
 
         pmsProductMapper.updateById(productDO);
 
+        // 更新商品参数（先删后插）
+        saveProductParams(reqVO.getId(), reqVO.getProductParams());
+
         return Response.success();
     }
 
-    /**
-     * 删除商品
-     */
     @Override
     public Response deleteProduct(Long id) {
 
@@ -352,5 +346,61 @@ public class PmsProductServiceImpl implements PmsProductService {
         pmsProductMapper.updateById(updateDO);
 
         return Response.success();
+    }
+
+    /**
+     * 批量删除商品
+     */
+    @Override
+    public Response batchDelete(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            throw new BizException(ResponseCodeEnum.PARAM_NOT_VALID);
+        }
+        pmsProductMapper.deleteBatchIds(ids);
+        return Response.success();
+    }
+
+    /**
+     * 批量更新上架状态
+     */
+    @Override
+    public Response batchUpdatePublishStatus(List<Long> ids, Integer publishStatus) {
+        if (ids == null || ids.isEmpty()) {
+            throw new BizException(ResponseCodeEnum.PARAM_NOT_VALID);
+        }
+        for (Long id : ids) {
+            PmsProductDO update = new PmsProductDO();
+            update.setId(id);
+            update.setPublishStatus(publishStatus);
+            pmsProductMapper.updateById(update);
+        }
+        return Response.success();
+    }
+
+    /**
+     * 保存商品参数（先删后插）
+     */
+    private void saveProductParams(Long productId, List<ProductParamItemVO> productParams) {
+        // 先删除旧参数
+        pmsProductParamMapper.deleteByProductId(productId);
+
+        if (CollectionUtils.isEmpty(productParams)) {
+            return;
+        }
+
+        // 批量插入新参数
+        for (int i = 0; i < productParams.size(); i++) {
+            ProductParamItemVO item = productParams.get(i);
+            if (item.getParamId() == null) {
+                continue;
+            }
+            PmsProductParamDO paramDO = PmsProductParamDO.builder()
+                    .productId(productId)
+                    .paramId(item.getParamId())
+                    .paramValue(item.getValue() != null ? item.getValue().trim() : "")
+                    .sort(i)
+                    .build();
+            pmsProductParamMapper.insert(paramDO);
+        }
     }
 }

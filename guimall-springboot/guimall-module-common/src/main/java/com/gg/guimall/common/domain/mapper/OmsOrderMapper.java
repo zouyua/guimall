@@ -16,6 +16,10 @@ import java.util.Objects;
  **/
 public interface OmsOrderMapper extends BaseMapper<OmsOrderDO> {
 
+    default OmsOrderDO selectByOrderSn(String orderSn) {
+        return selectOne(new LambdaQueryWrapper<OmsOrderDO>().eq(OmsOrderDO::getOrderSn, orderSn));
+    }
+
     default Page<OmsOrderDO> selectPageList(
             long current,
             long size,

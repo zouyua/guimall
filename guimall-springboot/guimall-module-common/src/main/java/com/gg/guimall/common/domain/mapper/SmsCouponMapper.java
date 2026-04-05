@@ -1,6 +1,7 @@
 package com.gg.guimall.common.domain.mapper;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.gg.guimall.common.domain.dos.SmsCouponDO;
@@ -40,6 +41,29 @@ public interface SmsCouponMapper extends BaseMapper<SmsCouponDO> {
                 .orderByDesc(SmsCouponDO::getCreateTime);
 
         return selectPage(page, wrapper);
+    }
+
+    /**
+     * 原子递增使用数量
+     * @param id 优惠券ID
+     * @return 影响行数
+     */
+    default int incrementUseCount(Long id) {
+        return update(null, new LambdaUpdateWrapper<SmsCouponDO>()
+                .setSql("use_count = use_count + 1")
+                .eq(SmsCouponDO::getId, id));
+    }
+
+    /**
+     * 原子递减使用数量（订单取消时回滚）
+     * @param id 优惠券ID
+     * @return 影响行数
+     */
+    default int decrementUseCount(Long id) {
+        return update(null, new LambdaUpdateWrapper<SmsCouponDO>()
+                .setSql("use_count = use_count - 1")
+                .ge(SmsCouponDO::getUseCount, 1)
+                .eq(SmsCouponDO::getId, id));
     }
 }
 

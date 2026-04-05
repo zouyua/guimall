@@ -44,6 +44,9 @@ public class SubmitOmsOrderReqVO {
     @NotBlank(message = "详细地址不能为空")
     private String receiverDetailAddress;
 
+    /** 优惠券ID（可选） */
+    private Long couponId;
+
     /** 订单备注（可选） */
     private String note;
 

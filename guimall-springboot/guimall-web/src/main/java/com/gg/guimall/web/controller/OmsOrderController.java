@@ -1,6 +1,8 @@
 package com.gg.guimall.web.controller;
 
 import com.gg.guimall.common.aspect.ApiOperationLog;
+import com.gg.guimall.common.domain.dos.OmsOrderDO;
+import com.gg.guimall.common.domain.mapper.OmsOrderMapper;
 import com.gg.guimall.common.utils.PageResponse;
 import com.gg.guimall.common.utils.Response;
 import com.gg.guimall.web.model.vo.oms.FindOmsOrderDetailReqVO;
@@ -16,6 +18,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.Objects;
+
 /**
  * 前台订单 Controller
  */
@@ -26,6 +32,12 @@ public class OmsOrderController {
 
     @Autowired
     private OmsOrderService omsOrderService;
+
+    @Autowired
+    private OmsOrderMapper omsOrderMapper;
+
+    /** 订单支付超时时间（分钟） */
+    private static final long ORDER_TIMEOUT_MINUTES = 30;
 
     @PostMapping("/submit")
     @ApiOperation(value = "提交订单（前台）")
@@ -49,6 +61,23 @@ public class OmsOrderController {
         reqVO.setId(id);
         reqVO.setMemberId(memberId);
         return omsOrderService.findOrderDetail(reqVO);
+    }
+
+    @GetMapping("/remaining-time")
+    @ApiOperation(value = "查询订单剩余支付时间（秒）")
+    @ApiOperationLog(description = "查询订单剩余支付时间（秒）")
+    public Response getRemainingTime(@RequestParam String orderSn) {
+        OmsOrderDO order = omsOrderMapper.selectByOrderSn(orderSn);
+        if (Objects.isNull(order) || Objects.isNull(order.getCreateTime())) {
+            return Response.success(0);
+        }
+        // 非待付款状态，无需倒计时
+        if (!Objects.equals(order.getStatus(), 0)) {
+            return Response.success(0);
+        }
+        long elapsed = Duration.between(order.getCreateTime(), LocalDateTime.now()).getSeconds();
+        long remaining = ORDER_TIMEOUT_MINUTES * 60 - elapsed;
+        return Response.success(Math.max(remaining, 0));
     }
 }
 

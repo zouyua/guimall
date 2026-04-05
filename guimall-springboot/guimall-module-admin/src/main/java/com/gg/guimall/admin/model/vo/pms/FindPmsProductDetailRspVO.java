@@ -6,6 +6,7 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /*@author:wgg
  * @url:www.gg.com
@@ -27,12 +28,6 @@ public class FindPmsProductDetailRspVO {
 
     @ApiModelProperty(value = "商品分类名称（关联展示）")
     private String categoryName;
-
-    @ApiModelProperty(value = "商品属性分类ID")
-    private Long productAttributeCategoryId;
-
-    @ApiModelProperty(value = "商品属性分类名称（关联展示）")
-    private String productAttributeCategoryName;
 
     @ApiModelProperty(value = "农户ID")
     private Long farmerId;
@@ -99,6 +94,9 @@ public class FindPmsProductDetailRspVO {
 
     @ApiModelProperty(value = "产品详情网页内容")
     private String detailHtml;
+
+    @ApiModelProperty(value = "商品参数列表")
+    private List<ProductParamItemVO> productParams;
 
     @ApiModelProperty(value = "促销类型：0没有促销使用原价；1使用满减价格；2使用会员价")
     private Integer promotionType;

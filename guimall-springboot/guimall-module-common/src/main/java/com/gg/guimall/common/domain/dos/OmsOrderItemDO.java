@@ -36,8 +36,6 @@ public class OmsOrderItemDO {
 
     private String productName;
 
-    private String productSn;
-
     private BigDecimal productPrice;
 
     private Integer productQuantity;

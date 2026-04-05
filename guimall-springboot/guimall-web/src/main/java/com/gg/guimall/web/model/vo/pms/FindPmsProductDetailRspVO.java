@@ -66,6 +66,9 @@ public class FindPmsProductDetailRspVO {
 
     private String detailHtml;
 
+    /** 商品参数列表 [{key, value}] */
+    private List<ProductParamItemVO> productParams;
+
     private Integer isNew;
 
     private Integer isRecommend;

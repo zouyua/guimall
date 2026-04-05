@@ -27,7 +27,7 @@ public class UmsMemberReceiveAddressDO {
     private String name;
     private String phone;
     /** 是否默认：0 否 1 是 */
-    private Integer defaultStatus;
+    private Integer isDefault;
     private String postCode;
     private String province;
     private String city;

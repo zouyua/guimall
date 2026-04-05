@@ -1,17 +1,19 @@
 package com.gg.guimall.web.service.impl;
 
 import com.gg.guimall.common.domain.dos.PmsFarmerDO;
+import com.gg.guimall.common.domain.dos.PmsFarmerOriginDO;
 import com.gg.guimall.common.domain.dos.PmsProductDO;
 import com.gg.guimall.common.domain.dos.TraceOriginDO;
-import com.gg.guimall.common.domain.dos.TraceProductOriginDO;
 import com.gg.guimall.common.domain.dos.TraceQrcodeDO;
 import com.gg.guimall.common.domain.dos.TraceRecordDO;
+import com.gg.guimall.common.domain.dos.TraceRecordTypeDO;
 import com.gg.guimall.common.domain.mapper.PmsFarmerMapper;
+import com.gg.guimall.common.domain.mapper.PmsFarmerOriginMapper;
 import com.gg.guimall.common.domain.mapper.PmsProductMapper;
 import com.gg.guimall.common.domain.mapper.TraceOriginMapper;
-import com.gg.guimall.common.domain.mapper.TraceProductOriginMapper;
 import com.gg.guimall.common.domain.mapper.TraceQrcodeMapper;
 import com.gg.guimall.common.domain.mapper.TraceRecordMapper;
+import com.gg.guimall.common.domain.mapper.TraceRecordTypeMapper;
 import com.gg.guimall.common.enums.ResponseCodeEnum;
 import com.gg.guimall.common.exception.BizException;
 import com.gg.guimall.common.utils.Response;
@@ -21,8 +23,11 @@ import com.gg.guimall.web.service.TraceService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -44,7 +49,7 @@ public class TraceServiceImpl implements TraceService {
     private PmsFarmerMapper pmsFarmerMapper;
 
     @Autowired
-    private TraceProductOriginMapper traceProductOriginMapper;
+    private PmsFarmerOriginMapper pmsFarmerOriginMapper;
 
     @Autowired
     private TraceOriginMapper traceOriginMapper;
@@ -54,6 +59,9 @@ public class TraceServiceImpl implements TraceService {
 
     @Autowired
     private TraceQrcodeMapper traceQrcodeMapper;
+
+    @Autowired
+    private TraceRecordTypeMapper traceRecordTypeMapper;
 
     @Override
     public Response findTraceDetail(Long productId) {
@@ -71,17 +79,56 @@ public class TraceServiceImpl implements TraceService {
                 ? pmsFarmerMapper.selectById(productDO.getFarmerId())
                 : null;
 
-        TraceProductOriginDO relation = traceProductOriginMapper.selectByProductId(productId);
-        TraceOriginDO originDO = Objects.nonNull(relation) ? traceOriginMapper.selectById(relation.getOriginId()) : null;
+        // 通过 商品→农户→农户关联产地 链路获取产地信息
+        TraceOriginDO originDO = null;
+        if (Objects.nonNull(farmerDO)) {
+            List<PmsFarmerOriginDO> farmerOrigins = pmsFarmerOriginMapper.selectByFarmerId(farmerDO.getId());
+            if (!CollectionUtils.isEmpty(farmerOrigins)) {
+                // 取第一个关联产地作为主产地
+                originDO = traceOriginMapper.selectById(farmerOrigins.get(0).getOriginId());
+            }
+        }
 
         List<TraceRecordDO> recordList = traceRecordMapper.selectByProductId(productId);
+
+        // 批量查询记录类型名称
+        List<Long> typeIds = recordList.stream()
+                .map(TraceRecordDO::getRecordTypeId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<Long, String> typeNameMap = new HashMap<>();
+        if (!typeIds.isEmpty()) {
+            List<TraceRecordTypeDO> typeList = traceRecordTypeMapper.selectBatchIds(typeIds);
+            typeNameMap = typeList.stream()
+                    .collect(Collectors.toMap(TraceRecordTypeDO::getId, TraceRecordTypeDO::getTypeName));
+        }
+
+        // 批量查询记录中涉及的农户名称
+        List<Long> farmerIds = recordList.stream()
+                .map(TraceRecordDO::getFarmerId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<Long, String> farmerNameMap = new HashMap<>();
+        if (!farmerIds.isEmpty()) {
+            List<PmsFarmerDO> farmers = pmsFarmerMapper.selectBatchIds(farmerIds);
+            farmerNameMap = farmers.stream()
+                    .collect(Collectors.toMap(PmsFarmerDO::getId, PmsFarmerDO::getName));
+        }
+
+        Map<Long, String> finalTypeNameMap = typeNameMap;
+        Map<Long, String> finalFarmerNameMap = farmerNameMap;
         List<TraceRecordVO> records = recordList.stream()
                 .map(r -> {
                     TraceRecordVO vo = new TraceRecordVO();
-                    vo.setRecordType(r.getRecordType());
+                    vo.setRecordTypeId(r.getRecordTypeId());
+                    vo.setRecordTypeName(finalTypeNameMap.getOrDefault(r.getRecordTypeId(), "记录"));
                     vo.setContent(r.getContent());
                     vo.setRecordTime(r.getRecordTime());
                     vo.setPic(r.getPic());
+                    vo.setFarmerName(Objects.nonNull(r.getFarmerId())
+                            ? finalFarmerNameMap.getOrDefault(r.getFarmerId(), null) : null);
                     return vo;
                 })
                 .collect(Collectors.toList());
@@ -109,6 +156,9 @@ public class TraceServiceImpl implements TraceService {
             rspVO.setCity(originDO.getCity());
             rspVO.setRegion(originDO.getRegion());
             rspVO.setOriginDescription(originDO.getDescription());
+            rspVO.setAltitude(originDO.getAltitude());
+            rspVO.setSunshineHours(originDO.getSunshineHours());
+            rspVO.setSoilType(originDO.getSoilType());
         }
 
         if (Objects.nonNull(qrcodeDO)) {
@@ -121,4 +171,3 @@ public class TraceServiceImpl implements TraceService {
         return Response.success(rspVO);
     }
 }
-

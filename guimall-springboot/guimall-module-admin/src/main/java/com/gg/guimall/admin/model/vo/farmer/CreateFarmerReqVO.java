@@ -9,6 +9,7 @@ import org.hibernate.validator.constraints.Length;
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Pattern;
+import java.util.List;
 
 /**
  * 创建农户请求 VO（对应 pms_farmer 表）
@@ -72,4 +73,7 @@ public class CreateFarmerReqVO {
 
     /** 状态：0禁用 1启用 */
     private Integer status;
+
+    /** 关联产地ID列表 */
+    private List<Long> originIds;
 }
