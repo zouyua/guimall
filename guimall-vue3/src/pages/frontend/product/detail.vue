@@ -15,6 +15,15 @@
              返回
            </button>
            <div class="w-px h-4 bg-stone-200"></div>
+           <router-link to="/cart" class="text-stone-500 hover:text-emerald-600 transition-colors flex items-center">
+             <a-badge :count="cartStore.cartCount" :offset="[-2, 2]" size="small">
+               <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z" />
+               </svg>
+             </a-badge>
+             购物车
+           </router-link>
+           <div class="w-px h-4 bg-stone-200"></div>
            <router-link to="/" class="text-stone-500 hover:text-emerald-600">首页</router-link>
         </div>
       </div>
@@ -85,6 +94,20 @@
              </p>
           </div>
 
+          <!-- 商品参数 -->
+          <div v-if="parsedParams.length > 0" class="bg-white p-6 rounded-3xl border border-stone-100 shadow-sm">
+            <h3 class="font-bold text-stone-800 text-lg mb-4 flex items-center">
+              <svg class="w-5 h-5 mr-2 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg>
+              商品参数
+            </h3>
+            <div class="divide-y divide-stone-100 rounded-2xl overflow-hidden border border-stone-100">
+              <div v-for="(param, idx) in parsedParams" :key="idx" class="flex">
+                <div class="w-32 shrink-0 bg-stone-50 px-4 py-3 text-sm font-medium text-stone-500">{{ param.key }}</div>
+                <div class="flex-1 px-4 py-3 text-sm text-stone-800">{{ param.value || '-' }}</div>
+              </div>
+            </div>
+          </div>
+
           <!-- 农户信息 -->
           <div class="bg-white p-6 rounded-3xl border border-stone-100 shadow-sm flex items-center justify-between">
             <div class="flex items-center space-x-4">
@@ -109,7 +132,7 @@
                <span class="font-bold text-stone-800">{{ quantity }}</span>
                <button @click="quantity++" class="w-8 h-8 flex items-center justify-center text-stone-400 hover:text-emerald-600">+</button>
             </div>
-            <button class="flex-1 bg-emerald-600 text-white py-4 rounded-2xl font-black text-lg shadow-lg shadow-emerald-200 hover:bg-emerald-700 hover:-translate-y-1 transition-all">加入购物车</button>
+            <button @click="handleAddCart" class="flex-1 bg-emerald-600 text-white py-4 rounded-2xl font-black text-lg shadow-lg shadow-emerald-200 hover:bg-emerald-700 hover:-translate-y-1 transition-all">加入购物车</button>
           </div>
 
           <!-- 详情介绍 -->
@@ -133,17 +156,27 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { message } from 'ant-design-vue'
 import { getProductDetail } from '@/api/frontend/product'
+import { addCartItem } from '@/api/frontend/cart'
+import { getMemberId, isMemberLoggedIn } from '@/composables/member'
+import { useCartStore } from '@/stores/cart'
 
 const route = useRoute()
 const router = useRouter()
+const cartStore = useCartStore()
 const id = route.query.id
 
 const product = ref({})
 const selectedSku = ref(null)
 const quantity = ref(1)
+
+// 商品参数（直接从 API 返回的数组读取）
+const parsedParams = computed(() => {
+  return product.value.productParams || []
+})
 
 const loadDetail = async () => {
   const res = await getProductDetail(id)
@@ -181,8 +214,42 @@ const goTrace = () => {
   router.push(`/trace/${id}`)
 }
 
+const handleAddCart = async () => {
+  if (!isMemberLoggedIn()) {
+    message.warning('请先登录')
+    router.push(`/member/login?redirect=${encodeURIComponent(route.fullPath)}`)
+    return
+  }
+  if (!selectedSku.value) {
+    message.warning('请先选择商品规格')
+    return
+  }
+  try {
+    const data = {
+      memberId: getMemberId(),
+      productId: product.value.id,
+      productSkuId: selectedSku.value.id,
+      quantity: quantity.value,
+      price: selectedSku.value.promotionPrice || selectedSku.value.price || product.value.price,
+      productPic: product.value.pic,
+      productName: product.value.name,
+      productAttr: formatSku(selectedSku.value)
+    }
+    const res = await addCartItem(data)
+    if (res.success) {
+      message.success('已加入购物车')
+      cartStore.loadCartCount()
+    } else {
+      message.error(res.message || '加入购物车失败')
+    }
+  } catch (e) {
+    message.error('加入购物车失败')
+  }
+}
+
 onMounted(() => {
   loadDetail()
+  cartStore.loadCartCount()
 })
 </script>
 

@@ -21,17 +21,18 @@
     </a-card>
 
     <a-card :bordered="false" class="mb-5">
-      <div class="flex flex-wrap items-center gap-4">
-        <a-button class="flex items-center gap-1" @click="goBack">
-          <ArrowLeftOutlined />
-          返回订单列表
-        </a-button>
-        <span class="text-base font-semibold">发货管理</span>
+      <div class="flex flex-wrap items-center justify-between">
+        <div class="flex items-center gap-4">
+          <a-button class="flex items-center gap-1" @click="goBack">
+            <ArrowLeftOutlined />
+            返回订单列表
+          </a-button>
+          <span class="text-xl font-bold">发货管理</span>
+        </div>
       </div>
     </a-card>
 
-    <a-card :bordered="false" title="发货管理">
-
+    <a-card :bordered="false">
       <a-table :dataSource="pagedData" :columns="columns" :pagination="false" rowKey="id" bordered class="w-full" />
 
       <div class="mt-6 flex justify-center">

@@ -32,14 +32,6 @@
           </a-select>
         </a-form-item>
 
-        <a-form-item label="属性分类">
-          <a-select v-model:value="form.productAttributeCategoryId" placeholder="可选" class="w-full" allow-clear>
-            <a-select-option v-for="item in attrCategoryOptions" :key="item.id" :value="item.id">
-              {{ item.name }}
-            </a-select-option>
-          </a-select>
-        </a-form-item>
-
         <a-form-item name="farmerId" label="关联农户" :required="true">
           <a-select v-model:value="form.farmerId" placeholder="请选择农户" class="w-full" allow-clear>
             <a-select-option v-for="item in farmerOptions" :key="item.id" :value="item.id">
@@ -52,8 +44,19 @@
           <a-input v-model:value="form.productSn" placeholder="请输入商品货号" />
         </a-form-item>
 
-        <a-form-item label="主图地址">
-          <a-input v-model:value="form.pic" placeholder="图片 URL" />
+        <a-form-item label="商品主图">
+          <a-upload
+            :max-count="1"
+            list-type="picture-card"
+            :file-list="picFileList"
+            :custom-request="handlePicUpload"
+            @remove="handlePicRemove"
+          >
+            <div v-if="picFileList.length === 0">
+              <plus-outlined />
+              <div class="mt-2">上传图片</div>
+            </div>
+          </a-upload>
         </a-form-item>
 
         <a-form-item name="price" label="销售价格" :required="true">
@@ -77,35 +80,89 @@
         </a-form-item>
 
         <a-form-item label="商品描述">
-          <a-textarea v-model:value="form.description" :rows="4" placeholder="请输入商品描述" />
+          <RichEditor v-model="form.detailHtml" />
         </a-form-item>
       </a-form>
-
-      <div class="mt-6 flex justify-center gap-3">
-        <a-button type="primary" @click="handleSubmit">提交</a-button>
-        <a-button @click="goBack">取消</a-button>
-      </div>
     </a-card>
+
+    <!-- 商品参数（由分类模板决定） -->
+    <a-card :bordered="false" title="商品参数" class="mt-5">
+      <a-alert
+        class="mb-4"
+        type="info"
+        show-icon
+        banner
+        message="商品参数由所选分类的参数模板自动加载，请先选择商品分类。"
+      />
+
+      <a-empty v-if="!form.productCategoryId" description="请先选择商品分类" />
+
+      <a-empty v-else-if="paramRows.length === 0 && !paramLoading" description="该分类暂无参数模板，请在分类管理中添加" />
+
+      <a-spin v-else :spinning="paramLoading">
+        <a-table
+          :dataSource="paramRows"
+          :columns="paramColumns"
+          rowKey="paramId"
+          :pagination="false"
+          bordered
+          size="small"
+        />
+      </a-spin>
+    </a-card>
+
+    <!-- 底部固定操作栏 -->
+    <div class="fixed-bottom-bar">
+      <a-button type="primary" @click="handleSubmit">提交</a-button>
+      <a-button @click="goBack">取消</a-button>
+    </div>
 
   </div>
 </template>
 
 <script setup>
-import { reactive, ref, onMounted } from 'vue'
+import { reactive, ref, h, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { message } from 'ant-design-vue'
-import { ArrowLeftOutlined } from '@ant-design/icons-vue'
+import { message, Input, Spin } from 'ant-design-vue'
+import { ArrowLeftOutlined, PlusOutlined } from '@ant-design/icons-vue'
 import { createProduct } from '@/api/admin/product'
 import { fetchProductCategoryOptions } from '@/api/admin/productCategory'
 import { fetchFarmerOptions } from '@/api/admin/farmer'
-import { fetchProductAttrCategoryOptions } from '@/api/admin/productAttrCategory'
+import { uploadFile } from '@/api/admin/upload'
+import { fetchParamDefinitions } from '@/api/admin/paramDefinition'
+import RichEditor from '@/components/RichEditor.vue'
 
 const router = useRouter()
 const formRef = ref(null)
 const categoryOptions = ref([])
 const farmerOptions = ref([])
-const attrCategoryOptions = ref([])
 const publishChecked = ref(false)
+const picFileList = ref([])
+
+// 动态参数行（模板驱动）
+const paramRows = ref([])
+const paramLoading = ref(false)
+
+const handlePicUpload = async ({ file, onSuccess, onError }) => {
+  try {
+    const res = await uploadFile(file)
+    if (res.success) {
+      form.pic = res.data
+      picFileList.value = [{ uid: '-1', name: file.name, status: 'done', url: res.data }]
+      onSuccess(res)
+    } else {
+      message.error(res.message || '上传失败')
+      onError(new Error(res.message))
+    }
+  } catch (e) {
+    message.error('上传失败')
+    onError(e)
+  }
+}
+const handlePicRemove = () => {
+  form.pic = ''
+  picFileList.value = []
+}
 
 const rules = {
   name: [{ required: true, message: '请输入商品名称', trigger: 'blur' }],
@@ -119,7 +176,6 @@ const rules = {
 const form = reactive({
   name: '',
   productCategoryId: undefined,
-  productAttributeCategoryId: undefined,
   farmerId: undefined,
   productSn: '',
   pic: '',
@@ -128,22 +184,71 @@ const form = reactive({
   stock: 0,
   unit: '斤',
   publishStatus: 0,
-  description: ''
+  detailHtml: ''
 })
 
 const goBack = () => {
   router.push('/admin/pms/product')
 }
 
+// 商品参数表格列（参数名只读，只填写值）
+const paramColumns = [
+  {
+    title: '参数名',
+    dataIndex: 'key',
+    width: '40%'
+  },
+  {
+    title: '参数值',
+    width: '60%',
+    customRender: ({ record }) =>
+      h(Input, {
+        value: record.value,
+        placeholder: '请输入参数值',
+        onChange: e => (record.value = e.target.value)
+      })
+  }
+]
+
+// 选择分类后加载参数模板
+const loadCategoryParams = async (categoryId) => {
+  if (!categoryId) {
+    paramRows.value = []
+    return
+  }
+  paramLoading.value = true
+  try {
+    const rsp = await fetchParamDefinitions(categoryId)
+    const defs = rsp?.data || []
+    paramRows.value = defs.map(d => ({
+      paramId: d.id,
+      key: d.paramName,
+      value: ''
+    }))
+  } finally {
+    paramLoading.value = false
+  }
+}
+
+// 监听分类变化
+watch(() => form.productCategoryId, (newVal) => {
+  loadCategoryParams(newVal)
+})
+
+// 构建 productParams 数组
+const buildProductParams = () => {
+  return paramRows.value
+    .filter(r => r.paramId)
+    .map(r => ({ paramId: r.paramId, value: (r.value || '').trim() }))
+}
+
 onMounted(async () => {
-  const [categoryRsp, farmerRsp, attrRsp] = await Promise.all([
+  const [categoryRsp, farmerRsp] = await Promise.all([
     fetchProductCategoryOptions(),
-    fetchFarmerOptions(),
-    fetchProductAttrCategoryOptions()
+    fetchFarmerOptions()
   ])
   categoryOptions.value = categoryRsp?.data || []
   farmerOptions.value = farmerRsp?.data || []
-  attrCategoryOptions.value = attrRsp?.data || []
 })
 
 const handleSubmit = async () => {
@@ -155,21 +260,20 @@ const handleSubmit = async () => {
 
   await createProduct({
     productCategoryId: form.productCategoryId,
-    productAttributeCategoryId: form.productAttributeCategoryId,
     farmerId: form.farmerId,
     name: form.name.trim(),
     productSn: form.productSn.trim(),
     pic: form.pic?.trim() || null,
-    description: form.description?.trim() || null,
+    detailHtml: form.detailHtml || null,
     price: form.price,
     originalPrice: form.originalPrice,
     stock: form.stock,
-    unit: form.unit?.trim() || null
+    unit: form.unit?.trim() || null,
+    productParams: buildProductParams()
   })
 
-  // 后端 createProduct 当前默认下架，这里若勾选“上架状态”则提示到列表页执行上架按钮
   if (publishChecked.value) {
-    message.info('商品已创建。请在商品列表点击“上架”开关完成上架。')
+    message.info('商品已创建。请在商品列表点击"上架"开关完成上架。')
   } else {
     message.success('创建成功')
   }
@@ -178,6 +282,25 @@ const handleSubmit = async () => {
 </script>
 
 <style scoped>
+.fixed-bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 99;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  padding: 12px 24px;
+  background: #fff;
+  border-top: 1px solid #f0f0f0;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.box {
+  padding-bottom: 72px;
+}
+
 :deep(.ant-input),
 :deep(.ant-input-number),
 :deep(.ant-select-selector),

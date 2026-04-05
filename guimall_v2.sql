@@ -73,40 +73,18 @@ CREATE TABLE `pms_farmer` (
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 DEFAULT CHARSET = utf8mb4 COMMENT = '农户信息';
 
 -- ----------------------------
--- pms_product_attribute_category 商品属性分组
+-- pms_param_definition 商品参数定义（模板，挂在分类下）
 -- ----------------------------
-DROP TABLE IF EXISTS `pms_product_attribute_category`;
-CREATE TABLE `pms_product_attribute_category` (
-  `id`              bigint       NOT NULL AUTO_INCREMENT            COMMENT '属性分组ID',
-  `name`            varchar(64)  NOT NULL                          COMMENT '属性分组名称',
-  `attribute_count` int          NOT NULL DEFAULT 0                COMMENT '属性数量（规格）',
-  `param_count`     int          NOT NULL DEFAULT 0                COMMENT '参数数量（参数）',
-  `create_time`     datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_time`     datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  PRIMARY KEY (`id`)
-) ENGINE = InnoDB AUTO_INCREMENT = 1 DEFAULT CHARSET = utf8mb4 COMMENT = '商品属性分组';
-
--- ----------------------------
--- pms_product_attribute 商品属性/规格定义
--- ----------------------------
-DROP TABLE IF EXISTS `pms_product_attribute`;
-CREATE TABLE `pms_product_attribute` (
-  `id`                           bigint       NOT NULL AUTO_INCREMENT  COMMENT '属性ID',
-  `product_attribute_category_id` bigint      NOT NULL                 COMMENT '属性分组ID',
-  `name`                         varchar(64)  NOT NULL                 COMMENT '属性名称',
-  `select_type`                  tinyint(1)   NOT NULL DEFAULT 0       COMMENT '属性选择类型：0单选 1多选 2唯一',
-  `input_type`                   tinyint(1)   NOT NULL DEFAULT 0       COMMENT '录入方式：0手动 1从列表选',
-  `input_list`                   varchar(255) NULL     DEFAULT NULL    COMMENT '可选值列表（逗号分隔）',
-  `sort`                         int          NOT NULL DEFAULT 0       COMMENT '排序',
-  `filter_type`                  tinyint(1)   NOT NULL DEFAULT 0       COMMENT '是否作为筛选项：0否 1是',
-  `search_type`                  tinyint(1)   NOT NULL DEFAULT 0       COMMENT '检索类型：0不检索 1模糊 2精确',
-  `related_status`               tinyint(1)   NOT NULL DEFAULT 0       COMMENT '是否关联SKU：0否 1是',
-  `hand_add_status`              tinyint(1)   NOT NULL DEFAULT 0       COMMENT '是否支持手动新增：0否 1是',
-  `type`                         tinyint(1)   NOT NULL DEFAULT 0       COMMENT '属性类型：0规格 1参数',
-  `create_time`                  datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+DROP TABLE IF EXISTS `pms_param_definition`;
+CREATE TABLE `pms_param_definition` (
+  `id`          bigint       NOT NULL AUTO_INCREMENT COMMENT 'ID',
+  `category_id` bigint       NOT NULL               COMMENT '所属商品分类ID',
+  `param_name`  varchar(64)  NOT NULL               COMMENT '参数名（如：保质期、产地）',
+  `sort`        int          NOT NULL DEFAULT 0      COMMENT '排序',
+  `create_time` datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   PRIMARY KEY (`id`),
-  INDEX `idx_category` (`product_attribute_category_id`)
-) ENGINE = InnoDB AUTO_INCREMENT = 1 DEFAULT CHARSET = utf8mb4 COMMENT = '商品属性/规格定义';
+  INDEX `idx_category` (`category_id`)
+) ENGINE = InnoDB AUTO_INCREMENT = 1 DEFAULT CHARSET = utf8mb4 COMMENT = '商品参数定义（模板，挂在分类下）';
 
 -- ----------------------------
 -- pms_product 商品主表
@@ -119,7 +97,6 @@ CREATE TABLE `pms_product` (
   `id`                           bigint         NOT NULL AUTO_INCREMENT COMMENT '商品ID',
   `product_category_id`          bigint         NOT NULL                COMMENT '商品分类ID',
   `farmer_id`                    bigint         NULL     DEFAULT NULL   COMMENT '农户ID',
-  `product_attribute_category_id` bigint        NULL     DEFAULT NULL   COMMENT '属性分组ID',
   `product_sn`                   varchar(64)    NOT NULL                COMMENT '货号/商品编码',
   `name`                         varchar(128)   NOT NULL                COMMENT '商品名称',
   `sub_title`                    varchar(255)   NULL     DEFAULT NULL   COMMENT '副标题/卖点',
@@ -180,17 +157,20 @@ CREATE TABLE `pms_sku_stock` (
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 DEFAULT CHARSET = utf8mb4 COMMENT = 'SKU库存';
 
 -- ----------------------------
--- pms_product_attribute_value 商品属性值
+-- pms_product_param 商品参数值（中间表：商品 ↔ 参数定义）
 -- ----------------------------
-DROP TABLE IF EXISTS `pms_product_attribute_value`;
-CREATE TABLE `pms_product_attribute_value` (
-  `id`                   bigint       NOT NULL AUTO_INCREMENT COMMENT 'ID',
-  `product_id`           bigint       NOT NULL               COMMENT '商品ID',
-  `product_attribute_id` bigint       NOT NULL               COMMENT '属性ID',
-  `value`                varchar(500) NOT NULL               COMMENT '属性值',
+DROP TABLE IF EXISTS `pms_product_param`;
+CREATE TABLE `pms_product_param` (
+  `id`          bigint       NOT NULL AUTO_INCREMENT COMMENT 'ID',
+  `product_id`  bigint       NOT NULL               COMMENT '商品ID',
+  `param_id`    bigint       NOT NULL               COMMENT '参数定义ID',
+  `param_value` varchar(255) NOT NULL DEFAULT ''     COMMENT '参数值',
+  `sort`        int          NOT NULL DEFAULT 0      COMMENT '排序',
   PRIMARY KEY (`id`),
-  INDEX `idx_product` (`product_id`)
-) ENGINE = InnoDB AUTO_INCREMENT = 1 DEFAULT CHARSET = utf8mb4 COMMENT = '商品属性值';
+  INDEX `idx_product` (`product_id`),
+  INDEX `idx_param` (`param_id`),
+  UNIQUE `uk_product_param` (`product_id`, `param_id`)
+) ENGINE = InnoDB AUTO_INCREMENT = 1 DEFAULT CHARSET = utf8mb4 COMMENT = '商品参数值（中间表）';
 
 -- ----------------------------
 -- pms_product_full_reduction 满减规则
@@ -618,8 +598,11 @@ CREATE TABLE `trace_origin` (
   `province`    varchar(64)   NOT NULL               COMMENT '省',
   `city`        varchar(64)   NOT NULL               COMMENT '市',
   `region`      varchar(64)   NULL     DEFAULT NULL  COMMENT '区/县',
-  `longitude`   decimal(10,6) NULL     DEFAULT NULL  COMMENT '经度（GIS定位）',
-  `latitude`    decimal(10,6) NULL     DEFAULT NULL  COMMENT '纬度（GIS定位）',
+  `longitude`       decimal(10,6) NULL     DEFAULT NULL  COMMENT '经度（GIS定位）',
+  `latitude`        decimal(10,6) NULL     DEFAULT NULL  COMMENT '纬度（GIS定位）',
+  `altitude`        varchar(64)   NULL     DEFAULT NULL  COMMENT '海拔高度（如 240m-450m）',
+  `sunshine_hours`  varchar(64)   NULL     DEFAULT NULL  COMMENT '年日照时长（如 1650h/年）',
+  `soil_type`       varchar(64)   NULL     DEFAULT NULL  COMMENT '土壤类型（如 富硒红壤）',
   `description` varchar(1000) NULL     DEFAULT NULL  COMMENT '产地描述',
   `create_time` datetime      NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time` datetime      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
@@ -627,37 +610,54 @@ CREATE TABLE `trace_origin` (
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 DEFAULT CHARSET = utf8mb4 COMMENT = '农产品产地';
 
 -- ----------------------------
--- trace_product_origin 商品-产地关联
--- 说明：一个商品可能来自多个产地批次，因此使用关联表而非直接在 pms_product 加 origin_id
+-- pms_farmer_origin 农户-产地关联（M:N）
+-- 说明：一个农户可以在多个产地种植，一个产地可以有多个农户
+-- 商品的产地通过 商品→农户→农户关联的产地 链路推导
 -- ----------------------------
-DROP TABLE IF EXISTS `trace_product_origin`;
-CREATE TABLE `trace_product_origin` (
-  `id`         bigint NOT NULL AUTO_INCREMENT COMMENT 'ID',
-  `product_id` bigint NOT NULL               COMMENT '商品ID',
-  `origin_id`  bigint NOT NULL               COMMENT '产地ID',
-  `farmer_id`  bigint NULL     DEFAULT NULL  COMMENT '农户ID',
-  `is_primary` tinyint(1) NOT NULL DEFAULT 1 COMMENT '是否主产地：0否 1是',
+DROP TABLE IF EXISTS `pms_farmer_origin`;
+CREATE TABLE `pms_farmer_origin` (
+  `id`          bigint   NOT NULL AUTO_INCREMENT COMMENT 'ID',
+  `farmer_id`   bigint   NOT NULL               COMMENT '农户ID',
+  `origin_id`   bigint   NOT NULL               COMMENT '产地ID',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   PRIMARY KEY (`id`),
-  INDEX `idx_product` (`product_id`),
+  UNIQUE INDEX `uk_farmer_origin` (`farmer_id`, `origin_id`),
+  INDEX `idx_farmer` (`farmer_id`),
   INDEX `idx_origin` (`origin_id`)
-) ENGINE = InnoDB AUTO_INCREMENT = 1 DEFAULT CHARSET = utf8mb4 COMMENT = '商品-产地关联';
+) ENGINE = InnoDB AUTO_INCREMENT = 1 DEFAULT CHARSET = utf8mb4 COMMENT = '农户-产地关联表（M:N）';
+
+-- ----------------------------
+-- trace_record_type 溯源记录类型（关联商品分类）
+-- ----------------------------
+DROP TABLE IF EXISTS `trace_record_type`;
+CREATE TABLE `trace_record_type` (
+  `id`          bigint       NOT NULL AUTO_INCREMENT COMMENT '类型ID',
+  `category_id` bigint       NULL     DEFAULT NULL  COMMENT '商品分类ID（关联pms_product_category）',
+  `type_name`   varchar(64)  NOT NULL               COMMENT '记录类型名称（如：播种、施肥、采摘）',
+  `sort`        int          NULL     DEFAULT 0     COMMENT '排序',
+  `create_time` datetime     NULL     DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime     NULL     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  INDEX `idx_category_id` (`category_id`)
+) ENGINE = InnoDB AUTO_INCREMENT = 1 DEFAULT CHARSET = utf8mb4 COMMENT = '溯源记录类型表';
 
 -- ----------------------------
 -- trace_record 种植/生产记录（成长轨迹时间线）
+-- 改动：record_type(varchar) → record_type_id(bigint) 关联 trace_record_type
 -- ----------------------------
 DROP TABLE IF EXISTS `trace_record`;
 CREATE TABLE `trace_record` (
-  `id`          bigint        NOT NULL AUTO_INCREMENT COMMENT '记录ID',
-  `product_id`  bigint        NOT NULL               COMMENT '商品ID',
-  `farmer_id`   bigint        NULL     DEFAULT NULL  COMMENT '农户ID',
-  `record_type` varchar(32)   NOT NULL               COMMENT '记录类型：播种/施肥/灌溉/采摘/加工/检测/入库等',
-  `content`     varchar(1000) NOT NULL               COMMENT '操作内容描述',
-  `pic`         varchar(500)  NULL     DEFAULT NULL  COMMENT '现场照片URL',
-  `record_time` datetime      NOT NULL               COMMENT '操作时间',
-  `create_time` datetime      NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '录入时间',
+  `id`             bigint        NOT NULL AUTO_INCREMENT COMMENT '记录ID',
+  `product_id`     bigint        NOT NULL               COMMENT '商品ID',
+  `farmer_id`      bigint        NULL     DEFAULT NULL  COMMENT '农户ID',
+  `record_type_id` bigint        NULL     DEFAULT NULL  COMMENT '记录类型ID（关联trace_record_type表）',
+  `content`        varchar(1000) NOT NULL               COMMENT '操作内容描述',
+  `pic`            varchar(500)  NULL     DEFAULT NULL  COMMENT '现场照片URL',
+  `record_time`    datetime      NOT NULL               COMMENT '操作时间',
+  `create_time`    datetime      NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '录入时间',
   PRIMARY KEY (`id`),
   INDEX `idx_product` (`product_id`),
+  INDEX `idx_record_type_id` (`record_type_id`),
   INDEX `idx_record_time` (`product_id`, `record_time`)
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 DEFAULT CHARSET = utf8mb4 COMMENT = '农产品成长记录/溯源时间线';
 
@@ -678,55 +678,7 @@ CREATE TABLE `trace_qrcode` (
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 DEFAULT CHARSET = utf8mb4 COMMENT = '商品溯源二维码';
 
 -- ================================================================
--- 初始化数据
--- ================================================================
-
--- 商品分类（一级分类）
-INSERT INTO `pms_product_category` (`id`,`parent_id`,`name`,`level`,`product_unit`,`status`,`sort`,`icon`,`keywords`,`description`) VALUES
-(1, 0, '荔浦农产', 0, '件', 1, 1, '', '荔浦,芋头,马蹄', '荔浦县特色农产品'),
-(2, 0, '阳朔特产', 0, '件', 1, 2, '', '阳朔,金桔,沙田柚', '阳朔县地理标志产品'),
-(3, 0, '永福道地', 0, '件', 1, 3, '', '永福,罗汉果,寿乡', '永福县道地药材与农产'),
-(4, 0, '恭城月柿', 0, '件', 1, 4, '', '恭城,月柿,柿子', '恭城县月柿系列'),
-(5, 0, '桂林米粉', 0, '件', 1, 5, '', '桂林米粉,卤水', '桂林地道米粉原料与制品'),
-(6, 0, '山野珍品', 0, '件', 1, 6, '', '山珍,野菌,竹笋', '桂林山区野生与半野生特产'),
-(7, 0, '绿色蔬菜', 0, '件', 1, 7, '', '有机蔬菜,绿色食品', '桂林地区绿色认证蔬菜'),
-(8, 0, '广西特色水果', 0, '斤', 1, 8, '', '广西,桂林,水果', '广西桂林助农电商平台-特色水果分类');
-
--- 商品分类（二级分类）
-INSERT INTO `pms_product_category` (`id`,`parent_id`,`name`,`level`,`product_unit`,`status`,`sort`,`icon`,`keywords`,`description`) VALUES
-(9,  8, '桂林砂糖橘', 1, '斤', 1, 1, '', '砂糖橘,沃柑', '桂林本地水果'),
-(10, 8, '阳朔金桔',   1, '盒', 1, 2, '', '阳朔,金桔,礼盒', '桂林阳朔代表性金桔品类'),
-(11, 8, '永福罗汉果', 1, '盒', 1, 3, '', '永福,罗汉果,养生', '桂林永福道地罗汉果品类'),
-(12, 1, '荔浦马蹄',   1, '袋', 1, 1, '', '荔浦,马蹄', '桂林荔浦特色根茎类农产品'),
-(13, 1, '荔浦芋头',   1, '斤', 1, 2, '', '荔浦,芋头', '桂林荔浦核心地标食材'),
-(14, 3, '永福罗汉果原果', 1, '盒', 1, 1, '', '永福,罗汉果', '永福道地罗汉果原果'),
-(15, 5, '桂林米粉礼盒', 1, '盒', 1, 1, '', '桂林米粉,礼盒', '正宗桂林米粉礼盒装');
-
--- 管理员初始数据（密码: admin123，Bcrypt加密）
-INSERT INTO `ums_admin` (`id`,`username`,`password`,`nickname`,`status`) VALUES
-(1, 'admin', '$2a$10$NZ5o7r2E2tM0E/CEeRGMkO/4/j2hLYLa1V1GVQb2C5mJfVFzQfxqO', '超级管理员', 1);
-
--- 产地数据（桂林各县区）
-INSERT INTO `trace_origin` (`id`,`origin_name`,`province`,`city`,`region`,`longitude`,`latitude`,`description`) VALUES
-(1, '荔浦芋头核心产区', '广西壮族自治区', '桂林市', '荔浦市', 110.3958, 24.4883, '荔浦芋头产地，漓江流域肥沃红壤，年均气温19°C，常年云雾滋润，孕育出肉质细腻、香气浓郁的荔浦芋头，是国家地理标志保护产品。'),
-(2, '阳朔金桔产区',     '广西壮族自治区', '桂林市', '阳朔县', 110.4969, 24.7756, '阳朔县滨江沿岸小气候区，光热充足、昼夜温差大，所产金桔色泽金黄、汁多皮薄，是阳朔最具代表性的农业地标产品。'),
-(3, '永福罗汉果道地产区', '广西壮族自治区', '桂林市', '永福县', 109.9831, 24.9797, '永福县被誉为中国长寿之乡，是罗汉果的原产地和主产区，独特的山地气候和富硒土壤造就了道地品质。'),
-(4, '恭城月柿产区', '广西壮族自治区', '桂林市', '恭城瑶族自治县', 110.8282, 24.8320, '恭城瑶族自治县月柿种植历史逾千年，秋季漫山柿红，所产月柿晶莹透亮，甜度高、无涩感，是广西著名出口农产品。'),
-(5, '荔浦马蹄产区', '广西壮族自治区', '桂林市', '荔浦市', 110.3958, 24.4883, '荔浦市沿河低洼水田区，土质疏松富含有机质，是马蹄的优质产区，所产马蹄个大皮薄、清甜爽脆。');
-
--- 溯源记录示例（荔浦芋头，product_id 待实际商品录入后调整）
-INSERT INTO `trace_record` (`product_id`,`farmer_id`,`record_type`,`content`,`record_time`) VALUES
-(1, 1, '播种', '选用优质荔浦芋头种苗，株行距50cm×60cm，施足基肥（农家肥+复合肥），完成整地起垄播种。', '2025-03-15 08:00:00'),
-(1, 1, '施肥', '追施有机肥（腐熟猪粪）一次，配合叶面喷施微量元素肥，促进块茎膨大，全程不施化学农药。', '2025-05-20 09:00:00'),
-(1, 1, '灌溉', '采用沟灌方式补水，保持田间湿润，并对病虫害进行人工物理防治，记录田间生长状况良好。', '2025-07-10 07:30:00'),
-(1, 1, '采摘', '人工逐株采收，鲜芋头经初步清洗分级，平均单个重量1.2-2.5kg，外观圆润、切面紫色纹路清晰。', '2025-10-08 06:00:00'),
-(1, 1, '检测', '送样至广西农科院检测中心，检测报告显示：农药残留未检出，重金属含量符合GB2762标准，品质优良。', '2025-10-12 14:00:00'),
-(1, 1, '入库', '完成预冷处理后入恒温仓库（温度8-12摄氏度，湿度85%），出库前完成二次抽检，附溯源二维码包装出仓。', '2025-10-15 10:00:00');
-
-SET FOREIGN_KEY_CHECKS = 1;
-
--- ================================================================
--- 权限模块遗留表（兼容现有代码，未做重构）
+-- 权限模块遗留表（兼容现有代码中 t_* 命名的 DO 类）
 -- ================================================================
 
 DROP TABLE IF EXISTS `t_user`;
@@ -777,7 +729,7 @@ CREATE TABLE `t_role_menu_relation` (
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 DEFAULT CHARSET = utf8mb4 COMMENT = '角色-菜单关联（权限模块）';
 
 -- ================================================================
--- SMS 优惠券领取记录
+-- 其他辅助表
 -- ================================================================
 
 DROP TABLE IF EXISTS `sms_coupon_history`;
@@ -798,10 +750,6 @@ CREATE TABLE `sms_coupon_history` (
   INDEX `idx_coupon` (`coupon_id`)
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 DEFAULT CHARSET = utf8mb4 COMMENT = '优惠券领取记录';
 
--- ================================================================
--- OMS 退货原因
--- ================================================================
-
 DROP TABLE IF EXISTS `oms_order_return_reason`;
 CREATE TABLE `oms_order_return_reason` (
   `id`          bigint       NOT NULL AUTO_INCREMENT,
@@ -812,23 +760,7 @@ CREATE TABLE `oms_order_return_reason` (
   PRIMARY KEY (`id`)
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 DEFAULT CHARSET = utf8mb4 COMMENT = '退货原因';
 
--- ================================================================
--- PMS 农户-商品关联（保留，部分查询可能依赖）
--- ================================================================
-
-DROP TABLE IF EXISTS `pms_farmer_product_relation`;
-CREATE TABLE `pms_farmer_product_relation` (
-  `id`         bigint NOT NULL AUTO_INCREMENT,
-  `farmer_id`  bigint NOT NULL,
-  `product_id` bigint NOT NULL,
-  PRIMARY KEY (`id`),
-  INDEX `idx_farmer` (`farmer_id`),
-  INDEX `idx_product` (`product_id`)
-) ENGINE = InnoDB AUTO_INCREMENT = 1 DEFAULT CHARSET = utf8mb4 COMMENT = '农户-商品关联';
-
--- ================================================================
--- SMS 优惠券适用范围关联（商品/分类）
--- ================================================================
+-- pms_farmer_product_relation 已废弃（pms_product.farmer_id 已满足 1:N 关系）
 
 DROP TABLE IF EXISTS `sms_coupon_product_relation`;
 CREATE TABLE `sms_coupon_product_relation` (
@@ -852,51 +784,6 @@ CREATE TABLE `sms_coupon_product_category_relation` (
   INDEX `idx_coupon` (`coupon_id`)
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 DEFAULT CHARSET = utf8mb4 COMMENT = '优惠券-商品分类关联';
 
--- ================================================================
--- 测试数据
--- ================================================================
-
--- 农户数据
-INSERT INTO `pms_farmer` (`id`,`name`,`phone`,`id_card`,`farm_name`,`province`,`city`,`region`,`detail_address`,`main_product`,`description`,`status`) VALUES
-(1, '张建国', '13978001001', '450303198501011234', '荔浦芋头示范基地', '广西壮族自治区', '桂林市', '荔浦市', '荔浦市双江镇大塘村', '荔浦芋头、荔浦马蹄', '从事荔浦芋头种植20余年，基地面积200亩，获得国家绿色食品认证，年产量超150吨。', 1),
-(2, '李秀英', '13978001002', '450321199002022345', '阳朔金桔生态园', '广西壮族自治区', '桂林市', '阳朔县', '阳朔县白沙镇古板村', '阳朔金桔、沙田柚', '阳朔本地金桔种植户，采用生态种植方式，无农药残留，金桔色泽金黄、皮薄汁多。', 1),
-(3, '周文华', '13978001003', '450323197803033456', '永福罗汉果专业合作社', '广西壮族自治区', '桂林市', '永福县', '永福县堡里乡福寿村', '永福罗汉果', '永福道地罗汉果种植传承人，合作社成员120户，年产罗汉果800万个，远销东南亚。', 1),
-(4, '蒋桂花', '13978001004', '450328198606044567', '恭城月柿农庄', '广西壮族自治区', '桂林市', '恭城瑶族自治县', '恭城县莲花镇栗木村', '恭城月柿、脆柿', '恭城瑶族月柿种植第三代传人，柿园面积80亩，所产月柿晶莹剔透、口感极佳。', 1),
-(5, '唐志强', '13978001005', '450305199105055678', '桂林有机蔬菜基地', '广西壮族自治区', '桂林市', '临桂区', '临桂区四塘镇官庄村', '有机蔬菜、番茄、辣椒', '专注有机蔬菜种植，获有机农产品认证，供应桂林市区各大商超。', 1);
-
--- 商品数据（使用公网可访问的图片）
-INSERT INTO `pms_product` (`id`,`product_category_id`,`farmer_id`,`product_sn`,`name`,`sub_title`,`pic`,`album_pics`,`description`,`price`,`market_price`,`promotion_price`,`stock`,`low_stock`,`unit`,`weight`,`publish_status`,`is_new`,`is_recommend`,`sort`,`sale`) VALUES
-(1, 13, 1, 'LP-YT-001', '荔浦芋头 新鲜现挖', '国家地理标志产品 · 漓江流域富硒红壤种植', 'https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?w=600&q=80', 'https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?w=600&q=80', '<p>荔浦芋头，国家地理标志保护产品，产自广西桂林荔浦市，漓江流域肥沃红壤种植，肉质细腻、香气浓郁。</p>', 38.00, 55.00, 32.00, 500, 50, '斤', 2.50, 1, 1, 1, 10, 328),
-(2, 13, 1, 'LP-YT-002', '荔浦芋头礼盒装 5斤', '送礼优选 · 精品挑选 · 真空锁鲜', 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=600&q=80', 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=600&q=80', '<p>精选荔浦芋头礼盒，5斤装，真空包装，适合送礼或自用。</p>', 88.00, 120.00, NULL, 200, 20, '盒', 5.00, 1, 0, 1, 8, 156),
-(3, 10, 2, 'YS-JJ-001', '阳朔滑皮金桔 新鲜现摘', '皮薄汁多 · 甜而不酸 · 阳朔特产', 'https://images.unsplash.com/photo-1548164723-63d3c0bee5f6?w=600&q=80', 'https://images.unsplash.com/photo-1548164723-63d3c0bee5f6?w=600&q=80', '<p>阳朔金桔，皮薄汁多，甜而不酸，现摘现发，产地直供。</p>', 28.00, 40.00, 24.00, 800, 100, '斤', 1.00, 1, 1, 0, 9, 512),
-(4, 10, 2, 'YS-JJ-002', '阳朔金桔礼盒 10斤装', '优质金桔礼盒 · 产地直发 · 顺丰包邮', 'https://images.unsplash.com/photo-1611080626919-7cf5a9dbab12?w=600&q=80', 'https://images.unsplash.com/photo-1611080626919-7cf5a9dbab12?w=600&q=80', '<p>阳朔金桔礼盒10斤，精品挑选，适合商务送礼。</p>', 128.00, 168.00, NULL, 300, 30, '盒', 10.00, 1, 0, 0, 7, 89),
-(5, 14, 3, 'YF-LHG-001', '永福罗汉果 大果型', '道地药材 · 养生佳品 · 长寿之乡出品', 'https://images.unsplash.com/photo-1519996529931-28324d5a630e?w=600&q=80', 'https://images.unsplash.com/photo-1519996529931-28324d5a630e?w=600&q=80', '<p>永福道地罗汉果，长寿之乡出品，清热润肺，适合泡茶饮用。</p>', 45.00, 68.00, 39.00, 600, 60, '盒', 0.50, 1, 1, 1, 6, 276),
-(6, 12, 1, 'LP-MT-001', '荔浦马蹄 新鲜脆甜', '清甜爽脆 · 沿河低洼水田种植', 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80', 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80', '<p>荔浦马蹄，沿河低洼水田种植，个大皮薄，清甜爽脆。</p>', 12.00, 18.00, NULL, 1000, 100, '袋', 2.00, 1, 0, 1, 5, 198),
-(7, 15, 5, 'GL-MF-001', '桂林米粉礼盒 正宗干米粉', '百年老字号工艺 · 桂林人的乡愁', 'https://images.unsplash.com/photo-1569050467447-ce54b3bbc37d?w=600&q=80', 'https://images.unsplash.com/photo-1569050467447-ce54b3bbc37d?w=600&q=80', '<p>正宗桂林米粉，采用传统工艺制作，圆润细腻，煮后不糊汤。</p>', 36.00, 48.00, 29.00, 400, 40, '盒', 1.50, 1, 0, 0, 4, 145),
-(8, 4, 4, 'GC-YS-001', '恭城月柿 自然晾晒', '千年瑶乡秘法 · 晶莹剔透 · 入口即化', 'https://images.unsplash.com/photo-1579613832125-5d34a13ffe2a?w=600&q=80', 'https://images.unsplash.com/photo-1579613832125-5d34a13ffe2a?w=600&q=80', '<p>恭城月柿，传统晾晒工艺，柿霜厚实，甜糯软滑，营养丰富。</p>', 52.00, 72.00, 45.00, 350, 35, '盒', 2.00, 1, 1, 1, 3, 203),
-(9, 7, 5, 'GL-SC-001', '桂林有机圣女果 樱桃番茄', '有机认证 · 产地直供 · 酸甜可口', 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=600&q=80', 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=600&q=80', '<p>桂林有机圣女果，有机认证，酸甜可口，富含维生素C。</p>', 18.00, 25.00, NULL, 700, 70, '斤', 1.00, 1, 0, 0, 2, 87),
-(10, 9, 2, 'GL-STJ-001', '桂林砂糖橘 蜜甜无核', '化渣极好 · 入口即甜 · 桂林特产', 'https://images.unsplash.com/photo-1547514701-42782101795e?w=600&q=80', 'https://images.unsplash.com/photo-1547514701-42782101795e?w=600&q=80', '<p>桂林砂糖橘，化渣极好，甜度高无核，老少皆宜。</p>', 22.00, 32.00, 18.00, 900, 90, '斤', 1.00, 1, 1, 1, 1, 445);
-
--- SKU数据
-INSERT INTO `pms_sku_stock` (`product_id`,`sku_code`,`price`,`promotion_price`,`stock`,`low_stock`,`lock_stock`,`sale`,`sp_data`) VALUES
-(1, 'LP-YT-001-3J', 38.00, 32.00, 200, 20, 0, 180, '[{"key":"重量","value":"3斤"}]'),
-(1, 'LP-YT-001-5J', 58.00, 49.00, 200, 20, 0, 148, '[{"key":"重量","value":"5斤"}]'),
-(1, 'LP-YT-001-10J', 108.00, 92.00, 100, 10, 0, 0, '[{"key":"重量","value":"10斤"}]'),
-(3, 'YS-JJ-001-3J', 28.00, 24.00, 400, 40, 0, 256, '[{"key":"重量","value":"3斤"}]'),
-(3, 'YS-JJ-001-5J', 42.00, 36.00, 400, 40, 0, 256, '[{"key":"重量","value":"5斤"}]'),
-(5, 'YF-LHG-001-10GE', 45.00, 39.00, 300, 30, 0, 150, '[{"key":"规格","value":"10个装"}]'),
-(5, 'YF-LHG-001-20GE', 82.00, 72.00, 300, 30, 0, 126, '[{"key":"规格","value":"20个装"}]'),
-(10, 'GL-STJ-001-5J', 22.00, 18.00, 500, 50, 0, 280, '[{"key":"重量","value":"5斤"}]'),
-(10, 'GL-STJ-001-10J', 40.00, 34.00, 400, 40, 0, 165, '[{"key":"重量","value":"10斤"}]');
-
--- 首页广告轮播
-INSERT INTO `sms_home_advertise` (`name`,`type`,`pic`,`url`,`sort`,`status`) VALUES
-('荔浦芋头地理标志产品', 0, 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1200&q=80', '/category?categoryId=13', 1, 1),
-('阳朔金桔产地直供', 0,
-
--- ----------------------------
--- pms_sku_spec SKU规格明细（替代 sp_data JSON 字段）
--- ----------------------------
 DROP TABLE IF EXISTS `pms_sku_spec`;
 CREATE TABLE `pms_sku_spec` (
   `id`          bigint       NOT NULL AUTO_INCREMENT COMMENT '规格ID',
@@ -909,3 +796,227 @@ CREATE TABLE `pms_sku_spec` (
   INDEX `idx_sku` (`sku_id`),
   INDEX `idx_product` (`product_id`)
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 DEFAULT CHARSET = utf8mb4 COMMENT = 'SKU规格明细';
+
+-- ================================================================
+-- 初始化数据（所有建表完成后再插入数据）
+-- ================================================================
+
+-- 商品分类（一级分类）
+INSERT INTO `pms_product_category` (`id`,`parent_id`,`name`,`level`,`product_unit`,`status`,`sort`,`icon`,`keywords`,`description`) VALUES
+(1, 0, '荔浦农产', 0, '件', 1, 1, '', '荔浦,芋头,马蹄', '荔浦县特色农产品'),
+(2, 0, '阳朔特产', 0, '件', 1, 2, '', '阳朔,金桔,沙田柚', '阳朔县地理标志产品'),
+(3, 0, '永福道地', 0, '件', 1, 3, '', '永福,罗汉果,寿乡', '永福县道地药材与农产'),
+(4, 0, '恭城月柿', 0, '件', 1, 4, '', '恭城,月柿,柿子', '恭城县月柿系列'),
+(5, 0, '桂林米粉', 0, '件', 1, 5, '', '桂林米粉,卤水', '桂林地道米粉原料与制品'),
+(6, 0, '山野珍品', 0, '件', 1, 6, '', '山珍,野菌,竹笋', '桂林山区野生与半野生特产'),
+(7, 0, '绿色蔬菜', 0, '件', 1, 7, '', '有机蔬菜,绿色食品', '桂林地区绿色认证蔬菜'),
+(8, 0, '广西特色水果', 0, '斤', 1, 8, '', '广西,桂林,水果', '广西桂林助农电商平台-特色水果分类');
+
+-- 商品分类（二级分类）
+INSERT INTO `pms_product_category` (`id`,`parent_id`,`name`,`level`,`product_unit`,`status`,`sort`,`icon`,`keywords`,`description`) VALUES
+(9,  8, '桂林砂糖橘', 1, '斤', 1, 1, '', '砂糖橘,沃柑', '桂林本地水果'),
+(10, 8, '阳朔金桔',   1, '盒', 1, 2, '', '阳朔,金桔,礼盒', '桂林阳朔代表性金桔品类'),
+(11, 8, '永福罗汉果', 1, '盒', 1, 3, '', '永福,罗汉果,养生', '桂林永福道地罗汉果品类'),
+(12, 1, '荔浦马蹄',   1, '袋', 1, 1, '', '荔浦,马蹄', '桂林荔浦特色根茎类农产品'),
+(13, 1, '荔浦芋头',   1, '斤', 1, 2, '', '荔浦,芋头', '桂林荔浦核心地标食材'),
+(14, 3, '永福罗汉果原果', 1, '盒', 1, 1, '', '永福,罗汉果', '永福道地罗汉果原果'),
+(15, 5, '桂林米粉礼盒', 1, '盒', 1, 1, '', '桂林米粉,礼盒', '正宗桂林米粉礼盒装');
+
+-- 管理员初始数据（密码: admin123，BCrypt加密）
+INSERT INTO `ums_admin` (`id`,`username`,`password`,`nickname`,`status`) VALUES
+(1, 'admin', '$2a$10$7yJWtWtXk1qCZ0dIyRDSx.aUg4fdavSQRRJlLa7kuGDS9FiZc6fAy', '超级管理员', 1);
+
+-- 角色
+INSERT INTO `ums_role` (`id`,`name`,`description`,`status`,`sort`) VALUES
+(1, 'ROLE_ADMIN', '超级管理员，拥有所有权限', 1, 0),
+(2, 'ROLE_OPERATOR', '运营人员，管理商品和订单', 1, 1);
+
+-- 管理员-角色关联
+INSERT INTO `ums_admin_role_relation` (`admin_id`,`role_id`) VALUES
+(1, 1);
+
+-- 权限模块遗留表数据（兼容现有代码）
+INSERT INTO `t_user` (`id`,`username`,`password`) VALUES
+(1, 'admin', '$2a$10$7yJWtWtXk1qCZ0dIyRDSx.aUg4fdavSQRRJlLa7kuGDS9FiZc6fAy');
+
+INSERT INTO `t_user_role` (`id`,`username`,`role`) VALUES
+(1, 'admin', 'ROLE_ADMIN');
+
+-- 农户数据
+INSERT INTO `pms_farmer` (`id`,`name`,`phone`,`id_card`,`farm_name`,`province`,`city`,`region`,`detail_address`,`main_product`,`description`,`cert_type`,`cert_desc`,`status`) VALUES
+(1, '张建国', '13978001001', '450303****1234', '荔浦芋头示范基地', '广西壮族自治区', '桂林市', '荔浦市', '荔浦市双江镇大塘村', '荔浦芋头、荔浦马蹄', '从事荔浦芋头种植20余年，基地面积200亩，获得国家绿色食品认证，年产量超150吨。', '绿色食品基地,地理标志产品', '国家绿色食品A级产品认证，荔浦芋头地理标志保护', 1),
+(2, '李秀英', '13978001002', '450321****2345', '阳朔金桔生态园', '广西壮族自治区', '桂林市', '阳朔县', '阳朔县白沙镇古板村', '阳朔金桔、沙田柚', '阳朔本地金桔种植户，采用生态种植方式，无农药残留，金桔色泽金黄、皮薄汁多。', '生态种植基地,扶贫帮扶对象', '阳朔县农业局认证生态种植示范户', 1),
+(3, '周文华', '13978001003', '450323****3456', '永福罗汉果专业合作社', '广西壮族自治区', '桂林市', '永福县', '永福县堡里乡福寿村', '永福罗汉果', '永福道地罗汉果种植传承人，合作社成员120户，年产罗汉果800万个，远销东南亚。', '道地药材基地,有机认证', '永福罗汉果原产地认证，有机农产品转换期认证', 1),
+(4, '蒋桂花', '13978001004', '450328****4567', '恭城月柿农庄', '广西壮族自治区', '桂林市', '恭城瑶族自治县', '恭城县莲花镇栗木村', '恭城月柿、脆柿', '恭城瑶族月柿种植第三代传人，柿园面积80亩，所产月柿晶莹剔透、口感极佳。', '非遗传承基地,扶贫帮扶对象', '恭城月柿制作技艺非遗传承人', 1),
+(5, '唐志强', '13978001005', '450305****5678', '桂林有机蔬菜基地', '广西壮族自治区', '桂林市', '临桂区', '临桂区四塘镇官庄村', '有机蔬菜、番茄、辣椒', '专注有机蔬菜种植，获有机农产品认证，供应桂林市区各大商超。', '有机认证', '中国有机农产品认证', 1);
+
+-- 商品数据
+INSERT INTO `pms_product` (`id`,`product_category_id`,`farmer_id`,`product_sn`,`name`,`sub_title`,`pic`,`album_pics`,`description`,`price`,`market_price`,`promotion_price`,`stock`,`low_stock`,`unit`,`weight`,`publish_status`,`is_new`,`is_recommend`,`sort`,`sale`,`is_aid_agriculture`,`cert_type`,`cert_desc`) VALUES
+(1, 13, 1, 'LP-YT-001', '荔浦芋头 新鲜现挖', '国家地理标志产品 · 漓江流域富硒红壤种植', 'https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?w=600&q=80', 'https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?w=600&q=80', '<p>荔浦芋头，国家地理标志保护产品，产自广西桂林荔浦市，漓江流域肥沃红壤种植，肉质细腻、香气浓郁。</p>', 38.00, 55.00, 32.00, 500, 50, '斤', 2.50, 1, 1, 1, 10, 328, 1, '地理标志,绿色食品', '国家地理标志保护产品'),
+(2, 13, 1, 'LP-YT-002', '荔浦芋头礼盒装 5斤', '送礼优选 · 精品挑选 · 真空锁鲜', 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=600&q=80', 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=600&q=80', '<p>精选荔浦芋头礼盒，5斤装，真空包装，适合送礼或自用。</p>', 88.00, 120.00, NULL, 200, 20, '盒', 5.00, 1, 0, 1, 8, 156, 1, '地理标志,绿色食品', '国家地理标志保护产品'),
+(3, 10, 2, 'YS-JJ-001', '阳朔滑皮金桔 新鲜现摘', '皮薄汁多 · 甜而不酸 · 阳朔特产', 'https://images.unsplash.com/photo-1548164723-63d3c0bee5f6?w=600&q=80', 'https://images.unsplash.com/photo-1548164723-63d3c0bee5f6?w=600&q=80', '<p>阳朔金桔，皮薄汁多，甜而不酸，现摘现发，产地直供。</p>', 28.00, 40.00, 24.00, 800, 100, '斤', 1.00, 1, 1, 0, 9, 512, 1, '地理标志', '阳朔金桔地理标志产品'),
+(4, 10, 2, 'YS-JJ-002', '阳朔金桔礼盒 10斤装', '优质金桔礼盒 · 产地直发 · 顺丰包邮', 'https://images.unsplash.com/photo-1611080626919-7cf5a9dbab12?w=600&q=80', 'https://images.unsplash.com/photo-1611080626919-7cf5a9dbab12?w=600&q=80', '<p>阳朔金桔礼盒10斤，精品挑选，适合商务送礼。</p>', 128.00, 168.00, NULL, 300, 30, '盒', 10.00, 1, 0, 0, 7, 89, 1, '地理标志', '阳朔金桔地理标志产品'),
+(5, 14, 3, 'YF-LHG-001', '永福罗汉果 大果型', '道地药材 · 养生佳品 · 长寿之乡出品', 'https://images.unsplash.com/photo-1519996529931-28324d5a630e?w=600&q=80', 'https://images.unsplash.com/photo-1519996529931-28324d5a630e?w=600&q=80', '<p>永福道地罗汉果，长寿之乡出品，清热润肺，适合泡茶饮用。</p>', 45.00, 68.00, 39.00, 600, 60, '盒', 0.50, 1, 1, 1, 6, 276, 1, '道地药材,有机认证', '永福罗汉果原产地认证'),
+(6, 12, 1, 'LP-MT-001', '荔浦马蹄 新鲜脆甜', '清甜爽脆 · 沿河低洼水田种植', 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80', 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80', '<p>荔浦马蹄，沿河低洼水田种植，个大皮薄，清甜爽脆。</p>', 12.00, 18.00, NULL, 1000, 100, '袋', 2.00, 1, 0, 1, 5, 198, 1, '绿色食品', '绿色食品A级认证'),
+(7, 15, 5, 'GL-MF-001', '桂林米粉礼盒 正宗干米粉', '百年老字号工艺 · 桂林人的乡愁', 'https://images.unsplash.com/photo-1569050467447-ce54b3bbc37d?w=600&q=80', 'https://images.unsplash.com/photo-1569050467447-ce54b3bbc37d?w=600&q=80', '<p>正宗桂林米粉，采用传统工艺制作，圆润细腻，煮后不糊汤。</p>', 36.00, 48.00, 29.00, 400, 40, '盒', 1.50, 1, 0, 0, 4, 145, 0, NULL, NULL),
+(8, 4, 4, 'GC-YS-001', '恭城月柿 自然晾晒', '千年瑶乡秘法 · 晶莹剔透 · 入口即化', 'https://images.unsplash.com/photo-1579613832125-5d34a13ffe2a?w=600&q=80', 'https://images.unsplash.com/photo-1579613832125-5d34a13ffe2a?w=600&q=80', '<p>恭城月柿，传统晾晒工艺，柿霜厚实，甜糯软滑，营养丰富。</p>', 52.00, 72.00, 45.00, 350, 35, '盒', 2.00, 1, 1, 1, 3, 203, 1, '非遗传承,地理标志', '恭城月柿制作技艺非遗项目'),
+(9, 7, 5, 'GL-SC-001', '桂林有机圣女果 樱桃番茄', '有机认证 · 产地直供 · 酸甜可口', 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=600&q=80', 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=600&q=80', '<p>桂林有机圣女果，有机认证，酸甜可口，富含维生素C。</p>', 18.00, 25.00, NULL, 700, 70, '斤', 1.00, 1, 0, 0, 2, 87, 0, '有机认证', '中国有机农产品认证'),
+(10, 9, 2, 'GL-STJ-001', '桂林砂糖橘 蜜甜无核', '化渣极好 · 入口即甜 · 桂林特产', 'https://images.unsplash.com/photo-1547514701-42782101795e?w=600&q=80', 'https://images.unsplash.com/photo-1547514701-42782101795e?w=600&q=80', '<p>桂林砂糖橘，化渣极好，甜度高无核，老少皆宜。</p>', 22.00, 32.00, 18.00, 900, 90, '斤', 1.00, 1, 1, 1, 1, 445, 1, '绿色食品', '绿色食品认证');
+
+-- SKU数据
+INSERT INTO `pms_sku_stock` (`product_id`,`sku_code`,`price`,`promotion_price`,`stock`,`low_stock`,`lock_stock`,`sale`,`sp_data`) VALUES
+(1, 'LP-YT-001-3J', 38.00, 32.00, 200, 20, 0, 180, '[{"key":"重量","value":"3斤"}]'),
+(1, 'LP-YT-001-5J', 58.00, 49.00, 200, 20, 0, 148, '[{"key":"重量","value":"5斤"}]'),
+(1, 'LP-YT-001-10J', 108.00, 92.00, 100, 10, 0, 0, '[{"key":"重量","value":"10斤"}]'),
+(3, 'YS-JJ-001-3J', 28.00, 24.00, 400, 40, 0, 256, '[{"key":"重量","value":"3斤"}]'),
+(3, 'YS-JJ-001-5J', 42.00, 36.00, 400, 40, 0, 256, '[{"key":"重量","value":"5斤"}]'),
+(5, 'YF-LHG-001-10GE', 45.00, 39.00, 300, 30, 0, 150, '[{"key":"规格","value":"10个装"}]'),
+(5, 'YF-LHG-001-20GE', 82.00, 72.00, 300, 30, 0, 126, '[{"key":"规格","value":"20个装"}]'),
+(8, 'GC-YS-001-2J', 52.00, 45.00, 150, 15, 0, 103, '[{"key":"重量","value":"2斤"}]'),
+(8, 'GC-YS-001-5J', 120.00, 105.00, 200, 20, 0, 100, '[{"key":"重量","value":"5斤"}]'),
+(10, 'GL-STJ-001-5J', 22.00, 18.00, 500, 50, 0, 280, '[{"key":"重量","value":"5斤"}]'),
+(10, 'GL-STJ-001-10J', 40.00, 34.00, 400, 40, 0, 165, '[{"key":"重量","value":"10斤"}]');
+
+-- SKU规格明细（对应 pms_sku_stock 的自增ID顺序）
+INSERT INTO `pms_sku_spec` (`sku_id`,`product_id`,`spec_key`,`spec_value`,`sort`) VALUES
+(1, 1, '重量', '3斤', 0),
+(2, 1, '重量', '5斤', 0),
+(3, 1, '重量', '10斤', 0),
+(4, 3, '重量', '3斤', 0),
+(5, 3, '重量', '5斤', 0),
+(6, 5, '规格', '10个装', 0),
+(7, 5, '规格', '20个装', 0),
+(8, 8, '重量', '2斤', 0),
+(9, 8, '重量', '5斤', 0),
+(10, 10, '重量', '5斤', 0),
+(11, 10, '重量', '10斤', 0);
+
+-- 首页广告轮播
+INSERT INTO `sms_home_advertise` (`name`,`type`,`pic`,`url`,`sort`,`status`) VALUES
+('荔浦芋头 地理标志产品', 0, 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1200&q=80', '/category?categoryId=13', 1, 1),
+('阳朔金桔 产地直供', 0, 'https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=1200&q=80', '/category?categoryId=10', 2, 1),
+('永福罗汉果 道地养生', 0, 'https://images.unsplash.com/photo-1523741543316-beb7fc7023d8?w=1200&q=80', '/category?categoryId=14', 3, 1);
+
+-- 新品推荐
+INSERT INTO `sms_home_new_product` (`product_id`,`product_name`,`sort`,`recommend_status`) VALUES
+(1, '荔浦芋头 新鲜现挖', 1, 1),
+(3, '阳朔滑皮金桔 新鲜现摘', 2, 1),
+(5, '永福罗汉果 大果型', 3, 1),
+(8, '恭城月柿 自然晾晒', 4, 1);
+
+-- 人气推荐
+INSERT INTO `sms_home_recommend_product` (`product_id`,`product_name`,`sort`,`recommend_status`) VALUES
+(10, '桂林砂糖橘 蜜甜无核', 1, 1),
+(1,  '荔浦芋头 新鲜现挖', 2, 1),
+(3,  '阳朔滑皮金桔 新鲜现摘', 3, 1),
+(6,  '荔浦马蹄 新鲜脆甜', 4, 1);
+
+-- 优惠券
+INSERT INTO `sms_coupon` (`name`,`type`,`platform`,`amount`,`min_amount`,`per_limit`,`publish_count`,`total_count`,`receive_count`,`use_count`,`use_type`,`start_time`,`end_time`,`status`,`note`) VALUES
+('新人专享券', 3, 0, 10.00, 50.00, 1, 1000, 1000, 128, 45, 0, '2026-01-01 00:00:00', '2026-12-31 23:59:59', 1, '新注册会员专享，满50元可用'),
+('农产品满减券', 0, 0, 20.00, 100.00, 2, 500, 500, 89, 32, 0, '2026-01-01 00:00:00', '2026-06-30 23:59:59', 1, '全场满100减20'),
+('桂林特产专享', 1, 0, 15.00, 80.00, 1, 300, 300, 56, 20, 1, '2026-03-01 00:00:00', '2026-05-31 23:59:59', 1, '水果分类满80减15');
+
+-- 前台会员
+INSERT INTO `ums_member` (`id`,`username`,`password`,`nickname`,`phone`,`icon`,`gender`,`city`,`status`) VALUES
+(1, 'zhangsan', '$2a$10$NZ5o7r2E2tM0E/CEeRGMkO/4/j2hLYLa1V1GVQb2C5mJfVFzQfxqO', '山水桂林人', '13900001111', NULL, 1, '桂林', 1),
+(2, 'lisi', '$2a$10$NZ5o7r2E2tM0E/CEeRGMkO/4/j2hLYLa1V1GVQb2C5mJfVFzQfxqO', '爱吃金桔', '13900002222', NULL, 2, '南宁', 1),
+(3, 'wangwu', '$2a$10$NZ5o7r2E2tM0E/CEeRGMkO/4/j2hLYLa1V1GVQb2C5mJfVFzQfxqO', '养生达人', '13900003333', NULL, 1, '广州', 1);
+
+-- 会员收货地址
+INSERT INTO `ums_member_receive_address` (`member_id`,`name`,`phone`,`is_default`,`province`,`city`,`region`,`detail_address`) VALUES
+(1, '张三', '13900001111', 1, '广西壮族自治区', '桂林市', '秀峰区', '中山中路88号桂林百货大厦旁'),
+(1, '张三（公司）', '13900001111', 0, '广西壮族自治区', '桂林市', '七星区', '高新万达广场B座1203'),
+(2, '李四', '13900002222', 1, '广西壮族自治区', '南宁市', '青秀区', '东葛路118号青秀万达广场'),
+(3, '王五', '13900003333', 1, '广东省', '广州市', '天河区', '体育西路101号天河城');
+
+-- 公司发货地址
+INSERT INTO `oms_company_address` (`address_name`,`send_status`,`receive_status`,`name`,`phone`,`province`,`city`,`region`,`detail_address`) VALUES
+('桂林总仓', 1, 1, '桂林仓管', '07732589999', '广西壮族自治区', '桂林市', '临桂区', '临桂区万福路88号桂林农产品物流中心A区'),
+('南宁分仓', 0, 0, '南宁仓管', '07715288888', '广西壮族自治区', '南宁市', '西乡塘区', '西乡塘区科园大道55号');
+
+-- 退货原因
+INSERT INTO `oms_order_return_reason` (`name`,`sort`,`status`) VALUES
+('质量问题', 1, 1),
+('商品与描述不符', 2, 1),
+('收到商品损坏/变质', 3, 1),
+('发错商品', 4, 1),
+('不想要了/多拍了', 5, 1),
+('其他原因', 6, 1);
+
+-- 订单示例
+INSERT INTO `oms_order` (`id`,`order_sn`,`member_id`,`member_username`,`farmer_id`,`total_amount`,`freight_amount`,`pay_amount`,`receiver_name`,`receiver_phone`,`receiver_province`,`receiver_city`,`receiver_region`,`receiver_detail_address`,`status`,`pay_type`,`source_type`,`note`) VALUES
+(1, '202603150001', 1, 'zhangsan', 1, 114.00, 0.00, 114.00, '张三', '13900001111', '广西壮族自治区', '桂林市', '秀峰区', '中山中路88号桂林百货大厦旁', 3, 1, 0, '请发顺丰，谢谢'),
+(2, '202603160002', 2, 'lisi', 2, 56.00, 10.00, 66.00, '李四', '13900002222', '广西壮族自治区', '南宁市', '青秀区', '东葛路118号青秀万达广场', 1, NULL, 0, NULL),
+(3, '202603170003', 3, 'wangwu', 3, 82.00, 0.00, 82.00, '王五', '13900003333', '广东省', '广州市', '天河区', '体育西路101号天河城', 2, 1, 0, '尽快发货');
+
+-- 订单商品行
+INSERT INTO `oms_order_item` (`order_id`,`order_sn`,`product_id`,`product_sku_id`,`product_name`,`product_pic`,`product_sku_code`,`product_attr`,`product_price`,`product_quantity`,`real_amount`) VALUES
+(1, '202603150001', 1, 1, '荔浦芋头 新鲜现挖', 'https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?w=600&q=80', 'LP-YT-001-3J', '[{"key":"重量","value":"3斤"}]', 38.00, 3, 114.00),
+(2, '202603160002', 3, 4, '阳朔滑皮金桔 新鲜现摘', 'https://images.unsplash.com/photo-1548164723-63d3c0bee5f6?w=600&q=80', 'YS-JJ-001-3J', '[{"key":"重量","value":"3斤"}]', 28.00, 2, 56.00),
+(3, '202603170003', 5, 7, '永福罗汉果 大果型', 'https://images.unsplash.com/photo-1519996529931-28324d5a630e?w=600&q=80', 'YF-LHG-001-20GE', '[{"key":"规格","value":"20个装"}]', 82.00, 1, 82.00);
+
+-- 购物车
+INSERT INTO `oms_cart_item` (`member_id`,`product_id`,`product_sku_id`,`product_name`,`product_pic`,`product_sub_title`,`product_sku_code`,`product_attr`,`product_category_id`,`product_sn`,`price`,`quantity`) VALUES
+(1, 5, 6, '永福罗汉果 大果型', 'https://images.unsplash.com/photo-1519996529931-28324d5a630e?w=600&q=80', '道地药材 · 养生佳品', 'YF-LHG-001-10GE', '[{"key":"规格","value":"10个装"}]', 14, 'YF-LHG-001', 45.00, 2),
+(2, 10, 10, '桂林砂糖橘 蜜甜无核', 'https://images.unsplash.com/photo-1547514701-42782101795e?w=600&q=80', '化渣极好 · 入口即甜', 'GL-STJ-001-5J', '[{"key":"重量","value":"5斤"}]', 9, 'GL-STJ-001', 22.00, 3);
+
+-- 产地数据（桂林各县区）
+INSERT INTO `trace_origin` (`id`,`origin_name`,`province`,`city`,`region`,`longitude`,`latitude`,`altitude`,`sunshine_hours`,`soil_type`,`description`) VALUES
+(1, '荔浦芋头核心产区', '广西壮族自治区', '桂林市', '荔浦市', 110.3958, 24.4883, '110m-280m', '1550h/年', '冲积沙壤土', '荔浦芋头产地，漓江流域肥沃红壤，年均气温19°C，常年云雾滋润，孕育出肉质细腻、香气浓郁的荔浦芋头，是国家地理标志保护产品。'),
+(2, '阳朔金桔产区',     '广西壮族自治区', '桂林市', '阳朔县', 110.4969, 24.7756, '100m-350m', '1620h/年', '石灰岩红壤', '阳朔县滨江沿岸小气候区，光热充足、昼夜温差大，所产金桔色泽金黄、汁多皮薄，是阳朔最具代表性的农业地标产品。'),
+(3, '永福罗汉果道地产区', '广西壮族自治区', '桂林市', '永福县', 109.9831, 24.9797, '300m-650m', '1450h/年', '富硒红壤', '永福县被誉为中国长寿之乡，是罗汉果的原产地和主产区，独特的山地气候和富硒土壤造就了道地品质。'),
+(4, '恭城月柿产区', '广西壮族自治区', '桂林市', '恭城瑶族自治县', 110.8282, 24.8320, '200m-500m', '1600h/年', '紫色页岩土', '恭城瑶族自治县月柿种植历史逾千年，秋季漫山柿红，所产月柿晶莹透亮，甜度高、无涩感，是广西著名出口农产品。'),
+(5, '荔浦马蹄产区', '广西壮族自治区', '桂林市', '荔浦市', 110.3958, 24.4883, '100m-200m', '1550h/年', '水田淤泥土', '荔浦市沿河低洼水田区，土质疏松富含有机质，是马蹄的优质产区，所产马蹄个大皮薄、清甜爽脆。');
+
+-- 农户-产地关联
+INSERT INTO `pms_farmer_origin` (`farmer_id`,`origin_id`) VALUES
+(1, 1),
+(2, 2),
+(3, 3),
+(1, 5),
+(4, 4);
+
+-- 溯源二维码（qrcode_url 留空，由后端 generate 接口自动生成上传 MinIO）
+INSERT INTO `trace_qrcode` (`product_id`,`trace_url`,`scan_count`) VALUES
+(1, 'http://localhost:5173/trace/1', 128),
+(2, 'http://localhost:5173/trace/2', 45),
+(3, 'http://localhost:5173/trace/3', 312),
+(5, 'http://localhost:5173/trace/5', 89),
+(8, 'http://localhost:5173/trace/8', 67),
+(10, 'http://localhost:5173/trace/10', 203);
+
+-- 溯源记录（商品1 荔浦芋头 完整时间线，category_id=13）
+INSERT INTO `trace_record` (`product_id`,`farmer_id`,`record_type_id`,`content`,`record_time`) VALUES
+(1, 1, 1, '选用优质荔浦芋头种苗，株行距50cm×60cm，施足基肥（农家肥+复合肥），完成整地起垄播种。', '2025-03-15 08:00:00'),
+(1, 1, 2, '追施有机肥（腐熟猪粪）一次，配合叶面喷施微量元素肥，促进块茎膨大，全程不施化学农药。', '2025-05-20 09:00:00'),
+(1, 1, 3, '采用沟灌方式补水，保持田间湿润，并对病虫害进行人工物理防治，记录田间生长状况良好。', '2025-07-10 07:30:00'),
+(1, 1, 5, '人工逐株采收，鲜芋头经初步清洗分级，平均单个重量1.2-2.5kg，外观圆润、切面紫色纹路清晰。', '2025-10-08 06:00:00'),
+(1, 1, 6, '送样至广西农科院检测中心，检测报告显示：农药残留未检出，重金属含量符合GB2762标准，品质优良。', '2025-10-12 14:00:00'),
+(1, 1, 7, '完成预冷处理后入恒温仓库（温度8-12°C，湿度85%），出库前完成二次抽检，附溯源二维码包装出仓。', '2025-10-15 10:00:00');
+
+-- 溯源记录（商品3 阳朔金桔，category_id=10）
+INSERT INTO `trace_record` (`product_id`,`farmer_id`,`record_type_id`,`content`,`record_time`) VALUES
+(3, 2, 22, '采用嫁接苗定植，选择阳朔县白沙镇沿江地块，土壤pH值5.5-6.5，排水良好。', '2024-03-01 08:00:00'),
+(3, 2, 23, '施用腐熟有机肥，配合桂林本地草木灰，增强果实甜度和色泽，全程不使用膨大剂。', '2024-06-15 09:00:00'),
+(3, 2, 26, '人工采摘，选择晴天上午进行。每颗金桔均达到一级品标准：直径≥2.8cm，糖度≥12°Brix。', '2024-12-10 07:00:00'),
+(3, 2, 27, '委托桂林市质量检测院检测，农残全部合格，维生素C含量为普通橙子的3倍。', '2024-12-12 10:00:00'),
+(3, 2, 28, '冷链打包，泡沫箱+保鲜膜，确保48小时内送达，保质期7天。', '2024-12-14 06:00:00');
+
+-- 溯源记录（商品5 永福罗汉果，category_id=14）
+INSERT INTO `trace_record` (`product_id`,`farmer_id`,`record_type_id`,`content`,`record_time`) VALUES
+(5, 3, 35, '选用永福本地优质罗汉果母株扦插育苗，苗圃位于海拔400m山坡，自然通风遮阴。', '2025-02-20 08:00:00'),
+(5, 3, 36, '移栽至搭好棚架的大田，株距2m×3m，施足底肥，采用人工授粉确保结果率。', '2025-04-10 07:00:00'),
+(5, 3, 37, '人工除草、整枝引蔓，全程不使用化学除草剂。夏季高温期每日早晚各浇水一次。', '2025-07-01 06:00:00'),
+(5, 3, 38, '罗汉果转色后人工采摘，选取饱满、无病斑的果实，采后立即送入烘房。', '2025-09-25 07:00:00'),
+(5, 3, 39, '采用低温慢烘工艺（65°C持续72小时），保留罗汉果甜苷活性成分，成品含水率≤12%。', '2025-09-28 08:00:00'),
+(5, 3, 40, '送检永福县农产品质检站，甜苷V含量≥1.0%（优于国标0.5%），包装入库待发。', '2025-10-05 10:00:00');
+
+-- 溯源记录（商品8 恭城月柿，category_id=4）
+INSERT INTO `trace_record` (`product_id`,`farmer_id`,`record_type_id`,`content`,`record_time`) VALUES
+(8, 4, 41, '柿树夏季疏果，每枝保留2-3个果实，保证营养集中，果型饱满。', '2025-06-20 07:00:00'),
+(8, 4, 42, '霜降前后人工采摘成熟脆柿，选果率85%以上，果面光洁无裂痕。', '2025-10-25 06:30:00'),
+(8, 4, 43, '传统瑶乡手法旋削柿皮，挂于通风竹架上自然晾晒，历时约40天。', '2025-10-28 08:00:00'),
+(8, 4, 44, '晾晒后的柿饼码入缸中捂霜，经15天低温发酵，柿面均匀覆盖白色柿霜，入口即化。', '2025-12-10 09:00:00');
+
+SET FOREIGN_KEY_CHECKS = 1;

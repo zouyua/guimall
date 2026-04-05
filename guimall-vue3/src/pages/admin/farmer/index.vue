@@ -12,6 +12,12 @@
           <a-input v-model:value="searchPhone" placeholder="请输入手机号" class="w-56" allow-clear />
         </a-form-item>
 
+        <a-form-item label="关联产地">
+          <a-select v-model:value="searchOriginId" placeholder="请选择产地" class="!w-48" allow-clear>
+            <a-select-option v-for="o in originOptions" :key="o.id" :value="o.id">{{ o.originName }}</a-select-option>
+          </a-select>
+        </a-form-item>
+
         <a-form-item label="状态">
           <a-select v-model:value="status" placeholder="请选择" class="!w-40" allow-clear>
             <a-select-option :value="1">启用</a-select-option>
@@ -83,12 +89,15 @@ import { Image, Button, Popconfirm, Tag, message } from 'ant-design-vue'
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons-vue'
 import { fetchFarmerList, deleteFarmer } from '@/api/admin/farmer'
 import { getProductBindingsByFarmerId } from '@/api/admin/traceProductOrigin'
+import { fetchTraceOriginOptions } from '@/api/admin/traceOrigin'
 
 const router = useRouter()
 
 const searchName = ref('')
 const searchPhone = ref('')
 const status = ref()
+const searchOriginId = ref()
+const originOptions = ref([])
 
 const allFarmers = ref([])
 const total = ref(0)
@@ -184,6 +193,17 @@ const columns = [
     align: 'center'
   },
   {
+    title: '关联产地',
+    dataIndex: 'originNames',
+    align: 'center',
+    customRender: ({ text }) => {
+      if (!text || text.length === 0) return '-'
+      return h('div', { class: 'flex flex-wrap justify-center gap-1' },
+        text.map(name => h(Tag, { color: 'green' }, () => name))
+      )
+    }
+  },
+  {
     title: '状态',
     align: 'center',
     customRender: ({ record }) => {
@@ -252,6 +272,7 @@ const handleReset = () => {
   searchName.value = ''
   searchPhone.value = ''
   status.value = undefined
+  searchOriginId.value = undefined
   const prev = current.value
   current.value = 1
   if (prev === 1) fetchList()
@@ -308,11 +329,26 @@ const fetchList = async () => {
     message.error(rsp?.message || '获取农户列表失败')
     return
   }
-  allFarmers.value = rsp.data || []
-  total.value = rsp.total || 0
+
+  let rows = rsp.data || []
+
+  // 前端过滤产地
+  if (searchOriginId.value) {
+    const selectedOrigin = originOptions.value.find(o => o.id === searchOriginId.value)
+    if (selectedOrigin) {
+      rows = rows.filter(r =>
+        (r.originNames || []).includes(selectedOrigin.originName)
+      )
+    }
+  }
+
+  allFarmers.value = rows
+  total.value = searchOriginId.value ? rows.length : (rsp.total || 0)
 }
 
-onMounted(() => {
+onMounted(async () => {
+  const originRsp = await fetchTraceOriginOptions()
+  if (originRsp?.success) originOptions.value = originRsp.data || []
   fetchList()
 })
 

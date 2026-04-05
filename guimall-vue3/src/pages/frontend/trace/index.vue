@@ -13,8 +13,23 @@
         </router-link>
 
         <div class="flex items-center md:order-2 space-x-4">
-          <button @click="$router.push('/login')" class="text-stone-600 hover:text-emerald-600 font-medium transition-colors">登录</button>
-          <button @click="$router.push('/admin')" class="bg-emerald-600 text-white px-6 py-2 rounded-full font-bold hover:bg-emerald-700 transition-all shadow-md">管理端</button>
+          <!-- 已登录：显示会员信息 -->
+          <template v-if="memberLoggedIn">
+            <router-link to="/member/center" class="flex items-center gap-2 text-stone-600 hover:text-emerald-600 font-medium transition-colors hidden md:inline-flex">
+              <img :src="memberAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + memberNickname" class="w-7 h-7 rounded-full object-cover border border-emerald-100" />
+              {{ memberNickname }}
+            </router-link>
+            <router-link to="/cart" class="text-stone-600 hover:text-emerald-600 transition-colors flex items-center">
+              <a-badge :count="cartStore.cartCount" :offset="[-2, 2]" size="small">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z" /></svg>
+              </a-badge>
+            </router-link>
+            <button @click="handleLogout" class="text-stone-500 hover:text-red-500 font-medium transition-colors">退出</button>
+          </template>
+          <!-- 未登录：显示登录按钮 -->
+          <template v-else>
+            <button @click="$router.push('/member/login')" class="text-stone-600 hover:text-emerald-600 font-medium transition-colors">登录</button>
+          </template>
         </div>
 
         <div class="items-center justify-between hidden w-full md:flex md:w-auto md:order-1">
@@ -88,10 +103,10 @@
                   {{ origin.description || '该产地位于桂林漓江流域核心保护区，环境优美，水质清澈，常年云雾缭绕，是得天独厚的绿色农产品培育基。' }}
                 </p>
                 <div class="space-y-4">
-                  <div v-for="(val, label) in { '地理位置': (origin.province || '') + (origin.city || '') + (origin.region || ''), '海拔高度': '240m - 450m', '日照时间': '1,650h/年', '土壤成分': '富硒红壤' }" :key="label"
+                  <div v-for="(val, label) in originInfoMap" :key="label"
                        class="flex justify-between items-center py-3 border-b border-emerald-800/50">
                     <span class="text-emerald-400 font-bold">{{ label }}</span>
-                    <span class="font-bold">{{ val }}</span>
+                    <span class="font-bold">{{ val || '-' }}</span>
                   </div>
                 </div>
               </div>
@@ -147,7 +162,8 @@
                     </span>
                     <span class="text-sm text-stone-300 font-bold font-mono">{{ record.recordTime }}</span>
                   </div>
-                  <h4 class="text-2xl font-black text-stone-800 mb-4">{{ record.title }}</h4>
+                  <h4 class="text-2xl font-black text-stone-800 mb-2">{{ record.title }}</h4>
+                  <p v-if="record.farmerName" class="text-sm text-emerald-600 font-semibold mb-4">操作人：{{ record.farmerName }}</p>
                   <p class="text-stone-500 leading-relaxed text-lg mb-6">{{ record.content }}</p>
 
                   <div v-if="record.pic" class="overflow-hidden rounded-3xl aspect-video bg-stone-50">
@@ -184,8 +200,10 @@
             <h4 class="text-orange-900 font-black text-xl mb-4">扫码验证正品</h4>
             <p class="text-orange-700/70 mb-8">您可以扫描包装上的 QR 码，实时核对产品批次与农残检测报告。</p>
             <div class="w-24 h-24 bg-white p-2 rounded-2xl mx-auto shadow-sm border border-orange-100">
-               <img v-if="product.id" :src="'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' + productId" class="w-full h-full object-contain" />
-               <div v-else class="w-full h-full bg-stone-50 rounded-lg"></div>
+               <img v-if="qrcodeUrl" :src="qrcodeUrl" class="w-full h-full object-contain" alt="溯源二维码" />
+               <div v-else class="w-full h-full bg-stone-50 rounded-lg flex items-center justify-center">
+                  <span class="text-xs text-stone-300">暂无</span>
+               </div>
             </div>
          </div>
       </div>
@@ -230,14 +248,43 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, computed, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { getTraceDetail } from '@/api/frontend/product'
+import { isMemberLoggedIn, getMemberInfo, removeMemberInfo } from '@/composables/member'
+import { removeMemberToken } from '@/composables/cookie'
+import { useCartStore } from '@/stores/cart'
 
 const route = useRoute()
+const router = useRouter()
+const cartStore = useCartStore()
 const productId = route.params.productId
 
 const loading = ref(false)
+
+// 会员登录状态 (同首页逻辑)
+const memberLoggedIn = ref(isMemberLoggedIn())
+const memberNickname = ref('')
+const memberAvatar = ref('')
+
+const initMemberStatus = () => {
+  memberLoggedIn.value = isMemberLoggedIn()
+  if (memberLoggedIn.value) {
+    const info = getMemberInfo()
+    memberNickname.value = info?.nickname || info?.username || '会员'
+    memberAvatar.value = info?.icon || ''
+  }
+}
+
+const handleLogout = () => {
+  removeMemberInfo()
+  removeMemberToken()
+  memberLoggedIn.value = false
+  memberNickname.value = ''
+  memberAvatar.value = ''
+  cartStore.reset()
+}
+
 const product = ref({
   id: '',
   name: '加载中...',
@@ -262,11 +309,26 @@ const origin = ref({
   description: '',
   province: '',
   city: '',
-  region: ''
+  region: '',
+  altitude: '',
+  sunshineHours: '',
+  soilType: ''
 })
 
 const scanCount = ref(0)
 const traceRecords = ref([])
+const qrcodeUrl = ref('')
+
+// 产地信息映射：只展示有值的字段，不再硬编码
+const originInfoMap = computed(() => {
+  const map = {}
+  const loc = (origin.value.province || '') + (origin.value.city || '') + (origin.value.region || '')
+  if (loc) map['地理位置'] = loc
+  if (origin.value.altitude) map['海拔高度'] = origin.value.altitude
+  if (origin.value.sunshineHours) map['日照时间'] = origin.value.sunshineHours
+  if (origin.value.soilType) map['土壤成分'] = origin.value.soilType
+  return map
+})
 
 const loadTraceDetail = async () => {
   loading.value = true
@@ -297,20 +359,25 @@ const loadTraceDetail = async () => {
         description: data.originDescription,
         province: data.province,
         city: data.city,
-        region: data.region
+        region: data.region,
+        altitude: data.altitude || '',
+        sunshineHours: data.sunshineHours || '',
+        soilType: data.soilType || ''
       }
 
       scanCount.value = data.scanCount || 0
+      qrcodeUrl.value = data.qrcodeUrl || ''
 
       // 处理时间轴记录
       if (data.records && data.records.length > 0) {
         traceRecords.value = data.records.map((r, index) => ({
           id: index,
-          recordType: r.recordType || '记录',
+          recordType: r.recordTypeName || r.recordType || '记录',
           recordTime: r.recordTime || '2026-03-01',
-          title: r.recordType + '阶段',
+          title: (r.recordTypeName || r.recordType || '记录') + '阶段',
           content: r.content || '暂无详细描述',
-          pic: r.pic
+          pic: r.pic,
+          farmerName: r.farmerName || data.farmerName || ''
         }))
       }
     }
@@ -329,7 +396,11 @@ const certifications = [
 ]
 
 onMounted(() => {
+  initMemberStatus()
   loadTraceDetail()
+  if (memberLoggedIn.value) {
+    cartStore.loadCartCount()
+  }
 })
 </script>
 

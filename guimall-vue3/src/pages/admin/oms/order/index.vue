@@ -173,6 +173,7 @@ const columns = [
   {
     title: '序号',
     align: 'center',
+    width: 70,
     customRender: ({ index }) =>
       (current.value - 1) * size.value + index + 1
   },
@@ -180,25 +181,30 @@ const columns = [
   {
     title: '订单编号',
     dataIndex: 'orderSn',
-    align: 'center'
+    align: 'center',
+    width: 200,
+    ellipsis: true
   },
 
   {
     title: '下单用户',
     dataIndex: 'memberUsername',
-    align: 'center'
+    align: 'center',
+    width: 120
   },
 
   {
     title: '订单金额',
     dataIndex: 'payAmount',
     align: 'center',
-    customRender: ({ text }) => `¥ ${text}`
+    width: 120,
+    customRender: ({ text }) => `¥ ${text ?? 0}`
   },
 
   {
     title: '状态',
     align: 'center',
+    width: 100,
     customRender: ({ record }) =>
       h(
         Tag,
@@ -210,6 +216,7 @@ const columns = [
   {
     title: '备注',
     align: 'center',
+    width: 80,
     customRender: ({ record }) => {
 
       const note = (record.note || '').trim()
@@ -234,15 +241,17 @@ const columns = [
   {
     title: '下单时间',
     dataIndex: 'createTime',
-    align: 'center'
+    align: 'center',
+    width: 180
   },
 
   {
     title: '操作',
     align: 'center',
-    width: 260,
+    width: 280,
+    fixed: 'right',
     customRender: ({ record }) =>
-      h('div', { class: 'flex gap-2 justify-center' }, [
+      h('div', { class: 'flex gap-2 justify-center items-center' }, [
 
         h(
           Button,
@@ -255,10 +264,7 @@ const columns = [
                 query: { id: record.id }
               })
           },
-          {
-            icon: () => h(EyeOutlined),
-            default: () => '详情'
-          }
+          () => [h(EyeOutlined), ' 详情']
         ),
 
         h(
@@ -267,10 +273,7 @@ const columns = [
             size: 'small',
             onClick: () => openRemark(record)
           },
-          {
-            icon: () => h(EditOutlined),
-            default: () => '备注'
-          }
+          () => [h(EditOutlined), ' 备注']
         ),
 
         h(
@@ -287,10 +290,7 @@ const columns = [
                   size: 'small',
                   danger: true
                 },
-                {
-                  icon: () => h(CloseCircleOutlined),
-                  default: () => '关闭'
-                }
+                () => [h(CloseCircleOutlined), ' 关闭']
               )
           }
         )

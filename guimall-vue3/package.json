@@ -17,9 +17,12 @@
   "dependencies": {
     "@vueuse/core": "^14.2.1",
     "@vueuse/integrations": "^14.2.0",
+    "@wangeditor/editor": "^5.1.23",
+    "@wangeditor/editor-for-vue": "^5.1.12",
     "animate.css": "^4.1.1",
     "ant-design-vue": "^4.2.6",
     "axios": "^1.13.4",
+    "china-division": "^2.7.0",
     "flowbite": "^1.8.1",
     "nprogress": "^0.2.0",
     "pinia": "^3.0.4",

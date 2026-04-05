@@ -38,18 +38,6 @@
           </a-select>
         </a-form-item>
 
-        <a-form-item label="属性分类">
-          <a-select v-model:value="form.productAttributeCategoryId" allow-clear class="gm-field">
-            <a-select-option
-              v-for="item in attrCategoryOptions"
-              :key="item.id"
-              :value="item.id"
-            >
-              {{ item.name }}
-            </a-select-option>
-          </a-select>
-        </a-form-item>
-
         <a-form-item name="farmerId" label="关联农户">
           <a-select v-model:value="form.farmerId" allow-clear class="gm-field">
             <a-select-option
@@ -66,8 +54,20 @@
           <a-input v-model:value="form.productSn" class="gm-field" />
         </a-form-item>
 
-        <a-form-item label="主图地址">
-          <a-input v-model:value="form.pic" class="gm-field" />
+        <a-form-item label="商品主图">
+          <a-upload
+            :max-count="1"
+            list-type="picture-card"
+            :file-list="picFileList"
+            :custom-request="handlePicUpload"
+            @remove="handlePicRemove"
+            accept="image/*"
+          >
+            <div v-if="picFileList.length === 0">
+              <PlusOutlined />
+              <div class="mt-2">上传图片</div>
+            </div>
+          </a-upload>
         </a-form-item>
 
         <a-form-item name="price" label="销售价格">
@@ -95,16 +95,36 @@
         </a-form-item>
 
         <a-form-item label="商品描述">
-          <a-textarea v-model:value="form.description" :rows="4" class="gm-field" />
+          <RichEditor v-model="form.detailHtml" />
         </a-form-item>
 
       </a-form>
+    </a-card>
 
-      <div class="mt-6 flex justify-center gap-3">
-        <a-button type="primary" @click="handleSubmit">保存</a-button>
-        <a-button @click="goBack">取消</a-button>
-      </div>
+    <!-- 商品参数（由分类模板决定） -->
+    <a-card :bordered="false" title="商品参数" class="mt-5">
+      <a-alert
+        class="mb-4"
+        type="info"
+        show-icon
+        banner
+        message="商品参数由所选分类的参数模板自动加载，切换分类后参数将重新加载。"
+      />
 
+      <a-empty v-if="!form.productCategoryId" description="请先选择商品分类" />
+
+      <a-empty v-else-if="paramRows.length === 0 && !paramLoading" description="该分类暂无参数模板，请在分类管理中添加" />
+
+      <a-spin v-else :spinning="paramLoading">
+        <a-table
+          :dataSource="paramRows"
+          :columns="paramColumns"
+          rowKey="paramId"
+          :pagination="false"
+          bordered
+          size="small"
+        />
+      </a-spin>
     </a-card>
 
     <!-- SKU库存 -->
@@ -132,14 +152,20 @@
 
     </a-card>
 
+    <!-- 底部固定操作栏 -->
+    <div class="fixed-bottom-bar">
+      <a-button type="primary" @click="handleSubmit">保存</a-button>
+      <a-button @click="goBack">取消</a-button>
+    </div>
+
   </div>
 </template>
 
 <script setup>
-import { reactive, ref, onMounted, h } from 'vue'
+import { reactive, ref, onMounted, h, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { message, Input, InputNumber, Button, Popconfirm } from 'ant-design-vue'
-import { ArrowLeftOutlined } from '@ant-design/icons-vue'
+import { ArrowLeftOutlined, PlusOutlined } from '@ant-design/icons-vue'
 
 import {
   getProductDetail,
@@ -153,7 +179,9 @@ import {
 } from '@/api/admin/productCategory'
 
 import { fetchFarmerOptions } from '@/api/admin/farmer'
-import { fetchProductAttrCategoryOptions } from '@/api/admin/productAttrCategory'
+import { uploadFile } from '@/api/admin/upload'
+import { fetchParamDefinitions } from '@/api/admin/paramDefinition'
+import RichEditor from '@/components/RichEditor.vue'
 
 import {
   fetchSkuListByProductId,
@@ -168,9 +196,36 @@ const formRef = ref()
 
 const categoryOptions = ref([])
 const farmerOptions = ref([])
-const attrCategoryOptions = ref([])
 
 const publishChecked = ref(false)
+const picFileList = ref([])
+
+// 动态参数行（模板驱动）
+const paramRows = ref([])
+const paramLoading = ref(false)
+// 标记初始化是否完成，避免 watch 在 init 过程中触发重复加载
+const initDone = ref(false)
+
+const handlePicUpload = async ({ file, onSuccess, onError }) => {
+  try {
+    const res = await uploadFile(file)
+    if (res.success) {
+      form.pic = res.data
+      picFileList.value = [{ uid: '-1', name: file.name, status: 'done', url: res.data }]
+      onSuccess(res)
+    } else {
+      message.error(res.message || '上传失败')
+      onError(new Error(res.message))
+    }
+  } catch (e) {
+    message.error('上传失败')
+    onError(e)
+  }
+}
+const handlePicRemove = () => {
+  form.pic = ''
+  picFileList.value = []
+}
 
 const skuRows = ref([])
 const skuSaveLoading = ref(false)
@@ -179,7 +234,6 @@ const form = reactive({
   id: null,
   name: '',
   productCategoryId: undefined,
-  productAttributeCategoryId: undefined,
   farmerId: undefined,
   productSn: '',
   pic: '',
@@ -189,13 +243,12 @@ const form = reactive({
   sale: 0,
   unit: '斤',
   publishStatus: 0,
-  description: ''
+  detailHtml: ''
 })
 
 const normalizeUnit = (v) => {
   const unit = String(v ?? '').trim()
   if (!unit || unit === 'null' || unit === 'undefined') return '斤'
-  // 常见乱码/占位符：问号、替换字符等
   if (/[?\uFF1F\uFFFD�]/.test(unit)) return '斤'
   return unit
 }
@@ -213,6 +266,69 @@ const goBack = () => {
   router.push('/admin/pms/product')
 }
 
+// 商品参数表格列（参数名只读，只填写值）
+const paramColumns = [
+  {
+    title: '参数名',
+    dataIndex: 'key',
+    width: '40%'
+  },
+  {
+    title: '参数值',
+    width: '60%',
+    customRender: ({ record }) =>
+      h(Input, {
+        class: 'gm-field',
+        value: record.value,
+        placeholder: '请输入参数值',
+        onChange: e => (record.value = e.target.value)
+      })
+  }
+]
+
+// 加载分类参数模板并合并已有值
+const loadCategoryParams = async (categoryId, existingParams) => {
+  if (!categoryId) {
+    paramRows.value = []
+    return
+  }
+  paramLoading.value = true
+  try {
+    const rsp = await fetchParamDefinitions(categoryId)
+    const defs = rsp?.data || []
+
+    // 构建已有参数值的映射：paramId → value
+    const existingMap = {}
+    if (existingParams && Array.isArray(existingParams)) {
+      existingParams.forEach(p => {
+        if (p.paramId) existingMap[p.paramId] = p.value || ''
+      })
+    }
+
+    paramRows.value = defs.map(d => ({
+      paramId: d.id,
+      key: d.paramName,
+      value: existingMap[d.id] || ''
+    }))
+  } finally {
+    paramLoading.value = false
+  }
+}
+
+// 监听分类变化（仅初始化完成后）
+watch(() => form.productCategoryId, (newVal) => {
+  if (initDone.value) {
+    loadCategoryParams(newVal, null)
+  }
+})
+
+// 构建 productParams 数组
+const buildProductParams = () => {
+  return paramRows.value
+    .filter(r => r.paramId)
+    .map(r => ({ paramId: r.paramId, value: (r.value || '').trim() }))
+}
+
 onMounted(() => {
   init()
 })
@@ -222,21 +338,29 @@ const init = async () => {
   const id = Number(route.query.id)
   if (!id) return
 
-  const [categoryRsp, farmerRsp, attrRsp, detailRsp] = await Promise.all([
+  const [categoryRsp, farmerRsp, detailRsp] = await Promise.all([
     fetchProductCategoryOptions(),
     fetchFarmerOptions(),
-    fetchProductAttrCategoryOptions(),
     getProductDetail(id)
   ])
 
   categoryOptions.value = categoryRsp?.data || []
   farmerOptions.value = farmerRsp?.data || []
-  attrCategoryOptions.value = attrRsp?.data || []
 
   Object.assign(form, detailRsp.data)
   form.unit = normalizeUnit(form.unit)
 
   publishChecked.value = form.publishStatus === 1
+
+  // 回填已有主图
+  if (form.pic) {
+    picFileList.value = [{ uid: '-1', name: '商品主图', status: 'done', url: form.pic }]
+  }
+
+  // 回填商品参数（加载分类模板 + 合并已有值）
+  await loadCategoryParams(form.productCategoryId, detailRsp.data?.productParams)
+
+  initDone.value = true
 
   await fetchSkuList()
 }
@@ -391,7 +515,8 @@ const handleSubmit = async () => {
   await updateProduct({
     ...form,
     unit: normalizeUnit(form.unit),
-    publishStatus: publishChecked.value ? 1 : 0
+    publishStatus: publishChecked.value ? 1 : 0,
+    productParams: buildProductParams()
   })
 
   if (publishChecked.value) {
@@ -407,7 +532,26 @@ const handleSubmit = async () => {
 </script>
 
 <style scoped>
-/* 统一把“更改商品信息”页的表单控件改成浅灰圆角风格 */
+.fixed-bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 99;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  padding: 12px 24px;
+  background: #fff;
+  border-top: 1px solid #f0f0f0;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.box {
+  padding-bottom: 72px;
+}
+
+/* 统一把"更改商品信息"页的表单控件改成浅灰圆角风格 */
 :deep(.gm-field .ant-input),
 :deep(.gm-field.ant-input),
 :deep(.gm-field .ant-input-number),

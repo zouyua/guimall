@@ -18,7 +18,24 @@
               class="block w-64 p-2 pl-4 text-sm text-stone-900 border border-stone-200 rounded-full bg-stone-100 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
               placeholder="搜索桂林特色农产品...">
           </div>
-          <button @click="$router.push('/login')" class="text-stone-600 hover:text-emerald-600 font-medium transition-colors">登录</button>
+          <!-- 已登录：显示会员信息 -->
+          <template v-if="memberLoggedIn">
+            <router-link to="/member/center" class="flex items-center gap-2 text-stone-600 hover:text-emerald-600 font-medium transition-colors hidden md:inline-flex">
+              <img :src="memberAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + memberNickname" class="w-7 h-7 rounded-full object-cover border border-emerald-100" />
+              {{ memberNickname }}
+            </router-link>
+            <router-link to="/my-orders" class="text-stone-600 hover:text-emerald-600 font-medium transition-colors hidden md:inline">我的订单</router-link>
+            <router-link to="/cart" class="text-stone-600 hover:text-emerald-600 transition-colors flex items-center">
+              <a-badge :count="cartStore.cartCount" :offset="[-2, 2]" size="small">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z" /></svg>
+              </a-badge>
+            </router-link>
+            <button @click="handleLogout" class="text-stone-500 hover:text-red-500 font-medium transition-colors">退出</button>
+          </template>
+          <!-- 未登录：显示登录按钮 -->
+          <template v-else>
+            <button @click="$router.push('/member/login')" class="text-stone-600 hover:text-emerald-600 font-medium transition-colors">登录</button>
+          </template>
           <button @click="$router.push('/admin')" class="bg-emerald-600 text-white px-6 py-2 rounded-full font-bold hover:bg-emerald-700 transition-all shadow-md">管理端</button>
         </div>
 
@@ -147,7 +164,7 @@
                 <span class="text-xs text-stone-400 mr-1">¥</span>
                 <span class="text-3xl font-black text-emerald-600">{{ item.price }}</span>
               </div>
-              <button class="w-12 h-12 bg-stone-100 rounded-2xl flex items-center justify-center text-stone-600 hover:bg-emerald-600 hover:text-white transition-all">
+              <button @click.stop="viewDetail(item.id)" class="w-12 h-12 bg-stone-100 rounded-2xl flex items-center justify-center text-stone-600 hover:bg-emerald-600 hover:text-white transition-all" title="加入购物车">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg>
               </button>
             </div>
@@ -202,8 +219,39 @@ import {
   getNewProducts,
   getRecommendProducts
 } from '@/api/frontend/product'
+import { isMemberLoggedIn, getMemberInfo, getMemberId, removeMemberInfo } from '@/composables/member'
+import { removeMemberToken } from '@/composables/cookie'
+import { useCartStore } from '@/stores/cart'
 
 const router = useRouter()
+const cartStore = useCartStore()
+
+// 会员登录状态
+const memberLoggedIn = ref(isMemberLoggedIn())
+const memberNickname = ref('')
+const memberAvatar = ref('')
+
+const initMemberStatus = () => {
+  memberLoggedIn.value = isMemberLoggedIn()
+  if (memberLoggedIn.value) {
+    const info = getMemberInfo()
+    memberNickname.value = info?.nickname || info?.username || '会员'
+    memberAvatar.value = info?.icon || ''
+  }
+}
+
+const loadCartCount = () => {
+  cartStore.loadCartCount()
+}
+
+const handleLogout = () => {
+  removeMemberInfo()
+  removeMemberToken()
+  memberLoggedIn.value = false
+  memberNickname.value = ''
+  memberAvatar.value = ''
+  cartStore.reset()
+}
 
 const queryParams = ref({
   keyword: '',
@@ -309,6 +357,8 @@ const goTrace = (id) => {
 }
 
 onMounted(() => {
+  initMemberStatus()
+  loadCartCount()
   loadHomeData().then(() => {
     setupDragScroll(newScrollRef.value)
     setupDragScroll(recScrollRef.value)

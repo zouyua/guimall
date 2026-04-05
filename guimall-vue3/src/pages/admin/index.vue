@@ -11,9 +11,6 @@
             {{ todayText }} · 桂品商城管理后台工作台
           </p>
         </div>
-        <div class="text-right text-sm text-gray-500">
-          <div>数据为演示统计，接入接口后将展示实时数据</div>
-        </div>
       </div>
     </a-card>
 
@@ -34,7 +31,7 @@
                   <span v-if="item.suffix" class="text-base font-normal text-gray-400">{{ item.suffix }}</span>
                 </template>
               </div>
-              <div class="mt-2 text-xs" :class="item.trend >= 0 ? 'text-emerald-600' : 'text-rose-600'">
+              <div v-if="item.trend !== 0 && item.trendLabel" class="mt-2 text-xs" :class="item.trend >= 0 ? 'text-emerald-600' : 'text-rose-600'">
                 {{ item.trend >= 0 ? '↑' : '↓' }} {{ Math.abs(item.trend) }}% {{ item.trendLabel }}
               </div>
             </div>
@@ -53,7 +50,7 @@
     <a-card :bordered="false" class="mb-5">
       <template #title>
         <span class="text-base font-medium">近7日销售额</span>
-        <span class="ml-2 text-xs font-normal text-gray-400">（元 · 演示）</span>
+        <span class="ml-2 text-xs font-normal text-gray-400">（元）</span>
       </template>
       <div class="sales-chart-with-axis flex flex-col gap-2 sm:flex-row sm:items-stretch">
         <!-- 纵轴标题 -->
@@ -141,8 +138,8 @@
                 {{ item.value }}
                 <span v-if="item.suffix" class="text-base font-normal text-gray-400">{{ item.suffix }}</span>
               </div>
-              <div class="mt-2 text-xs" :class="item.trend >= 0 ? 'text-emerald-600' : 'text-rose-600'">
-                {{ item.trend >= 0 ? '↑' : '↓' }} {{ Math.abs(item.trend) }}% 较昨日
+              <div class="mt-2 text-xs text-gray-400">
+                实时统计
               </div>
             </div>
             <div
@@ -220,7 +217,7 @@
 </template>
 
 <script setup>
-import { computed, h } from 'vue'
+import { ref, reactive, computed, h, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { Tag } from 'ant-design-vue'
@@ -238,6 +235,9 @@ import {
   AccountBookOutlined,
   PayCircleOutlined
 } from '@ant-design/icons-vue'
+import { fetchOrderList } from '@/api/admin/order'
+import { fetchProductList } from '@/api/admin/product'
+import { fetchFarmerList } from '@/api/admin/farmer'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -262,7 +262,7 @@ const todayText = computed(() => {
   return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 星期${w[d.getDay()]}`
 })
 
-/** 金额展示（演示数据） */
+/** 金额展示 */
 function formatMoney(n) {
   return Number(n).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
@@ -293,93 +293,95 @@ function formatAxisY(n) {
   return String(Math.round(n))
 }
 
-const salesStatCards = [
+// ============ Reactive data (initially zero / empty) ============
+
+const todaySales = ref(0)
+const monthSales = ref(0)
+const todayOrders = ref(0)
+const pendingOrders = ref(0)
+const productCount = ref(0)
+const farmerCount = ref(0)
+
+const salesStatCards = computed(() => [
   {
     key: 'todaySales',
     title: '今日销售额',
-    value: 12580.5,
+    value: todaySales.value,
     valueType: 'currency',
-    trend: 8.2,
+    trend: 0,
     trendLabel: '较昨日',
     icon: DollarOutlined,
     iconWrap: 'bg-rose-50 text-rose-600'
   },
   {
-    key: 'monthSales',
-    title: '本月销售额',
-    value: 286420.0,
-    valueType: 'currency',
-    trend: 15.3,
-    trendLabel: '较上月同期',
-    icon: AccountBookOutlined,
-    iconWrap: 'bg-orange-50 text-orange-600'
-  },
-  {
     key: 'todayOrders',
-    title: '今日成交订单',
-    value: 28,
+    title: '今日订单数',
+    value: todayOrders.value,
     suffix: '单',
     valueType: 'count',
-    trend: 12.5,
+    trend: 0,
     trendLabel: '较昨日',
     icon: ShoppingOutlined,
     iconWrap: 'bg-blue-50 text-blue-600'
   },
   {
-    key: 'aov',
-    title: '笔单价（今日）',
-    value: 449.3,
+    key: 'monthSales',
+    title: '本月销售额',
+    value: monthSales.value,
     valueType: 'currency',
-    trend: 3.1,
-    trendLabel: '较昨日',
+    trend: 0,
+    trendLabel: '较上月同期',
+    icon: AccountBookOutlined,
+    iconWrap: 'bg-orange-50 text-orange-600'
+  },
+  {
+    key: 'pending',
+    title: '待处理订单',
+    value: pendingOrders.value,
+    suffix: '单',
+    valueType: 'count',
+    trend: 0,
+    trendLabel: '',
     icon: PayCircleOutlined,
     iconWrap: 'bg-cyan-50 text-cyan-600'
   }
-]
+])
 
-const operationStatCards = [
-  {
-    key: 'ship',
-    title: '待发货',
-    value: 14,
-    suffix: '单',
-    trend: -3.2,
-    icon: CarOutlined,
-    iconWrap: 'bg-amber-50 text-amber-600'
-  },
+const operationStatCards = computed(() => [
   {
     key: 'products',
     title: '在售商品',
-    value: 186,
+    value: productCount.value,
     suffix: '件',
-    trend: 4.1,
+    trend: 0,
     icon: AppstoreOutlined,
     iconWrap: 'bg-emerald-50 text-emerald-600'
   },
   {
     key: 'farmers',
-    title: '合作农户',
-    value: 42,
+    title: '签约农户',
+    value: farmerCount.value,
     suffix: '户',
-    trend: 2.0,
+    trend: 0,
     icon: TeamOutlined,
     iconWrap: 'bg-violet-50 text-violet-600'
+  },
+  {
+    key: 'members',
+    title: '注册会员',
+    value: '—',
+    suffix: '',
+    trend: 0,
+    icon: UserOutlined,
+    iconWrap: 'bg-amber-50 text-amber-600'
   }
-]
+])
 
-/** 近7日销售额（演示） */
-const last7DaysSales = [
-  { label: '3/16', amount: 6840.2 },
-  { label: '3/17', amount: 9120.0 },
-  { label: '3/18', amount: 7580.5 },
-  { label: '3/19', amount: 11240.0 },
-  { label: '3/20', amount: 10560.8 },
-  { label: '3/21', amount: 13200.0 },
-  { label: '3/22', amount: 12580.5 }
-]
+/** 近7日销售额 */
+const last7DaysSales = ref([])
 
 const chartYMax = computed(() =>
-  niceChartMax(Math.max(...last7DaysSales.map((d) => d.amount), 0))
+  niceChartMax(Math.max(...last7DaysSales.value.map((d) => d.amount), 0))
 )
 
 const yAxisTicks = computed(() => {
@@ -406,83 +408,158 @@ const quickLinks = [
   { label: '商品管理', path: '/admin/pms/product', icon: AppstoreOutlined }
 ]
 
-const todoItems = [
+const todoItems = ref([
   {
     title: '待发货订单',
     hint: '买家已付款，等待出库发货',
-    count: 14,
+    count: 0,
     tagColor: 'orange',
     path: '/admin/oms/order/deliverOrderList'
   },
   {
-    title: '退货待审核',
-    hint: '用户发起退货，需尽快处理',
-    count: 3,
-    tagColor: 'red',
-    path: '/admin/oms/apply'
+    title: '待付款订单',
+    hint: '等待买家付款',
+    count: 0,
+    tagColor: 'gold',
+    path: '/admin/oms/order'
   },
   {
-    title: '农户待认证',
-    hint: '新提交认证资料',
-    count: 2,
+    title: '农户管理',
+    hint: '已签约农户数',
+    count: 0,
     tagColor: 'blue',
     path: '/admin/farmer'
   }
-]
+])
 
-const recentOrders = [
-  {
-    id: 'O20260322001',
-    orderSn: 'O20260322001',
-    buyer: '李**',
-    amount: '¥268.00',
-    status: '待发货',
-    statusColor: 'orange',
-    time: '2026-03-22 09:12'
-  },
-  {
-    id: 'O20260321088',
-    orderSn: 'O20260321088',
-    buyer: '王**',
-    amount: '¥89.50',
-    status: '已完成',
-    statusColor: 'green',
-    time: '2026-03-21 16:40'
-  },
-  {
-    id: 'O20260321072',
-    orderSn: 'O20260321072',
-    buyer: '张**',
-    amount: '¥156.00',
-    status: '待付款',
-    statusColor: 'gold',
-    time: '2026-03-21 11:05'
-  },
-  {
-    id: 'O20260320033',
-    orderSn: 'O20260320033',
-    buyer: '赵**',
-    amount: '¥412.00',
-    status: '已完成',
-    statusColor: 'green',
-    time: '2026-03-20 14:22'
-  }
-]
+const ORDER_STATUS_LABEL = {
+  0: '待付款',
+  1: '待发货',
+  2: '已发货',
+  3: '已完成',
+  4: '已关闭',
+  5: '无效订单'
+}
+const ORDER_STATUS_COLOR = {
+  0: 'orange',
+  1: 'blue',
+  2: 'cyan',
+  3: 'success',
+  4: 'default',
+  5: 'default'
+}
+
+const recentOrders = ref([])
 
 const orderColumns = [
-  { title: '订单号', dataIndex: 'orderSn', align: 'center', width: 160 },
-  { title: '买家', dataIndex: 'buyer', align: 'center', width: 100 },
-  { title: '金额', dataIndex: 'amount', align: 'center', width: 110 },
+  { title: '订单号', dataIndex: 'orderSn', align: 'center', width: 200 },
+  { title: '买家', dataIndex: 'memberUsername', align: 'center', width: 120 },
+  {
+    title: '金额',
+    dataIndex: 'payAmount',
+    align: 'center',
+    width: 110,
+    customRender: ({ text }) => text != null ? `¥${formatMoney(text)}` : '—'
+  },
   {
     title: '状态',
     dataIndex: 'status',
     align: 'center',
     width: 100,
-    customRender: ({ record }) =>
-      h(Tag, { color: record.statusColor }, () => record.status)
+    customRender: ({ text }) =>
+      h(Tag, { color: ORDER_STATUS_COLOR[text] || 'default' }, () => ORDER_STATUS_LABEL[text] || '-')
   },
-  { title: '下单时间', dataIndex: 'time', align: 'center' }
+  { title: '下单时间', dataIndex: 'createTime', align: 'center' }
 ]
+
+// ============ Data fetching ============
+
+/** Format a Date to YYYY-MM-DD */
+function fmtDate(d) {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${dd}`
+}
+
+async function loadDashboardData() {
+  const now = new Date()
+  const todayStr = fmtDate(now)
+  const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+
+  try {
+    // Fetch a large page of orders for stats calculation
+    const orderRes = await fetchOrderList({ current: 1, size: 500 })
+    if (orderRes?.success && orderRes?.data) {
+      const orders = orderRes.data
+
+      // Today's stats
+      const todayOrdersList = orders.filter(o => o.createTime && o.createTime.startsWith(todayStr))
+      todayOrders.value = todayOrdersList.length
+      todaySales.value = todayOrdersList.reduce((sum, o) => sum + (Number(o.payAmount) || 0), 0)
+
+      // Month stats
+      const monthOrders = orders.filter(o => o.createTime && o.createTime >= monthStart)
+      monthSales.value = monthOrders.reduce((sum, o) => sum + (Number(o.payAmount) || 0), 0)
+
+      // Pending orders (status 0=待付款, 1=待发货)
+      const pendingList = orders.filter(o => o.status === 0 || o.status === 1)
+      pendingOrders.value = pendingList.length
+
+      // Todo items counts
+      const waitShipCount = orders.filter(o => o.status === 1).length
+      const waitPayCount = orders.filter(o => o.status === 0).length
+      todoItems.value[0].count = waitShipCount
+      todoItems.value[1].count = waitPayCount
+
+      // Recent 5 orders
+      recentOrders.value = orders.slice(0, 5)
+
+      // Last 7 days chart
+      const dayMap = {}
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(now)
+        d.setDate(d.getDate() - i)
+        const key = fmtDate(d)
+        dayMap[key] = { label: `${d.getMonth() + 1}/${d.getDate()}`, amount: 0 }
+      }
+      orders.forEach(o => {
+        if (o.createTime) {
+          const dateKey = o.createTime.substring(0, 10)
+          if (dayMap[dateKey]) {
+            dayMap[dateKey].amount += Number(o.payAmount) || 0
+          }
+        }
+      })
+      last7DaysSales.value = Object.values(dayMap)
+    }
+  } catch (e) {
+    console.warn('加载订单数据失败', e)
+  }
+
+  try {
+    const productRes = await fetchProductList({ current: 1, size: 1 })
+    if (productRes?.success) {
+      productCount.value = productRes.total || 0
+    }
+  } catch (e) {
+    console.warn('加载商品数据失败', e)
+  }
+
+  try {
+    const farmerRes = await fetchFarmerList({ current: 1, size: 1 })
+    if (farmerRes?.success) {
+      farmerCount.value = farmerRes.total || 0
+      todoItems.value[2].count = farmerRes.total || 0
+    }
+  } catch (e) {
+    console.warn('加载农户数据失败', e)
+  }
+}
+
+onMounted(() => {
+  loadDashboardData()
+})
 </script>
 
 <style scoped>

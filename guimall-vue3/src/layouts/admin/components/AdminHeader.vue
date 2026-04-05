@@ -13,6 +13,17 @@
     <!-- 右侧区域 -->
     <div class="ml-auto flex items-center">
 
+      <!-- 前往前台 -->
+      <a-tooltip placement="bottom">
+        <template #title>
+          <span>前往前台</span>
+        </template>
+        <div class="w-[42px] h-[64px] flex cursor-pointer items-center justify-center text-gray-700 hover:bg-gray-200"
+          @click="goFrontend">
+          <HomeOutlined class="text-lg" />
+        </div>
+      </a-tooltip>
+
       <!-- 点击刷新按钮 -->
       <a-tooltip placement="bottom">
         <template #title>
@@ -104,7 +115,8 @@ import {
   FullscreenOutlined,
   FullscreenExitOutlined,
   DownOutlined,
-  ReloadOutlined
+  ReloadOutlined,
+  HomeOutlined
 } from '@ant-design/icons-vue'
 
 // 引入图片
@@ -135,6 +147,9 @@ const handleMenuWidth = () => {
 
 //刷新页面
 const handleRefresh = () => location.reload()
+
+//跳转前台首页（新窗口）
+const goFrontend = () => window.open('/', '_blank')
 
 //isFullscreen表示当前是否全屏；toggle用于动态切换全屏、非全屏
 const { isFullscreen, toggle } = useFullscreen()

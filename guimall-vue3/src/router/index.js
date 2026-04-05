@@ -34,6 +34,41 @@ const routes = [
         meta: { title: '关于我们' }
     },
     {
+        path: '/cart',
+        component: () => import('@/pages/frontend/cart/index.vue'),
+        meta: { title: '购物车' }
+    },
+    {
+        path: '/checkout',
+        component: () => import('@/pages/frontend/checkout/index.vue'),
+        meta: { title: '确认订单' }
+    },
+    {
+        path: '/pay',
+        component: () => import('@/pages/frontend/pay/index.vue'),
+        meta: { title: '订单支付' }
+    },
+    {
+        path: '/pay/result',
+        component: () => import('@/pages/frontend/pay/result.vue'),
+        meta: { title: '支付结果' }
+    },
+    {
+        path: '/my-orders',
+        component: () => import('@/pages/frontend/order/index.vue'),
+        meta: { title: '我的订单' }
+    },
+    {
+        path: '/member/center',
+        component: () => import('@/pages/frontend/member/center.vue'),
+        meta: { title: '个人中心' }
+    },
+    {
+        path: '/member/login',
+        component: () => import('@/pages/frontend/member/login.vue'),
+        meta: { title: '会员登录' }
+    },
+    {
         path: '/login',//登录页
         component: () => import('@/pages/admin/login.vue'),
         meta: {
@@ -111,26 +146,6 @@ const routes = [
                 path: 'pms/productCate/update',
                 component: () => import('@/pages/admin/pms/productCate/update.vue'),
                 meta: { title: '更改商品分类' }
-            },
-            {
-                path: 'pms/productAttr',
-                component: () => import('@/pages/admin/pms/productAttr/index.vue'),
-                meta: { title: '商品类型' }
-            },
-            {
-                path: 'pms/productAttr/productAttrList',
-                component: () => import('@/pages/admin/pms/productAttr/index.vue'),
-                meta: { title: '商品类型列表' }
-            },
-            {
-                path: 'pms/productAttr/addProductAttr',
-                component: () => import('@/pages/admin/pms/productAttr/addProductAttr.vue'),
-                meta: { title: '添加商品类型' }
-            },
-            {
-                path: 'pms/productAttr/updateProductAttr',
-                component: () => import('@/pages/admin/pms/productAttr/updateProductAttr.vue'),
-                meta: { title: '更改商品类型' }
             },
             {
                 path: 'oms/order',
@@ -221,6 +236,11 @@ const routes = [
                 path: 'trace/origin/update',
                 component: () => import('@/pages/admin/trace/update.vue'),
                 meta: { title: '编辑产地' }
+            },
+            {
+                path: 'trace/record',
+                component: () => import('@/pages/admin/trace/record.vue'),
+                meta: { title: '溯源记录管理' }
             },
             {
                 path: 'ums/admin',

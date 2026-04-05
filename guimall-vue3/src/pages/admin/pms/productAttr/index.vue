@@ -18,6 +18,14 @@
 
     <a-card :bordered="false">
 
+      <a-alert
+        class="mb-4"
+        type="info"
+        show-icon
+        banner
+        message="商品类型定义了商品的规格和参数模板。点击行左侧展开按钮可查看和管理该类型下的规格属性（如净含量）和参数属性（如产地）。在商品编辑页选择「属性分类」即可关联使用。"
+      />
+
       <div class="mb-4 flex flex-wrap justify-between items-center gap-3">
         <a-button type="primary" class="flex items-center gap-1" @click="goAdd">
           <PlusOutlined />
