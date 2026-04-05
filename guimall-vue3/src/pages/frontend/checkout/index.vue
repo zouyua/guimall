@@ -86,20 +86,18 @@
                 <a-input v-model:value="address.receiverPhone" placeholder="请输入手机号码"
                   size="large" class="!rounded-xl" />
               </div>
-              <div>
-                <label class="block text-sm font-bold text-stone-500 mb-2">省份</label>
-                <a-input v-model:value="address.receiverProvince" placeholder="请输入省份"
-                  size="large" class="!rounded-xl" />
-              </div>
-              <div>
-                <label class="block text-sm font-bold text-stone-500 mb-2">城市</label>
-                <a-input v-model:value="address.receiverCity" placeholder="请输入城市"
-                  size="large" class="!rounded-xl" />
-              </div>
-              <div>
-                <label class="block text-sm font-bold text-stone-500 mb-2">区/县</label>
-                <a-input v-model:value="address.receiverRegion" placeholder="请输入区/县"
-                  size="large" class="!rounded-xl" />
+              <div class="col-span-3">
+                <label class="block text-sm font-bold text-stone-500 mb-2">省/市/区</label>
+                <a-cascader
+                  v-model:value="selectedRegion"
+                  :options="regionData"
+                  placeholder="请选择省/市/区"
+                  @change="handleRegionChange"
+                  :show-search="{ filter }"
+                  size="large"
+                  class="w-full !rounded-xl"
+                  :field-names="{ label: 'label', value: 'value', children: 'children' }"
+                />
               </div>
               <div>
                 <label class="block text-sm font-bold text-stone-500 mb-2">详细地址</label>
@@ -231,6 +229,7 @@ import { submitOrder } from '@/api/frontend/order'
 import { getAddressList } from '@/api/frontend/member'
 import { getOrderAvailableCoupons } from '@/api/frontend/coupon'
 import { getMemberId, isMemberLoggedIn } from '@/composables/member'
+import regionData from '@/utils/regionData'
 
 const router = useRouter()
 
@@ -283,6 +282,22 @@ const address = ref({
   receiverDetailAddress: ''
 })
 
+const selectedRegion = ref([])
+
+// 级联选择器搜索过滤
+const filter = (inputValue, path) => {
+  return path.some(option => option.label.toLowerCase().indexOf(inputValue.toLowerCase()) > -1)
+}
+
+// 处理省市区选择变化
+const handleRegionChange = (value) => {
+  if (value && value.length === 3) {
+    address.value.receiverProvince = value[0]
+    address.value.receiverCity = value[1]
+    address.value.receiverRegion = value[2]
+  }
+}
+
 // 选择已有地址
 const selectAddress = (addr) => {
   selectedAddressId.value = addr.id
@@ -295,6 +310,8 @@ const selectAddress = (addr) => {
     receiverRegion: addr.region,
     receiverDetailAddress: addr.detailAddress
   }
+  // 同步级联选择器的值
+  selectedRegion.value = [addr.province, addr.city, addr.region]
 }
 
 // 加载已有地址列表

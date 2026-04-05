@@ -101,26 +101,23 @@
       </a-form>
     </a-card>
 
-    <!-- 商品参数（由分类模板决定） -->
+    <!-- 商品参数 -->
     <a-card :bordered="false" title="商品参数" class="mt-5">
       <a-alert
         class="mb-4"
         type="info"
         show-icon
         banner
-        message="商品参数由所选分类的参数模板自动加载，切换分类后参数将重新加载。"
+        message="从参数字典中选择参数。如需添加新参数，请前往【参数管理】页面。"
       />
 
-      <a-empty v-if="!form.productCategoryId" description="请先选择商品分类" />
-
-      <a-empty v-else-if="paramRows.length === 0 && !paramLoading" description="该分类暂无参数模板，请在分类管理中添加" />
-
-      <a-spin v-else :spinning="paramLoading">
+      <a-spin :spinning="paramLoading">
         <a-table
           :dataSource="paramRows"
           :columns="paramColumns"
           rowKey="paramId"
-          :pagination="false"
+          :pagination="paramPagination"
+          @change="handleParamTableChange"
           bordered
           size="small"
         />
@@ -162,9 +159,9 @@
 </template>
 
 <script setup>
-import { reactive, ref, onMounted, h, watch } from 'vue'
+import { reactive, ref, onMounted, h } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { message, Input, InputNumber, Button, Popconfirm } from 'ant-design-vue'
+import { message, Input, InputNumber, Button, Popconfirm, Checkbox } from 'ant-design-vue'
 import { ArrowLeftOutlined, PlusOutlined } from '@ant-design/icons-vue'
 
 import {
@@ -180,7 +177,7 @@ import {
 
 import { fetchFarmerOptions } from '@/api/admin/farmer'
 import { uploadFile } from '@/api/admin/upload'
-import { fetchParamDefinitions } from '@/api/admin/paramDefinition'
+import { fetchParamDefinitions, createParamDefinition } from '@/api/admin/paramDefinition'
 import RichEditor from '@/components/RichEditor.vue'
 
 import {
@@ -200,11 +197,18 @@ const farmerOptions = ref([])
 const publishChecked = ref(false)
 const picFileList = ref([])
 
-// 动态参数行（模板驱动）
+// 动态参数行（全局字典）
 const paramRows = ref([])
 const paramLoading = ref(false)
-// 标记初始化是否完成，避免 watch 在 init 过程中触发重复加载
-const initDone = ref(false)
+const paramPagination = ref({
+  current: 1,
+  pageSize: 10,
+  total: 0,
+  showSizeChanger: true,
+  showTotal: total => `共 ${total} 条`
+})
+// 全局维护已选中的参数ID集合
+const selectedParamIds = ref(new Set())
 
 const handlePicUpload = async ({ file, onSuccess, onError }) => {
   try {
@@ -266,67 +270,101 @@ const goBack = () => {
   router.push('/admin/pms/product')
 }
 
-// 商品参数表格列（参数名只读，只填写值）
+// 商品参数表格列（从字典选择）
 const paramColumns = [
+  {
+    title: '选择',
+    width: '10%',
+    align: 'center',
+    customRender: ({ record }) =>
+      h(Checkbox, {
+        checked: record.selected,
+        onChange: e => {
+          record.selected = e.target.checked
+          // 同步更新全局选中集合
+          if (e.target.checked) {
+            selectedParamIds.value.add(record.paramId)
+          } else {
+            selectedParamIds.value.delete(record.paramId)
+          }
+          console.log('Checkbox changed:', record.key, 'selected:', record.selected)
+        }
+      })
+  },
   {
     title: '参数名',
     dataIndex: 'key',
-    width: '40%'
+    width: '30%'
   },
   {
     title: '参数值',
-    width: '60%',
-    customRender: ({ record }) =>
-      h(Input, {
-        class: 'gm-field',
-        value: record.value,
-        placeholder: '请输入参数值',
-        onChange: e => (record.value = e.target.value)
-      })
+    dataIndex: 'value',
+    width: '60%'
   }
 ]
 
-// 加载分类参数模板并合并已有值
-const loadCategoryParams = async (categoryId, existingParams) => {
-  if (!categoryId) {
-    paramRows.value = []
-    return
-  }
+// 加载全局参数字典并合并已有值
+const loadAllParams = async (existingParams) => {
   paramLoading.value = true
   try {
-    const rsp = await fetchParamDefinitions(categoryId)
-    const defs = rsp?.data || []
+    console.log('loadAllParams - existingParams:', existingParams)
 
-    // 构建已有参数值的映射：paramId → value
-    const existingMap = {}
+    const rsp = await fetchParamDefinitions({
+      current: paramPagination.value.current,
+      size: paramPagination.value.pageSize
+    })
+
+    console.log('loadAllParams - rsp:', rsp)
+
+    if (!rsp?.success) return
+
+    // PageResponse 的数据直接在 data 字段，不是 data.records
+    const defs = rsp?.data || []
+    paramPagination.value.total = rsp?.total || 0
+
+    console.log('loadAllParams - defs:', defs)
+
+    // 首次加载时，初始化已选中的参数ID集合
     if (existingParams && Array.isArray(existingParams)) {
+      selectedParamIds.value.clear()
       existingParams.forEach(p => {
-        if (p.paramId) existingMap[p.paramId] = p.value || ''
+        if (p.paramId) {
+          selectedParamIds.value.add(p.paramId)
+          console.log('Adding paramId to selectedParamIds:', p.paramId)
+        }
       })
     }
+
+    console.log('loadAllParams - selectedParamIds:', selectedParamIds.value)
 
     paramRows.value = defs.map(d => ({
       paramId: d.id,
       key: d.paramName,
-      value: existingMap[d.id] || ''
+      value: d.paramValue,
+      selected: selectedParamIds.value.has(d.id) // 从全局集合判断是否选中
     }))
+
+    console.log('loadAllParams - paramRows:', paramRows.value)
   } finally {
     paramLoading.value = false
   }
 }
 
-// 监听分类变化（仅初始化完成后）
-watch(() => form.productCategoryId, (newVal) => {
-  if (initDone.value) {
-    loadCategoryParams(newVal, null)
-  }
-})
+// 分页切换
+const handleParamTableChange = (pagination) => {
+  paramPagination.value.current = pagination.current
+  paramPagination.value.pageSize = pagination.pageSize
 
-// 构建 productParams 数组
+  // 不需要传 existingParams，因为已经在全局 selectedParamIds 中维护了
+  loadAllParams()
+}
+
+// 构建 productParams 数组（只提交已勾选的参数ID）
 const buildProductParams = () => {
-  return paramRows.value
-    .filter(r => r.paramId)
-    .map(r => ({ paramId: r.paramId, value: (r.value || '').trim() }))
+  const result = Array.from(selectedParamIds.value).map(paramId => ({ paramId }))
+  console.log('buildProductParams - selectedParamIds:', selectedParamIds.value)
+  console.log('buildProductParams - result:', result)
+  return result
 }
 
 onMounted(() => {
@@ -357,10 +395,8 @@ const init = async () => {
     picFileList.value = [{ uid: '-1', name: '商品主图', status: 'done', url: form.pic }]
   }
 
-  // 回填商品参数（加载分类模板 + 合并已有值）
-  await loadCategoryParams(form.productCategoryId, detailRsp.data?.productParams)
-
-  initDone.value = true
+  // 回填商品参数（加载全局字典 + 合并已有值）
+  await loadAllParams(detailRsp.data?.productParams)
 
   await fetchSkuList()
 }

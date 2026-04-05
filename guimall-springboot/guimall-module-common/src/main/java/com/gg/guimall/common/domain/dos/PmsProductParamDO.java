@@ -9,7 +9,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * 商品参数表（自由键值对）
+ * 商品参数关联表（多对多中间表）
  */
 @Data
 @Builder
@@ -26,9 +26,6 @@ public class PmsProductParamDO {
 
     /** 参数定义ID */
     private Long paramId;
-
-    /** 参数值 */
-    private String paramValue;
 
     /** 排序 */
     private Integer sort;

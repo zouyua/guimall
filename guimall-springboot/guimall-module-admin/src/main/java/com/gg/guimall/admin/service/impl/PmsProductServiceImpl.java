@@ -198,22 +198,25 @@ public class PmsProductServiceImpl implements PmsProductService {
             }
         }
 
-        // 查询商品参数（关联参数定义表拿参数名）
+        // 查询商品参数（关联参数定义表拿参数名和参数值）
         List<PmsProductParamDO> paramDOs = pmsProductParamMapper.selectByProductId(id);
         if (!CollectionUtils.isEmpty(paramDOs)) {
-            // 批量查询参数定义名称
+            // 批量查询参数定义（包含参数名和参数值）
             List<Long> paramIds = paramDOs.stream()
                     .map(PmsProductParamDO::getParamId).distinct().collect(Collectors.toList());
-            Map<Long, String> paramNameMap = paramIds.isEmpty() ? Collections.emptyMap() :
+            Map<Long, PmsParamDefinitionDO> paramDefMap = paramIds.isEmpty() ? Collections.emptyMap() :
                     pmsParamDefinitionMapper.selectBatchIds(paramIds).stream()
-                            .collect(Collectors.toMap(PmsParamDefinitionDO::getId, PmsParamDefinitionDO::getParamName));
+                            .collect(Collectors.toMap(PmsParamDefinitionDO::getId, p -> p));
 
             List<ProductParamItemVO> paramVOs = paramDOs.stream()
-                    .map(p -> ProductParamItemVO.builder()
-                            .paramId(p.getParamId())
-                            .key(paramNameMap.getOrDefault(p.getParamId(), ""))
-                            .value(p.getParamValue())
-                            .build())
+                    .map(p -> {
+                        PmsParamDefinitionDO def = paramDefMap.get(p.getParamId());
+                        return ProductParamItemVO.builder()
+                                .paramId(p.getParamId())
+                                .key(def != null ? def.getParamName() : "")
+                                .value(def != null ? def.getParamValue() : "")
+                                .build();
+                    })
                     .collect(Collectors.toList());
             rspVO.setProductParams(paramVOs);
         }
@@ -385,22 +388,29 @@ public class PmsProductServiceImpl implements PmsProductService {
         pmsProductParamMapper.deleteByProductId(productId);
 
         if (CollectionUtils.isEmpty(productParams)) {
+            System.out.println("商品参数为空，跳过保存");
             return;
         }
+
+        System.out.println("开始保存商品参数，商品ID: " + productId + ", 参数数量: " + productParams.size());
 
         // 批量插入新参数
         for (int i = 0; i < productParams.size(); i++) {
             ProductParamItemVO item = productParams.get(i);
+            System.out.println("参数 " + i + ": paramId=" + item.getParamId() + ", key=" + item.getKey() + ", value=" + item.getValue());
+
             if (item.getParamId() == null) {
+                System.out.println("参数ID为空，跳过");
                 continue;
             }
+
             PmsProductParamDO paramDO = PmsProductParamDO.builder()
                     .productId(productId)
                     .paramId(item.getParamId())
-                    .paramValue(item.getValue() != null ? item.getValue().trim() : "")
                     .sort(i)
                     .build();
             pmsProductParamMapper.insert(paramDO);
+            System.out.println("参数保存成功: " + paramDO);
         }
     }
 }

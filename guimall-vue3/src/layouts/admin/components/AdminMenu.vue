@@ -104,7 +104,8 @@ const menus = [
         icon: AppstoreOutlined,
         children: [
             { title: '商品管理', icon: ShoppingOutlined, path: '/admin/pms/product' },
-            { title: '商品分类', icon: ApartmentOutlined, path: '/admin/pms/productCate' }
+            { title: '商品分类', icon: ApartmentOutlined, path: '/admin/pms/productCate' },
+            { title: '参数管理', icon: SettingOutlined, path: '/admin/pms/paramDefinition' }
         ]
     },
     {

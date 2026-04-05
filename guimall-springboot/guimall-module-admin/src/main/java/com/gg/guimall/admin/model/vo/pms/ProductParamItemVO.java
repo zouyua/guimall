@@ -8,7 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * 商品参数项 VO
+ * 商品参数项 VO（用于提交和展示）
  */
 @Data
 @Builder
@@ -23,6 +23,6 @@ public class ProductParamItemVO {
     @ApiModelProperty(value = "参数名（展示用，后端填充）")
     private String key;
 
-    @ApiModelProperty(value = "参数值")
+    @ApiModelProperty(value = "参数值（展示用，后端填充）")
     private String value;
 }

@@ -85,26 +85,23 @@
       </a-form>
     </a-card>
 
-    <!-- 商品参数（由分类模板决定） -->
+    <!-- 商品参数 -->
     <a-card :bordered="false" title="商品参数" class="mt-5">
       <a-alert
         class="mb-4"
         type="info"
         show-icon
         banner
-        message="商品参数由所选分类的参数模板自动加载，请先选择商品分类。"
+        message="从参数字典中选择参数。如需添加新参数，请前往【参数管理】页面。"
       />
 
-      <a-empty v-if="!form.productCategoryId" description="请先选择商品分类" />
-
-      <a-empty v-else-if="paramRows.length === 0 && !paramLoading" description="该分类暂无参数模板，请在分类管理中添加" />
-
-      <a-spin v-else :spinning="paramLoading">
+      <a-spin :spinning="paramLoading">
         <a-table
           :dataSource="paramRows"
           :columns="paramColumns"
           rowKey="paramId"
-          :pagination="false"
+          :pagination="paramPagination"
+          @change="handleParamTableChange"
           bordered
           size="small"
         />
@@ -121,15 +118,15 @@
 </template>
 
 <script setup>
-import { reactive, ref, h, onMounted, watch } from 'vue'
+import { reactive, ref, h, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { message, Input, Spin } from 'ant-design-vue'
+import { message, Input, Spin, Checkbox } from 'ant-design-vue'
 import { ArrowLeftOutlined, PlusOutlined } from '@ant-design/icons-vue'
 import { createProduct } from '@/api/admin/product'
 import { fetchProductCategoryOptions } from '@/api/admin/productCategory'
 import { fetchFarmerOptions } from '@/api/admin/farmer'
 import { uploadFile } from '@/api/admin/upload'
-import { fetchParamDefinitions } from '@/api/admin/paramDefinition'
+import { fetchParamDefinitions, createParamDefinition } from '@/api/admin/paramDefinition'
 import RichEditor from '@/components/RichEditor.vue'
 
 const router = useRouter()
@@ -142,6 +139,15 @@ const picFileList = ref([])
 // 动态参数行（模板驱动）
 const paramRows = ref([])
 const paramLoading = ref(false)
+const paramPagination = ref({
+  current: 1,
+  pageSize: 10,
+  total: 0,
+  showSizeChanger: true,
+  showTotal: total => `共 ${total} 条`
+})
+// 全局维护已选中的参数ID集合
+const selectedParamIds = ref(new Set())
 
 const handlePicUpload = async ({ file, onSuccess, onError }) => {
   try {
@@ -191,55 +197,78 @@ const goBack = () => {
   router.push('/admin/pms/product')
 }
 
-// 商品参数表格列（参数名只读，只填写值）
+// 商品参数表格列（从字典选择）
 const paramColumns = [
+  {
+    title: '选择',
+    width: '10%',
+    align: 'center',
+    customRender: ({ record }) =>
+      h(Checkbox, {
+        checked: record.selected,
+        onChange: e => {
+          record.selected = e.target.checked
+          // 同步更新全局选中集合
+          if (e.target.checked) {
+            selectedParamIds.value.add(record.paramId)
+          } else {
+            selectedParamIds.value.delete(record.paramId)
+          }
+          console.log('Checkbox changed:', record.key, 'selected:', record.selected)
+        }
+      })
+  },
   {
     title: '参数名',
     dataIndex: 'key',
-    width: '40%'
+    width: '30%'
   },
   {
     title: '参数值',
-    width: '60%',
-    customRender: ({ record }) =>
-      h(Input, {
-        value: record.value,
-        placeholder: '请输入参数值',
-        onChange: e => (record.value = e.target.value)
-      })
+    dataIndex: 'value',
+    width: '60%'
   }
 ]
 
-// 选择分类后加载参数模板
-const loadCategoryParams = async (categoryId) => {
-  if (!categoryId) {
-    paramRows.value = []
-    return
-  }
+// 加载全局参数字典
+const loadAllParams = async () => {
   paramLoading.value = true
   try {
-    const rsp = await fetchParamDefinitions(categoryId)
+    const rsp = await fetchParamDefinitions({
+      current: paramPagination.value.current,
+      size: paramPagination.value.pageSize
+    })
+
+    if (!rsp?.success) return
+
+    // PageResponse 的数据直接在 data 字段，不是 data.records
     const defs = rsp?.data || []
+    paramPagination.value.total = rsp?.total || 0
+
     paramRows.value = defs.map(d => ({
       paramId: d.id,
       key: d.paramName,
-      value: ''
+      value: d.paramValue,
+      selected: selectedParamIds.value.has(d.id) // 从全局集合判断是否选中
     }))
   } finally {
     paramLoading.value = false
   }
 }
 
-// 监听分类变化
-watch(() => form.productCategoryId, (newVal) => {
-  loadCategoryParams(newVal)
-})
+// 分页切换
+const handleParamTableChange = (pagination) => {
+  paramPagination.value.current = pagination.current
+  paramPagination.value.pageSize = pagination.pageSize
+  loadAllParams()
+}
 
-// 构建 productParams 数组
+// 构建 productParams 数组（只提交已勾选的参数ID）
 const buildProductParams = () => {
-  return paramRows.value
-    .filter(r => r.paramId)
-    .map(r => ({ paramId: r.paramId, value: (r.value || '').trim() }))
+  const result = Array.from(selectedParamIds.value).map(paramId => ({ paramId }))
+  console.log('buildProductParams - selectedParamIds:', selectedParamIds.value)
+  console.log('buildProductParams - result:', result)
+  return result
 }
 
 onMounted(async () => {
@@ -249,6 +278,9 @@ onMounted(async () => {
   ])
   categoryOptions.value = categoryRsp?.data || []
   farmerOptions.value = farmerRsp?.data || []
+
+  // 加载全局参数字典
+  await loadAllParams()
 })
 
 const handleSubmit = async () => {

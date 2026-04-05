@@ -44,6 +44,16 @@ const routes = [
         meta: { title: '确认订单' }
     },
     {
+        path: '/coupon-center',
+        component: () => import('@/pages/frontend/coupon/index.vue'),
+        meta: { title: '领券中心' }
+    },
+    {
+        path: '/user/coupons',
+        component: () => import('@/pages/frontend/user/coupons.vue'),
+        meta: { title: '我的优惠券' }
+    },
+    {
         path: '/pay',
         component: () => import('@/pages/frontend/pay/index.vue'),
         meta: { title: '订单支付' }
@@ -146,6 +156,11 @@ const routes = [
                 path: 'pms/productCate/update',
                 component: () => import('@/pages/admin/pms/productCate/update.vue'),
                 meta: { title: '更改商品分类' }
+            },
+            {
+                path: 'pms/paramDefinition',
+                component: () => import('@/pages/admin/pms/paramDefinition/index.vue'),
+                meta: { title: '参数管理' }
             },
             {
                 path: 'oms/order',

@@ -175,7 +175,9 @@ const quantity = ref(1)
 
 // 商品参数（直接从 API 返回的数组读取）
 const parsedParams = computed(() => {
-  return product.value.productParams || []
+  const params = product.value.productParams || []
+  // 过滤掉空值的参数
+  return params.filter(p => p.key && p.key.trim())
 })
 
 const loadDetail = async () => {

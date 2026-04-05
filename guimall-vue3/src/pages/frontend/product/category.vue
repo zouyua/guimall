@@ -18,7 +18,23 @@
               class="block w-64 p-2 pl-4 text-sm text-stone-900 border border-stone-200 rounded-full bg-stone-100 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
               placeholder="搜索桂林特色农产品...">
           </div>
-          <button @click="$router.push('/login')" class="text-stone-600 hover:text-emerald-600 font-medium transition-colors">登录</button>
+          <!-- 已登录 -->
+          <template v-if="memberLoggedIn">
+            <router-link to="/cart" class="text-stone-600 hover:text-emerald-600 transition-colors">
+              <a-badge :count="cartStore.cartCount" :offset="[-2, 2]" size="small">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z" /></svg>
+              </a-badge>
+            </router-link>
+            <router-link to="/member/center" class="flex items-center gap-1.5 text-sm text-stone-600 hover:text-emerald-600 transition-colors">
+              <img :src="memberAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + memberNickname" class="w-6 h-6 rounded-full border border-emerald-100" />
+              <span>{{ memberNickname }}</span>
+            </router-link>
+            <button @click="handleLogout" class="text-sm text-stone-500 hover:text-red-500 transition-colors">退出</button>
+          </template>
+          <!-- 未登录 -->
+          <template v-else>
+            <button @click="$router.push('/member/login')" class="text-stone-600 hover:text-emerald-600 font-medium transition-colors">登录</button>
+          </template>
           <button @click="$router.push('/admin')" class="bg-emerald-600 text-white px-6 py-2 rounded-full font-bold hover:bg-emerald-700 transition-all shadow-md">管理端</button>
         </div>
 
@@ -191,9 +207,39 @@
 import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getProductList, getCategoryTree } from '@/api/frontend/product'
+import { isMemberLoggedIn, getMemberInfo } from '@/composables/member'
+import { removeMemberInfo } from '@/composables/member'
+import { removeMemberToken } from '@/composables/cookie'
+import { useCartStore } from '@/stores/cart'
 
 const route = useRoute()
 const router = useRouter()
+const cartStore = useCartStore()
+
+// 会员登录状态
+const memberLoggedIn = ref(isMemberLoggedIn())
+const memberNickname = ref('')
+const memberAvatar = ref('')
+
+const initMemberStatus = () => {
+  memberLoggedIn.value = isMemberLoggedIn()
+  if (memberLoggedIn.value) {
+    const info = getMemberInfo()
+    memberNickname.value = info?.nickname || info?.username || '会员'
+    memberAvatar.value = info?.icon || ''
+    cartStore.loadCartCount()
+  }
+}
+
+const handleLogout = () => {
+  removeMemberInfo()
+  removeMemberToken()
+  memberLoggedIn.value = false
+  memberNickname.value = ''
+  memberAvatar.value = ''
+  cartStore.reset()
+  router.push('/')
+}
 
 const queryParams = ref({
   keyword: route.query.keyword || '',
@@ -310,6 +356,7 @@ watch(() => route.query, (newQuery) => {
 })
 
 onMounted(() => {
+  initMemberStatus()
   loadCategories()
   loadData()
 })

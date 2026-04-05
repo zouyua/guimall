@@ -11,6 +11,7 @@ import javax.validation.constraints.Positive;
 import javax.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  *
@@ -82,5 +83,11 @@ public class CreateSmsCouponReqVO {
 
     /** 会员等级限制 */
     private Integer memberLevel;
+
+    /** 指定分类ID列表（useType=1时使用） */
+    private List<Long> productCategoryIds;
+
+    /** 指定商品ID列表（useType=2时使用） */
+    private List<Long> productIds;
 }
 

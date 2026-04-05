@@ -16,11 +16,11 @@ public class ParamDefinitionRspVO {
     @ApiModelProperty("ID")
     private Long id;
 
-    @ApiModelProperty("所属分类ID")
-    private Long categoryId;
-
     @ApiModelProperty("参数名")
     private String paramName;
+
+    @ApiModelProperty("参数值")
+    private String paramValue;
 
     @ApiModelProperty("排序")
     private Integer sort;

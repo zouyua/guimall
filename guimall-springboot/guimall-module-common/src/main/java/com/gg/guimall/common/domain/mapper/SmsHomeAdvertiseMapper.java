@@ -52,9 +52,13 @@ public interface SmsHomeAdvertiseMapper extends BaseMapper<SmsHomeAdvertiseDO> {
         wrapper
                 .eq(SmsHomeAdvertiseDO::getStatus, 1)
                 .eq(SmsHomeAdvertiseDO::getType, type)
-                // 时间校验：now 在 [startTime, endTime]
-                .le(SmsHomeAdvertiseDO::getStartTime, now)
-                .ge(SmsHomeAdvertiseDO::getEndTime, now)
+                // 时间校验：如果 startTime 和 endTime 都为 null，则不限制时间
+                .and(w -> w.isNull(SmsHomeAdvertiseDO::getStartTime)
+                        .or()
+                        .le(SmsHomeAdvertiseDO::getStartTime, now))
+                .and(w -> w.isNull(SmsHomeAdvertiseDO::getEndTime)
+                        .or()
+                        .ge(SmsHomeAdvertiseDO::getEndTime, now))
                 .orderByAsc(SmsHomeAdvertiseDO::getSort)
                 .orderByDesc(SmsHomeAdvertiseDO::getId);
         return selectList(wrapper);

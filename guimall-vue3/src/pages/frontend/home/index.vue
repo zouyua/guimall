@@ -2,50 +2,58 @@
   <div class="min-h-screen bg-stone-50 font-sans">
     <!-- 导航栏 -->
     <nav class="bg-white/90 backdrop-blur-md border-b border-stone-200 sticky top-0 z-50">
-      <div class="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4">
-        <a href="/" class="flex items-center space-x-3">
-          <div class="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-200">
-            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-            </svg>
-          </div>
-          <span class="text-2xl font-black tracking-tighter text-emerald-900 uppercase">Guimall</span>
-        </a>
+      <div class="max-w-screen-xl mx-auto px-4 py-3">
+        <div class="flex items-center justify-between">
+          <!-- Logo -->
+          <a href="/" class="flex items-center space-x-2">
+            <div class="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
+              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+              </svg>
+            </div>
+            <span class="text-xl font-black text-emerald-900">桂Mall</span>
+          </a>
 
-        <div class="flex items-center md:order-2 space-x-4">
-          <div class="relative hidden md:block">
-            <input type="text" v-model="queryParams.keyword" @keyup.enter="handleSearch"
-              class="block w-64 p-2 pl-4 text-sm text-stone-900 border border-stone-200 rounded-full bg-stone-100 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
-              placeholder="搜索桂林特色农产品...">
-          </div>
-          <!-- 已登录：显示会员信息 -->
-          <template v-if="memberLoggedIn">
-            <router-link to="/member/center" class="flex items-center gap-2 text-stone-600 hover:text-emerald-600 font-medium transition-colors hidden md:inline-flex">
-              <img :src="memberAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + memberNickname" class="w-7 h-7 rounded-full object-cover border border-emerald-100" />
-              {{ memberNickname }}
-            </router-link>
-            <router-link to="/my-orders" class="text-stone-600 hover:text-emerald-600 font-medium transition-colors hidden md:inline">我的订单</router-link>
-            <router-link to="/cart" class="text-stone-600 hover:text-emerald-600 transition-colors flex items-center">
-              <a-badge :count="cartStore.cartCount" :offset="[-2, 2]" size="small">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z" /></svg>
-              </a-badge>
-            </router-link>
-            <button @click="handleLogout" class="text-stone-500 hover:text-red-500 font-medium transition-colors">退出</button>
-          </template>
-          <!-- 未登录：显示登录按钮 -->
-          <template v-else>
-            <button @click="$router.push('/member/login')" class="text-stone-600 hover:text-emerald-600 font-medium transition-colors">登录</button>
-          </template>
-          <button @click="$router.push('/admin')" class="bg-emerald-600 text-white px-6 py-2 rounded-full font-bold hover:bg-emerald-700 transition-all shadow-md">管理端</button>
-        </div>
-
-        <div class="items-center justify-between hidden w-full md:flex md:w-auto md:order-1">
-          <ul class="flex flex-col p-4 md:p-0 mt-4 font-bold md:flex-row md:space-x-12 md:mt-0">
-            <li><router-link to="/" exact class="block py-2 text-stone-600 hover:text-emerald-600 transition-colors relative group" exact-active-class="text-emerald-600 nav-active">首页<span class="absolute bottom-0 left-0 w-0 h-0.5 bg-emerald-500 transition-all group-hover:w-full"></span></router-link></li>
-            <li><router-link to="/category" class="block py-2 text-stone-600 hover:text-emerald-600 transition-colors relative group" active-class="text-emerald-600 nav-active">全部分类<span class="absolute bottom-0 left-0 w-0 h-0.5 bg-emerald-500 transition-all group-hover:w-full"></span></router-link></li>
-            <li><router-link to="/support" class="block py-2 text-stone-600 hover:text-emerald-600 transition-colors relative group" active-class="text-emerald-600 nav-active">助农专区<span class="absolute bottom-0 left-0 w-0 h-0.5 bg-emerald-500 transition-all group-hover:w-full"></span></router-link></li>
-            <li><router-link to="/about" class="block py-2 text-stone-600 hover:text-emerald-600 transition-colors relative group" active-class="text-emerald-600 nav-active">关于我们<span class="absolute bottom-0 left-0 w-0 h-0.5 bg-emerald-500 transition-all group-hover:w-full"></span></router-link></li>
+          <!-- 主导航 -->
+          <ul class="hidden md:flex items-center space-x-8 font-semibold">
+            <li><router-link to="/" exact class="text-stone-600 hover:text-emerald-600 transition-colors" exact-active-class="text-emerald-600">首页</router-link></li>
+            <li><router-link to="/category" class="text-stone-600 hover:text-emerald-600 transition-colors" active-class="text-emerald-600">全部分类</router-link></li>
+            <li><router-link to="/coupon-center" class="text-stone-600 hover:text-emerald-600 transition-colors" active-class="text-emerald-600">领券中心</router-link></li>
+            <li><router-link to="/support" class="text-stone-600 hover:text-emerald-600 transition-colors" active-class="text-emerald-600">助农专区</router-link></li>
+            <li><router-link to="/about" class="text-stone-600 hover:text-emerald-600 transition-colors" active-class="text-emerald-600">关于我们</router-link></li>
           </ul>
+
+          <!-- 右侧功能区 -->
+          <div class="flex items-center space-x-3">
+            <!-- 搜索框 -->
+            <div class="relative hidden lg:block">
+              <input type="text" v-model="queryParams.keyword" @keyup.enter="handleSearch"
+                class="w-48 px-3 py-1.5 text-sm border border-stone-200 rounded-full bg-stone-50 focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
+                placeholder="搜索商品...">
+            </div>
+
+            <!-- 已登录 -->
+            <template v-if="memberLoggedIn">
+              <router-link to="/my-orders" class="text-sm text-stone-600 hover:text-emerald-600 transition-colors hidden lg:inline">订单</router-link>
+              <router-link to="/cart" class="text-stone-600 hover:text-emerald-600 transition-colors">
+                <a-badge :count="cartStore.cartCount" :offset="[-2, 2]" size="small">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z" /></svg>
+                </a-badge>
+              </router-link>
+              <router-link to="/member/center" class="flex items-center gap-1.5 text-sm text-stone-600 hover:text-emerald-600 transition-colors">
+                <img :src="memberAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + memberNickname" class="w-6 h-6 rounded-full border border-emerald-100" />
+                <span class="hidden lg:inline">{{ memberNickname }}</span>
+              </router-link>
+              <button @click="handleLogout" class="text-sm text-stone-500 hover:text-red-500 transition-colors">退出</button>
+            </template>
+
+            <!-- 未登录 -->
+            <template v-else>
+              <button @click="$router.push('/member/login')" class="text-sm text-stone-600 hover:text-emerald-600 transition-colors">登录</button>
+            </template>
+
+            <button @click="$router.push('/admin')" class="bg-emerald-600 text-white px-4 py-1.5 rounded-full text-sm font-semibold hover:bg-emerald-700 transition-all">管理端</button>
+          </div>
         </div>
       </div>
     </nav>
@@ -58,7 +66,7 @@
           <div class="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent flex items-center px-12">
             <div class="max-w-lg text-white space-y-4">
               <h2 class="text-5xl font-black">{{ adv.name }}</h2>
-              <button class="bg-emerald-600 px-8 py-3 rounded-xl font-bold hover:bg-emerald-700 transition-all">了解详情</button>
+              <button @click="handleAdvertiseClick(adv)" class="bg-emerald-600 px-8 py-3 rounded-xl font-bold hover:bg-emerald-700 transition-all">了解详情</button>
             </div>
           </div>
         </div>
@@ -143,7 +151,7 @@
         </div>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 mb-16">
+      <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-8 mb-16">
         <div v-for="item in productList" :key="item.id"
              class="bg-white rounded-[2.5rem] overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 border border-stone-100 group">
           <div class="relative overflow-hidden aspect-square">
@@ -346,6 +354,18 @@ const handleCategoryClick = (id) => {
 
 const handleSearch = () => {
   router.push(`/category?keyword=${queryParams.value.keyword}`)
+}
+
+const handleAdvertiseClick = (adv) => {
+  if (adv.url) {
+    // 如果 url 是内部路由（以 / 开头），使用 router.push
+    if (adv.url.startsWith('/')) {
+      router.push(adv.url)
+    } else {
+      // 如果是外部链接，使用 window.open
+      window.open(adv.url, '_blank')
+    }
+  }
 }
 
 const viewDetail = (id) => {

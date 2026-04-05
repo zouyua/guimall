@@ -209,21 +209,24 @@ public class PmsProductServiceImpl implements PmsProductService {
             }
         }
 
-        // 查询商品参数（关联参数定义表拿参数名）
+        // 查询商品参数（关联参数定义表拿参数名和参数值）
         List<PmsProductParamDO> paramDOs = pmsProductParamMapper.selectByProductId(id);
         if (paramDOs != null && !paramDOs.isEmpty()) {
             List<Long> paramIds = paramDOs.stream()
                     .map(PmsProductParamDO::getParamId).distinct().collect(Collectors.toList());
-            Map<Long, String> paramNameMap = paramIds.isEmpty() ? Collections.emptyMap() :
+            Map<Long, PmsParamDefinitionDO> paramDefMap = paramIds.isEmpty() ? Collections.emptyMap() :
                     pmsParamDefinitionMapper.selectBatchIds(paramIds).stream()
-                            .collect(Collectors.toMap(PmsParamDefinitionDO::getId, PmsParamDefinitionDO::getParamName));
+                            .collect(Collectors.toMap(PmsParamDefinitionDO::getId, p -> p));
 
             List<ProductParamItemVO> paramVOs = paramDOs.stream()
-                    .map(p -> ProductParamItemVO.builder()
-                            .paramId(p.getParamId())
-                            .key(paramNameMap.getOrDefault(p.getParamId(), ""))
-                            .value(p.getParamValue())
-                            .build())
+                    .map(p -> {
+                        PmsParamDefinitionDO def = paramDefMap.get(p.getParamId());
+                        return ProductParamItemVO.builder()
+                                .paramId(p.getParamId())
+                                .key(def != null ? def.getParamName() : "")
+                                .value(def != null ? def.getParamValue() : "")
+                                .build();
+                    })
                     .collect(Collectors.toList());
             rspVO.setProductParams(paramVOs);
         }

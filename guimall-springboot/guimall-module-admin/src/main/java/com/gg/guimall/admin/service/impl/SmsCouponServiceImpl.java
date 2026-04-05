@@ -7,8 +7,16 @@ import com.gg.guimall.admin.model.vo.sms.FindSmsCouponPageListReqVO;
 import com.gg.guimall.admin.model.vo.sms.FindSmsCouponPageListRspVO;
 import com.gg.guimall.admin.model.vo.sms.UpdateSmsCouponReqVO;
 import com.gg.guimall.admin.service.SmsCouponService;
+import com.gg.guimall.common.domain.dos.PmsProductCategoryDO;
+import com.gg.guimall.common.domain.dos.PmsProductDO;
 import com.gg.guimall.common.domain.dos.SmsCouponDO;
+import com.gg.guimall.common.domain.dos.SmsCouponProductCategoryRelationDO;
+import com.gg.guimall.common.domain.dos.SmsCouponProductRelationDO;
+import com.gg.guimall.common.domain.mapper.PmsProductCategoryMapper;
+import com.gg.guimall.common.domain.mapper.PmsProductMapper;
 import com.gg.guimall.common.domain.mapper.SmsCouponMapper;
+import com.gg.guimall.common.domain.mapper.SmsCouponProductCategoryRelationMapper;
+import com.gg.guimall.common.domain.mapper.SmsCouponProductRelationMapper;
 import com.gg.guimall.common.enums.ResponseCodeEnum;
 import com.gg.guimall.common.exception.BizException;
 import com.gg.guimall.common.utils.PageResponse;
@@ -17,6 +25,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 
 import java.util.List;
 import java.util.Objects;
@@ -36,7 +46,20 @@ public class SmsCouponServiceImpl implements SmsCouponService {
     @Autowired
     private SmsCouponMapper couponMapper;
 
+    @Autowired
+    private SmsCouponProductRelationMapper couponProductRelationMapper;
+
+    @Autowired
+    private SmsCouponProductCategoryRelationMapper couponProductCategoryRelationMapper;
+
+    @Autowired
+    private PmsProductMapper productMapper;
+
+    @Autowired
+    private PmsProductCategoryMapper productCategoryMapper;
+
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Response createCoupon(CreateSmsCouponReqVO reqVO) {
         if (Objects.isNull(reqVO.getType()) ||
                 Objects.isNull(reqVO.getName()) ||
@@ -56,6 +79,7 @@ public class SmsCouponServiceImpl implements SmsCouponService {
                 .name(reqVO.getName())
                 .platform(reqVO.getPlatform())
                 .totalCount(reqVO.getCount())
+                .publishCount(reqVO.getCount())  // 发行数量等于总数量
                 .amount(reqVO.getAmount())
                 .perLimit(reqVO.getPerLimit())
                 .minAmount(reqVO.getMinAmount())
@@ -69,7 +93,47 @@ public class SmsCouponServiceImpl implements SmsCouponService {
                 .build();
 
         couponMapper.insert(couponDO);
+        Long couponId = couponDO.getId();
+
+        // 处理关联关系
+        // useType: 0全场 1指定分类 2指定商品
+        if (reqVO.getUseType() == 1 && !CollectionUtils.isEmpty(reqVO.getProductCategoryIds())) {
+            // 指定分类：插入 sms_coupon_product_category_relation
+            for (Long categoryId : reqVO.getProductCategoryIds()) {
+                PmsProductCategoryDO category = productCategoryMapper.selectById(categoryId);
+                if (category != null) {
+                    SmsCouponProductCategoryRelationDO relation = SmsCouponProductCategoryRelationDO.builder()
+                            .couponId(couponId)
+                            .productCategoryId(categoryId)
+                            .productCategoryName(category.getName())
+                            .parentCategoryName(category.getParentId() != null && category.getParentId() > 0 ?
+                                    getParentCategoryName(category.getParentId()) : "")
+                            .build();
+                    couponProductCategoryRelationMapper.insert(relation);
+                }
+            }
+        } else if (reqVO.getUseType() == 2 && !CollectionUtils.isEmpty(reqVO.getProductIds())) {
+            // 指定商品：插入 sms_coupon_product_relation
+            for (Long productId : reqVO.getProductIds()) {
+                PmsProductDO product = productMapper.selectById(productId);
+                if (product != null) {
+                    SmsCouponProductRelationDO relation = SmsCouponProductRelationDO.builder()
+                            .couponId(couponId)
+                            .productId(productId)
+                            .productName(product.getName())
+                            .productSn(product.getProductSn())
+                            .build();
+                    couponProductRelationMapper.insert(relation);
+                }
+            }
+        }
+
         return Response.success();
+    }
+
+    private String getParentCategoryName(Long parentId) {
+        PmsProductCategoryDO parent = productCategoryMapper.selectById(parentId);
+        return parent != null ? parent.getName() : "";
     }
 
     @Override
