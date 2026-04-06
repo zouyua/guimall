@@ -7,6 +7,7 @@ import lombok.*;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import java.math.BigDecimal;
+import java.util.List;
 
 /*@author:wgg
  * @url:www.gg.com
@@ -23,9 +24,6 @@ public class PmsProductCreateReqVO {
     @ApiModelProperty(value = "商品分类ID")
     @NotNull(message = "商品分类不能为空")
     private Long productCategoryId;
-
-    @ApiModelProperty(value = "商品属性分类ID")
-    private Long productAttributeCategoryId;
 
     @ApiModelProperty(value = "农户ID")
     @NotNull(message = "农户ID不能为空")
@@ -55,8 +53,8 @@ public class PmsProductCreateReqVO {
     @NotNull(message = "商品价格不能为空")
     private BigDecimal price;
 
-    @ApiModelProperty(value = "原价")
-    private BigDecimal originalPrice;
+    @ApiModelProperty(value = "市场价/原价（划线价）")
+    private BigDecimal marketPrice;
 
     @ApiModelProperty(value = "库存")
     @NotNull(message = "库存不能为空")
@@ -80,13 +78,16 @@ public class PmsProductCreateReqVO {
     @ApiModelProperty(value = "备注")
     private String note;
 
-    @ApiModelProperty(value = "详情标题")
-    private String detailTitle;
+    @ApiModelProperty(value = "是否新品推荐：0否 1是")
+    private Integer isNew;
 
-    @ApiModelProperty(value = "详情描述")
-    private String detailDesc;
+    @ApiModelProperty(value = "是否人气推荐：0否 1是")
+    private Integer isRecommend;
 
     @ApiModelProperty(value = "商品详情HTML")
     private String detailHtml;
+
+    @ApiModelProperty(value = "商品参数列表")
+    private List<ProductParamItemVO> productParams;
 
 }

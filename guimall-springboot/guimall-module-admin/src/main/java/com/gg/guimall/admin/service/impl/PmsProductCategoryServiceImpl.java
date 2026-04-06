@@ -130,9 +130,9 @@ public class PmsProductCategoryServiceImpl implements PmsProductCategoryService 
                 reqVO.getName()
         );
         wrapper.eq(
-                reqVO.getShowStatus() != null,
-                PmsProductCategoryDO::getShowStatus,
-                reqVO.getShowStatus()
+                reqVO.getStatus() != null,
+                PmsProductCategoryDO::getStatus,
+                reqVO.getStatus()
         );
         wrapper.orderByAsc(PmsProductCategoryDO::getSort);
 
@@ -224,7 +224,7 @@ public class PmsProductCategoryServiceImpl implements PmsProductCategoryService 
         // 查询所有启用状态的分类，按sort排序
         List<PmsProductCategoryDO> list = categoryMapper.selectList(
                 new LambdaQueryWrapper<PmsProductCategoryDO>()
-                        .eq(PmsProductCategoryDO::getShowStatus, 1)
+                        .eq(PmsProductCategoryDO::getStatus, 1)
                         .orderByAsc(PmsProductCategoryDO::getSort)
         );
 

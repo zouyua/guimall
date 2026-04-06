@@ -12,10 +12,9 @@
           <a-input v-model:value="searchFarmer" placeholder="请输入农户姓名" class="w-56" allow-clear />
         </a-form-item>
 
-        <a-form-item label="关联状态">
-          <a-select v-model:value="linkStatus" placeholder="请选择" class="!w-40" allow-clear>
-            <a-select-option :value="1">已关联</a-select-option>
-            <a-select-option :value="0">未关联</a-select-option>
+        <a-form-item label="产地">
+          <a-select v-model:value="searchOriginId" placeholder="请选择产地" class="!w-48" allow-clear>
+            <a-select-option v-for="o in originOptions" :key="o.id" :value="o.id">{{ o.originName }}</a-select-option>
           </a-select>
         </a-form-item>
 
@@ -27,11 +26,15 @@
       </a-form>
     </a-card>
 
-    <a-card :bordered="false" title="农户关联">
+    <a-card :bordered="false" title="农户商品关联">
 
-      <div class="mb-4 text-sm text-gray-500">
-        <!-- 维护商品与供货农户的绑定关系，便于溯源与结算（动态接口数据）。 -->
-      </div>
+      <a-alert
+        class="mb-4"
+        type="info"
+        show-icon
+        banner
+        message="商品的农户关联在商品添加/编辑时设置（选择「关联农户」），此页面仅展示当前关联关系。农户的产地关联请在农户编辑页面设置。"
+      />
 
       <a-table :dataSource="pagedData" :columns="columns" :pagination="false" rowKey="id" bordered class="w-full" />
 
@@ -48,86 +51,31 @@
 
     </a-card>
 
-    <a-modal
-      v-model:open="bindModalVisible"
-      :title="editingRow?.linkStatus ? '更换关联农户' : '关联农户'"
-      ok-text="确定"
-      cancel-text="取消"
-      :confirmLoading="bindLoading"
-      destroy-on-close
-      @ok="handleBindConfirm"
-    >
-      <a-form layout="vertical" class="mt-2">
-        <a-form-item label="商品">
-          <a-input :value="editingRow?.productName" disabled />
-        </a-form-item>
-        <a-form-item label="选择产地" required>
-          <a-select
-            v-model:value="bindOriginId"
-            placeholder="请选择产地"
-            class="w-full"
-            allow-clear
-            show-search
-            option-filter-prop="label"
-          >
-            <a-select-option v-for="o in originOptions" :key="o.id" :value="o.id" :label="o.originName">
-              {{ o.originName }}
-            </a-select-option>
-          </a-select>
-        </a-form-item>
-        <a-form-item label="选择农户" required>
-          <a-select
-            v-model:value="bindFarmerId"
-            placeholder="请选择农户"
-            class="w-full"
-            allow-clear
-            show-search
-            option-filter-prop="label"
-          >
-            <a-select-option v-for="f in farmerOptions" :key="f.id" :value="f.id" :label="f.name">
-              {{ f.name }}
-            </a-select-option>
-          </a-select>
-        </a-form-item>
-      </a-form>
-    </a-modal>
-
   </div>
 </template>
 
 <script setup>
 import { ref, computed, h, onMounted } from 'vue'
-import { Button, Popconfirm, Tag, message } from 'ant-design-vue'
-import { LinkOutlined, DisconnectOutlined } from '@ant-design/icons-vue'
+import { Tag } from 'ant-design-vue'
 import { fetchProductList } from '@/api/admin/product'
-import { fetchFarmerOptions } from '@/api/admin/farmer'
+import { fetchFarmerList } from '@/api/admin/farmer'
 import { fetchTraceOriginOptions } from '@/api/admin/traceOrigin'
-import { bindProductOrigin, getProductOriginByProductId, unbindProductOrigin } from '@/api/admin/traceProductOrigin'
 
 const searchName = ref('')
 const searchFarmer = ref('')
-const linkStatus = ref()
-
-const farmerOptions = ref([])
+const searchOriginId = ref()
 const originOptions = ref([])
 
-const bindModalVisible = ref(false)
-const editingRow = ref(null)
-const bindFarmerId = ref(undefined)
-const bindOriginId = ref(undefined)
-const bindLoading = ref(false)
-
 const allRows = ref([])
-const fullRows = ref([])
 const total = ref(0)
 
 const current = ref(1)
 const size = ref(10)
 
-const pagedData = computed(() => {
-  const start = (current.value - 1) * size.value
-  return allRows.value.slice(start, start + size.value)
-})
+// 农户 id → originNames 映射（从农户列表接口获取）
+const farmerOriginMap = ref({})
+
+const pagedData = computed(() => allRows.value)
 
 const columns = [
   {
@@ -137,7 +85,7 @@ const columns = [
   },
   {
     title: '商品名称',
-    dataIndex: 'productName',
+    dataIndex: 'name',
     align: 'center'
   },
   {
@@ -148,9 +96,14 @@ const columns = [
   },
   {
     title: '关联产地',
-    dataIndex: 'originName',
     align: 'center',
-    customRender: ({ text }) => text || '—'
+    customRender: ({ record }) => {
+      const names = record.originNames || []
+      if (names.length === 0) return '—'
+      return h('div', { class: 'flex flex-wrap justify-center gap-1' },
+        names.map(name => h(Tag, { color: 'green' }, () => name))
+      )
+    }
   },
   {
     title: '状态',
@@ -158,60 +111,9 @@ const columns = [
     customRender: ({ record }) =>
       h(
         Tag,
-        { color: record.linkStatus ? 'success' : 'default' },
-        () => (record.linkStatus ? '已关联' : '未关联')
+        { color: record.farmerName ? 'success' : 'default' },
+        () => (record.farmerName ? '已关联' : '未关联')
       )
-  },
-  {
-    title: '最近更新',
-    dataIndex: 'updateTime',
-    align: 'center'
-  },
-  {
-    title: '操作',
-    align: 'center',
-    width: 220,
-    customRender: ({ record }) =>
-      h('div', { class: 'flex items-center justify-center gap-2' }, [
-        h(
-          Button,
-          {
-            size: 'small',
-            type: 'primary',
-            ghost: true,
-            class: 'flex items-center gap-1',
-            onClick: () => handleBind(record)
-          },
-          {
-            icon: () => h(LinkOutlined),
-            default: () => (record.linkStatus ? '更换农户' : '关联农户')
-          }
-        ),
-        h(
-          Popconfirm,
-          {
-            title: '确定解除该商品的农户关联吗？',
-            disabled: !record.linkStatus,
-            onConfirm: () => handleUnbind(record.productId)
-          },
-          {
-            default: () =>
-              h(
-                Button,
-                {
-                  size: 'small',
-                  danger: true,
-                  disabled: !record.linkStatus,
-                  class: 'flex items-center gap-1'
-                },
-                {
-                  icon: () => h(DisconnectOutlined),
-                  default: () => '解除'
-                }
-              )
-          }
-        )
-      ])
   }
 ]
 
@@ -223,141 +125,65 @@ const handleSearch = async () => {
 const handleReset = () => {
   searchName.value = ''
   searchFarmer.value = ''
-  linkStatus.value = undefined
-  const prev = current.value
+  searchOriginId.value = undefined
   current.value = 1
-  if (prev === 1) fetchRows()
+  fetchRows()
 }
 
-const handleBind = (record) => {
-  editingRow.value = record
-  bindFarmerId.value = record.farmerId ?? undefined
-  bindOriginId.value = record.originId ?? undefined
-  bindModalVisible.value = true
-}
-
-// 绑定按钮入参与后端 BindProductOriginReqVO 对齐：{ productId, originId, farmerId }
-const handleBindConfirm = async () => {
-  if (!bindOriginId.value) {
-    message.warning('请选择产地')
-    return
+const fetchRows = async () => {
+  const reqVO = {
+    current: current.value,
+    size: size.value
   }
-  if (!bindFarmerId.value) {
-    message.warning('请选择农户')
-    return
-  }
-  const row = editingRow.value
-  if (!row?.productId) return
+  if (searchName.value.trim()) reqVO.name = searchName.value.trim()
 
-  bindLoading.value = true
-  try {
-    const rsp = await bindProductOrigin({
-      productId: row.productId,
-      originId: bindOriginId.value,
-      farmerId: bindFarmerId.value
-    })
-    if (!rsp?.success) {
-      message.error(rsp?.message || '绑定失败')
-      return
-    }
-    message.success(row.linkStatus ? '已更换关联农户' : '已关联农户')
-    bindModalVisible.value = false
-    await fetchRows()
-  } finally {
-    bindLoading.value = false
-  }
-}
+  const rsp = await fetchProductList(reqVO)
+  if (!rsp?.success) return
 
-// 解除按钮入参：DELETE /admin/trace/productOrigin/product/{productId}
-const handleUnbind = async (productId) => {
-  const rsp = await unbindProductOrigin(productId)
-  if (!rsp?.success) {
-    message.error(rsp?.message || '解除关联失败')
-    return
-  }
-  message.success('已解除关联')
-  await fetchRows()
-}
+  let rows = (rsp.data || []).map(item => {
+    // 从 farmerOriginMap 中查找该农户关联的产地
+    const origins = item.farmerId ? (farmerOriginMap.value[item.farmerId] || []) : []
+    return { ...item, originNames: origins }
+  })
 
-const fetchOptions = async () => {
-  const [farmerRsp, originRsp] = await Promise.all([
-    fetchFarmerOptions(),
-    fetchTraceOriginOptions()
-  ])
-  farmerOptions.value = farmerRsp?.data || []
-  originOptions.value = originRsp?.data || []
-}
-
-const applyFilters = () => {
-  let list = fullRows.value
-
+  // 前端过滤农户名称
   if (searchFarmer.value.trim()) {
-    list = list.filter(r =>
+    rows = rows.filter(r =>
       (r.farmerName || '').includes(searchFarmer.value.trim())
     )
   }
 
-  if (linkStatus.value !== undefined) {
-    list = list.filter(r => r.linkStatus === linkStatus.value)
+  // 前端过滤产地
+  if (searchOriginId.value) {
+    const selectedOrigin = originOptions.value.find(o => o.id === searchOriginId.value)
+    if (selectedOrigin) {
+      rows = rows.filter(r =>
+        (r.originNames || []).includes(selectedOrigin.originName)
+      )
+    }
   }
 
-  allRows.value = list
-  total.value = list.length
+  allRows.value = rows
+  total.value = (searchFarmer.value.trim() || searchOriginId.value) ? rows.length : (rsp.total || rows.length)
 }
 
-const fetchRows = async () => {
-  // 列表主查询入参：FindPmsProductPageListReqVO
-  const reqVO = { current: 1, size: 500 }
-  if (searchName.value.trim()) reqVO.name = searchName.value.trim()
+// 加载所有农户及其关联产地（用于映射到商品列表）
+const loadFarmerOrigins = async () => {
+  const rsp = await fetchFarmerList({ current: 1, size: 9999 })
+  if (!rsp?.success) return
 
-  const productRsp = await fetchProductList(reqVO)
-  if (!productRsp?.success) {
-    message.error(productRsp?.message || '获取商品列表失败')
-    return
+  const map = {}
+  for (const farmer of (rsp.data || [])) {
+    map[farmer.id] = farmer.originNames || []
   }
-  const products = productRsp?.data || []
-
-  const relationResults = await Promise.all(
-    products.map(async (p) => {
-      try {
-        const relRsp = await getProductOriginByProductId(p.id)
-        const rel = relRsp?.success ? relRsp.data : null
-        return {
-          id: p.id,
-          productId: p.id,
-          productName: p.name,
-          // 关联页展示应以“绑定关系表(trace_product_origin)”为准，
-          // 解除关联后不能再回退到商品表中的 farmer 字段，否则会出现“看起来仍已关联”的假象。
-          farmerId: rel?.farmerId ?? null,
-          farmerName: rel?.farmerName ?? '',
-          originId: rel?.originId ?? null,
-          originName: rel?.originName ?? '',
-          linkStatus: rel?.farmerId ? 1 : 0,
-          updateTime: rel?.createTime || '-'
-        }
-      } catch {
-        return {
-          id: p.id,
-          productId: p.id,
-          productName: p.name,
-          // 未绑定/查询失败时统一视为未关联，避免误展示旧数据
-          farmerId: null,
-          farmerName: '',
-          originId: null,
-          originName: '',
-          linkStatus: 0,
-          updateTime: '-'
-        }
-      }
-    })
-  )
-
-  fullRows.value = relationResults
-  applyFilters()
+  farmerOriginMap.value = map
 }
 
 onMounted(async () => {
-  await fetchOptions()
+  const originRsp = await fetchTraceOriginOptions()
+  if (originRsp?.success) originOptions.value = originRsp.data || []
+
+  await loadFarmerOrigins()
   await fetchRows()
 })
 </script>

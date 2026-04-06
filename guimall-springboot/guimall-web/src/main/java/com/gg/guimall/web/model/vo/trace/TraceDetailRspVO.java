@@ -31,6 +31,9 @@ public class TraceDetailRspVO {
 
     private String farmerName;
 
+    /** 农户联系电话（用于前台联系农户功能） */
+    private String farmerPhone;
+
     private Long originId;
 
     private String originName;
@@ -42,6 +45,15 @@ public class TraceDetailRspVO {
     private String region;
 
     private String originDescription;
+
+    /** 海拔高度 */
+    private String altitude;
+
+    /** 年日照时长 */
+    private String sunshineHours;
+
+    /** 土壤类型 */
+    private String soilType;
 
     private String traceUrl;
 

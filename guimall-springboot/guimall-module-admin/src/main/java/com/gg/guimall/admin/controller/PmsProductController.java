@@ -11,6 +11,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 /*@author:wgg
  * @url:www.gg.com
  * @date:2026/3/10
@@ -71,5 +73,26 @@ public class PmsProductController {
     @ApiOperationLog(description = "下架商品")
     public Response unpublishProduct(@PathVariable Long id) {
         return pmsProductService.unpublishProduct(id);
+    }
+
+    @PostMapping("/batch/delete")
+    @ApiOperation(value = "批量删除商品")
+    @ApiOperationLog(description = "批量删除商品")
+    public Response batchDelete(@RequestBody List<Long> ids) {
+        return pmsProductService.batchDelete(ids);
+    }
+
+    @PostMapping("/batch/publish")
+    @ApiOperation(value = "批量上架")
+    @ApiOperationLog(description = "批量上架商品")
+    public Response batchPublish(@RequestBody List<Long> ids) {
+        return pmsProductService.batchUpdatePublishStatus(ids, 1);
+    }
+
+    @PostMapping("/batch/unpublish")
+    @ApiOperation(value = "批量下架")
+    @ApiOperationLog(description = "批量下架商品")
+    public Response batchUnpublish(@RequestBody List<Long> ids) {
+        return pmsProductService.batchUpdatePublishStatus(ids, 0);
     }
 }

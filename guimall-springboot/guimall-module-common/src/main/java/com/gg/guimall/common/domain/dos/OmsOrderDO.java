@@ -50,11 +50,7 @@ public class OmsOrderDO {
 
     private BigDecimal promotionAmount;
 
-    private BigDecimal integrationAmount;
-
     private BigDecimal couponAmount;
-
-    private BigDecimal discountAmount;
 
     /**
      * 支付方式:0未支付1支付宝2微信
@@ -71,25 +67,9 @@ public class OmsOrderDO {
      */
     private Integer status;
 
-    private Integer orderType;
-
     private String deliveryCompany;
 
     private String deliverySn;
-
-    private Integer autoConfirmDay;
-
-    private Integer integration;
-
-    private Integer growth;
-
-    private String promotionInfo;
-
-    private Integer billType;
-
-    private String billHeader;
-
-    private String billContent;
 
     private String receiverName;
 
@@ -107,17 +87,20 @@ public class OmsOrderDO {
 
     private String note;
 
+    private String adminNote;
+
     private Integer confirmStatus;
 
-    @TableLogic
-    private Integer deleteStatus;
+    @TableLogic(value = "0", delval = "1")
+    private Integer isDeleted;
 
-    private LocalDateTime paymentTime;
+    /** 支付时间（对应 SQL pay_time） */
+    private LocalDateTime payTime;
+
+    private String paymentSn;
 
     private LocalDateTime deliveryTime;
 
     private LocalDateTime receiveTime;
-
-    private LocalDateTime commentTime;
 }
 

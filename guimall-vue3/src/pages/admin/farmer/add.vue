@@ -36,24 +36,51 @@
           <a-input v-model:value="form.farmName" placeholder="如：临桂金桔合作社" allow-clear />
         </a-form-item>
 
-        <a-form-item label="省" name="province">
-          <a-input v-model:value="form.province" placeholder="如：广西壮族自治区" allow-clear />
-        </a-form-item>
-
-        <a-form-item label="市" name="city">
-          <a-input v-model:value="form.city" placeholder="如：桂林市" allow-clear />
-        </a-form-item>
-
-        <a-form-item label="区/县" name="region">
-          <a-input v-model:value="form.region" placeholder="如：临桂区" allow-clear />
+        <a-form-item label="所在地区" name="area">
+          <a-cascader
+            v-model:value="areaValue"
+            :options="areaOptions"
+            placeholder="请选择省/市/区"
+            :show-search="{ filter }"
+            @change="handleAreaChange"
+            style="width: 100%"
+          />
         </a-form-item>
 
         <a-form-item label="详细地址" name="detailAddress">
           <a-input v-model:value="form.detailAddress" placeholder="街道/乡镇/村信息" allow-clear />
         </a-form-item>
 
-        <a-form-item label="头像地址" name="avatar">
-          <a-input v-model:value="form.avatar" placeholder="图片 URL，留空则使用默认头像" allow-clear />
+        <a-form-item label="关联产地" name="originIds">
+          <a-select
+            v-model:value="form.originIds"
+            mode="multiple"
+            placeholder="请选择该农户所在的产地（可多选）"
+            class="w-full"
+            allow-clear
+            show-search
+            option-filter-prop="label"
+          >
+            <a-select-option v-for="o in originOptions" :key="o.id" :value="o.id" :label="o.originName">
+              {{ o.originName }} ({{ o.province }}{{ o.city }})
+            </a-select-option>
+          </a-select>
+        </a-form-item>
+
+        <a-form-item label="头像">
+          <a-upload
+            :max-count="1"
+            list-type="picture-card"
+            :file-list="avatarFileList"
+            :custom-request="handleAvatarUpload"
+            @remove="handleAvatarRemove"
+            accept="image/*"
+          >
+            <div v-if="avatarFileList.length === 0">
+              <PlusOutlined />
+              <div class="mt-2">上传头像</div>
+            </div>
+          </a-upload>
         </a-form-item>
 
         <a-form-item label="主要农产品" name="mainProduct">
@@ -87,28 +114,58 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
-import { ArrowLeftOutlined } from '@ant-design/icons-vue'
+import { ArrowLeftOutlined, PlusOutlined } from '@ant-design/icons-vue'
 import { createFarmer } from '@/api/admin/farmer'
+import { fetchTraceOriginOptions } from '@/api/admin/traceOrigin'
+import { uploadFile } from '@/api/admin/upload'
+import { chinaAreaData } from '@/utils/chinaArea'
 
 const router = useRouter()
 const formRef = ref()
+
+const areaOptions = chinaAreaData
+const areaValue = ref([])
+const originOptions = ref([])
+const avatarFileList = ref([])
+
+const handleAvatarUpload = async ({ file, onSuccess, onError }) => {
+  try {
+    const res = await uploadFile(file)
+    if (res.success) {
+      form.avatar = res.data
+      avatarFileList.value = [{ uid: '-1', name: file.name, status: 'done', url: res.data }]
+      onSuccess(res)
+    } else {
+      message.error(res.message || '上传失败')
+      onError(new Error(res.message))
+    }
+  } catch (e) {
+    message.error('上传失败')
+    onError(e)
+  }
+}
+const handleAvatarRemove = () => {
+  form.avatar = ''
+  avatarFileList.value = []
+}
 
 const form = reactive({
   name: '',
   phone: '',
   idCard: '',
   farmName: '',
-  province: '广西壮族自治区',
-  city: '桂林市',
+  province: '',
+  city: '',
   region: '',
   detailAddress: '',
   avatar: '',
   mainProduct: '',
   status: 1,
-  description: ''
+  description: '',
+  originIds: []
 })
 
 const rules = {
@@ -116,12 +173,38 @@ const rules = {
   phone: [
     { required: true, message: '请输入手机号', trigger: 'blur' },
     { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的11位手机号', trigger: 'blur' }
-  ]
+  ],
+  area: [{ required: true, message: '请选择所在地区', trigger: 'change' }]
+}
+
+// 级联选择器搜索过滤
+const filter = (inputValue, path) => {
+  return path.some(option => option.label.toLowerCase().indexOf(inputValue.toLowerCase()) > -1)
+}
+
+// 处理地区选择变化
+const handleAreaChange = (value, selectedOptions) => {
+  if (selectedOptions && selectedOptions.length === 3) {
+    form.province = selectedOptions[0].label
+    form.city = selectedOptions[1].label
+    form.region = selectedOptions[2].label
+  } else {
+    form.province = ''
+    form.city = ''
+    form.region = ''
+  }
 }
 
 const goBack = () => {
   router.push('/admin/farmer')
 }
+
+onMounted(async () => {
+  const rsp = await fetchTraceOriginOptions()
+  if (rsp?.success) {
+    originOptions.value = rsp.data || []
+  }
+})
 
 // 提交按钮入参与后端 CreateFarmerReqVO 字段严格对齐
 const handleSubmit = async () => {
@@ -143,7 +226,8 @@ const handleSubmit = async () => {
     detailAddress: form.detailAddress?.trim() || '',
     mainProduct: form.mainProduct?.trim() || '',
     description: form.description?.trim() || '',
-    status: form.status
+    status: form.status,
+    originIds: form.originIds || []
   }
   const rsp = await createFarmer(reqVO)
   if (!rsp?.success) {

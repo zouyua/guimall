@@ -44,7 +44,7 @@ public class SmsCouponServiceImpl implements SmsCouponService {
                 Objects.isNull(reqVO.getCount()) ||
                 Objects.isNull(reqVO.getAmount()) ||
                 Objects.isNull(reqVO.getPerLimit()) ||
-                Objects.isNull(reqVO.getMinPoint()) ||
+                Objects.isNull(reqVO.getMinAmount()) ||
                 Objects.isNull(reqVO.getStartTime()) ||
                 Objects.isNull(reqVO.getEndTime()) ||
                 Objects.isNull(reqVO.getUseType())) {
@@ -55,10 +55,10 @@ public class SmsCouponServiceImpl implements SmsCouponService {
                 .type(reqVO.getType())
                 .name(reqVO.getName())
                 .platform(reqVO.getPlatform())
-                .count(reqVO.getCount())
+                .totalCount(reqVO.getCount())
                 .amount(reqVO.getAmount())
                 .perLimit(reqVO.getPerLimit())
-                .minPoint(reqVO.getMinPoint())
+                .minAmount(reqVO.getMinAmount())
                 .startTime(reqVO.getStartTime())
                 .endTime(reqVO.getEndTime())
                 .useType(reqVO.getUseType())
@@ -89,6 +89,7 @@ public class SmsCouponServiceImpl implements SmsCouponService {
                 .map(item -> {
                     FindSmsCouponPageListRspVO vo = new FindSmsCouponPageListRspVO();
                     BeanUtils.copyProperties(item, vo);
+                    vo.setCount(item.getTotalCount());
                     return vo;
                 })
                 .collect(Collectors.toList());
@@ -109,6 +110,7 @@ public class SmsCouponServiceImpl implements SmsCouponService {
 
         FindSmsCouponDetailRspVO rspVO = new FindSmsCouponDetailRspVO();
         BeanUtils.copyProperties(couponDO, rspVO);
+        rspVO.setCount(couponDO.getTotalCount());
         return Response.success(rspVO);
     }
 
@@ -128,10 +130,10 @@ public class SmsCouponServiceImpl implements SmsCouponService {
                 .type(reqVO.getType())
                 .name(reqVO.getName())
                 .platform(reqVO.getPlatform())
-                .count(reqVO.getCount())
+                .totalCount(reqVO.getCount())
                 .amount(reqVO.getAmount())
                 .perLimit(reqVO.getPerLimit())
-                .minPoint(reqVO.getMinPoint())
+                .minAmount(reqVO.getMinAmount())
                 .startTime(reqVO.getStartTime())
                 .endTime(reqVO.getEndTime())
                 .useType(reqVO.getUseType())

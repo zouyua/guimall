@@ -31,6 +31,13 @@ public class TraceQrcodeController {
         return traceQrcodeService.upsert(reqVO);
     }
 
+    @PostMapping("/generate/{productId}")
+    @ApiOperation(value = "一键生成溯源二维码（ZXing生成 → MinIO上传 → 入库）")
+    @ApiOperationLog(description = "一键生成溯源二维码")
+    public Response generate(@PathVariable Long productId) {
+        return traceQrcodeService.generate(productId);
+    }
+
     @GetMapping("/product/{productId}")
     @ApiOperation(value = "根据商品ID查询溯源二维码")
     @ApiOperationLog(description = "根据商品ID查询溯源二维码")
@@ -45,4 +52,3 @@ public class TraceQrcodeController {
         return traceQrcodeService.deleteByProductId(productId);
     }
 }
-

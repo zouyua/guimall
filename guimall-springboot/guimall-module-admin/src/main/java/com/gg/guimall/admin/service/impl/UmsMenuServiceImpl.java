@@ -14,7 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
 import java.util.Collections;
-import java.util.Date;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -97,7 +97,7 @@ public class UmsMenuServiceImpl implements UmsMenuService {
                 .icon(reqVO.getIcon())
                 .sort(reqVO.getSort())
                 .hidden(reqVO.getHidden())
-                .createTime(new Date())
+                .createTime(LocalDateTime.now())
                 .build();
 
         menuMapper.insert(menuDO);

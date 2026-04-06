@@ -103,31 +103,23 @@ const columns = [
             Button,
             {
               size: 'small',
-              class: 'inline-flex shrink-0 items-center gap-1',
               onClick: () =>
                 router.push({
                   path: '/admin/sms/coupon/history',
                   query: { couponId: record.id, name: record.name }
                 })
             },
-            {
-              icon: () => h(UnorderedListOutlined),
-              default: () => '领取记录'
-            }
+            () => [h(UnorderedListOutlined), ' 领取记录']
           ),
           h(
             Button,
             {
               size: 'small',
               type: 'primary',
-              class: 'inline-flex shrink-0 items-center gap-1',
               onClick: () =>
                 router.push({ path: '/admin/sms/coupon/update', query: { id: record.id } })
             },
-            {
-              icon: () => h(EditOutlined),
-              default: () => '编辑'
-            }
+            () => [h(EditOutlined), ' 编辑']
           ),
           h(
             Popconfirm,
@@ -141,13 +133,9 @@ const columns = [
                   Button,
                   {
                     size: 'small',
-                    danger: true,
-                    class: 'inline-flex shrink-0 items-center gap-1'
+                    danger: true
                   },
-                  {
-                    icon: () => h(DeleteOutlined),
-                    default: () => '删除'
-                  }
+                  () => [h(DeleteOutlined), ' 删除']
                 )
             }
           )

@@ -100,40 +100,16 @@ onMounted(() => {
   background: #f5f5f5;
   height: calc(100vh - 64px - 70px);
   padding: 16px;
+  overflow-y: auto;
 }
 
 /* 内容区域过渡动画：淡入淡出效果 */
-/* 刚开始进入时 */
-.fade-enter-from {
-    /* 透明度 */
-    opacity: 0;
-}
-
-/* 刚开始结束 */
-.fade-enter-to {
-    opacity: 1;
-}
-
-/* 刚开始离开 */
-.fade-leave-from {
-  opacity: 1;
-}
-
-/* 离开已结束 */
-.fade-leave-to {
-  opacity: 0;
-}
-
-/* 离开进行中 */
-.fade-leave-active {
-    transition: all 0.3s;
-}
-
-/* 进入进行中 */
-.fade-enter-active {
-    transition: all 0.3s;
-    transition-delay: 0.3s;
-}
+.fade-enter-from { opacity: 0; }
+.fade-enter-to { opacity: 1; }
+.fade-leave-from { opacity: 1; }
+.fade-leave-to { opacity: 0; }
+.fade-leave-active { transition: all 0.3s; }
+.fade-enter-active { transition: all 0.3s; transition-delay: 0.3s; }
 
 /* 底部 */
 .footer {
@@ -144,5 +120,28 @@ onMounted(() => {
   line-height: 70px;
   padding: 0;
   overflow: hidden;
+}
+</style>
+
+<!-- 全局样式：修复 Ant Design Vue 表格操作按钮图标对齐 -->
+<style>
+/* 修复 h() 渲染的 Button icon slot 不对齐问题 */
+.ant-table .ant-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+.ant-table .ant-btn > .anticon {
+  display: inline-flex !important;
+  align-items: center !important;
+  line-height: 1 !important;
+}
+/* 修复操作列按钮组间距 */
+.ant-table .ant-btn + .ant-btn {
+  margin-left: 0 !important;
+}
+/* 表格表头居中对齐 */
+.ant-table-thead > tr > th {
+  text-align: center !important;
 }
 </style>

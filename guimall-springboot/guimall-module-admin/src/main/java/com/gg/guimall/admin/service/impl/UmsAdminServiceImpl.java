@@ -19,6 +19,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -104,7 +105,7 @@ public class UmsAdminServiceImpl implements UmsAdminService {
             return Response.fail("角色不存在");
         }
 
-        Date now = new Date();
+        LocalDateTime now = LocalDateTime.now();
         UserDO userDO = UserDO.builder()
                 .username(reqVO.getUsername())
                 .password(passwordEncoder.encode(reqVO.getPassword()))
@@ -142,7 +143,7 @@ public class UmsAdminServiceImpl implements UmsAdminService {
         }
         existing.setAvatar(reqVO.getNickname());
         existing.setIsDeleted(reqVO.getStatus() == 0);
-        existing.setUpdateTime(new Date());
+        existing.setUpdateTime(LocalDateTime.now());
 
         if (reqVO.getPassword() != null && !reqVO.getPassword().trim().isEmpty()) {
             existing.setPassword(passwordEncoder.encode(reqVO.getPassword()));
@@ -156,7 +157,7 @@ public class UmsAdminServiceImpl implements UmsAdminService {
         userRoleMapper.insert(UserRoleDO.builder()
                 .username(existing.getUsername())
                 .role(roleCode)
-                .createTime(new Date())
+                .createTime(LocalDateTime.now())
                 .build());
 
         return Response.success();
@@ -175,7 +176,7 @@ public class UmsAdminServiceImpl implements UmsAdminService {
 
             userMapper.update(null, new LambdaUpdateWrapper<UserDO>()
                     .set(UserDO::getIsDeleted, true)
-                    .set(UserDO::getUpdateTime, new Date())
+                    .set(UserDO::getUpdateTime, LocalDateTime.now())
                     .eq(UserDO::getId, id));
 
             userRoleMapper.delete(new LambdaQueryWrapper<UserRoleDO>().eq(UserRoleDO::getUsername, u.getUsername()));
@@ -205,7 +206,7 @@ public class UmsAdminServiceImpl implements UmsAdminService {
         userRoleMapper.insert(UserRoleDO.builder()
                 .username(u.getUsername())
                 .role(roleCode)
-                .createTime(new Date())
+                .createTime(LocalDateTime.now())
                 .build());
 
         return Response.success();

@@ -58,6 +58,53 @@
     </div>
 
   </div>
+
+  <!-- 参数定义管理弹窗 -->
+  <a-modal
+    v-model:open="paramModalVisible"
+    :title="`参数模板管理 - ${paramModalCategoryName}`"
+    width="640px"
+    :footer="null"
+    destroy-on-close
+  >
+    <a-alert
+      class="mb-4"
+      type="info"
+      show-icon
+      banner
+      message="管理该分类下的参数模板，商品编辑时将自动加载这些参数供填写。"
+    />
+
+    <!-- 添加参数表单 -->
+    <div class="flex items-center gap-2 mb-4">
+      <a-input
+        v-model:value="newParamName"
+        placeholder="参数名（如：保质期、产地）"
+        class="flex-1"
+        @pressEnter="handleCreateParam"
+      />
+      <a-input-number
+        v-model:value="newParamSort"
+        placeholder="排序"
+        :min="0"
+        style="width: 100px"
+      />
+      <a-button type="primary" @click="handleCreateParam" :disabled="!newParamName.trim()">
+        添加
+      </a-button>
+    </div>
+
+    <!-- 参数列表 -->
+    <a-table
+      :dataSource="paramDefinitions"
+      :columns="paramDefColumns"
+      rowKey="id"
+      :pagination="false"
+      bordered
+      size="small"
+      :loading="paramLoading"
+    />
+  </a-modal>
 </template>
 
 <script setup>
@@ -72,14 +119,24 @@ import {
 } from '@/api/admin/productCategory'
 
 import {
+  fetchParamDefinitions,
+  createParamDefinition,
+  updateParamDefinition,
+  deleteParamDefinition
+} from '@/api/admin/paramDefinition'
+
+import {
   Button,
-  Popconfirm
+  Popconfirm,
+  Input,
+  InputNumber
 } from 'ant-design-vue'
 
 import {
   PlusOutlined,
   EditOutlined,
-  DeleteOutlined
+  DeleteOutlined,
+  UnorderedListOutlined
 } from '@ant-design/icons-vue'
 
 const router = useRouter()
@@ -158,6 +215,20 @@ const columns = [
     align: 'center',
     customRender: ({ record }) => {
       return h('div', { class: 'flex justify-center items-center gap-2' }, [
+
+        h(
+          Button,
+          {
+            size: 'small',
+            type: 'default',
+            class: 'flex items-center',
+            onClick: () => handleOpenParamModal(record)
+          },
+          {
+            icon: () => h(UnorderedListOutlined),
+            default: () => '参数模板'
+          }
+        ),
 
         h(
           Button,
@@ -302,5 +373,141 @@ onMounted(async () => {
 watch([current, size], () => {
   fetchList()
 })
+
+/* ================= 参数模板管理弹窗 ================= */
+
+const paramModalVisible = ref(false)
+const paramModalCategoryId = ref(null)
+const paramModalCategoryName = ref('')
+const paramDefinitions = ref([])
+const paramLoading = ref(false)
+const newParamName = ref('')
+const newParamSort = ref(0)
+
+// 正在编辑的参数行
+const editingParamId = ref(null)
+const editingParamName = ref('')
+const editingParamSort = ref(0)
+
+const handleOpenParamModal = async (record) => {
+  paramModalCategoryId.value = record.id
+  paramModalCategoryName.value = record.name
+  paramModalVisible.value = true
+  newParamName.value = ''
+  newParamSort.value = 0
+  editingParamId.value = null
+  await loadParamDefinitions()
+}
+
+const loadParamDefinitions = async () => {
+  paramLoading.value = true
+  try {
+    const rsp = await fetchParamDefinitions(paramModalCategoryId.value)
+    paramDefinitions.value = rsp?.data || []
+  } finally {
+    paramLoading.value = false
+  }
+}
+
+const handleCreateParam = async () => {
+  const name = newParamName.value.trim()
+  if (!name) return
+  await createParamDefinition(paramModalCategoryId.value, {
+    categoryId: paramModalCategoryId.value,
+    paramName: name,
+    sort: newParamSort.value || 0
+  })
+  message.success('添加成功')
+  newParamName.value = ''
+  newParamSort.value = 0
+  await loadParamDefinitions()
+}
+
+const handleSaveEditParam = async (record) => {
+  const name = editingParamName.value.trim()
+  if (!name) {
+    message.warn('参数名不能为空')
+    return
+  }
+  await updateParamDefinition(record.id, {
+    paramName: name,
+    sort: editingParamSort.value || 0
+  })
+  message.success('修改成功')
+  editingParamId.value = null
+  await loadParamDefinitions()
+}
+
+const handleCancelEditParam = () => {
+  editingParamId.value = null
+}
+
+const handleDeleteParamDef = async (id) => {
+  await deleteParamDefinition(id)
+  message.success('删除成功')
+  await loadParamDefinitions()
+}
+
+const paramDefColumns = [
+  {
+    title: '参数名',
+    dataIndex: 'paramName',
+    width: '40%',
+    customRender: ({ record }) => {
+      if (editingParamId.value === record.id) {
+        return h(Input, {
+          value: editingParamName.value,
+          onChange: e => (editingParamName.value = e.target.value),
+          onPressEnter: () => handleSaveEditParam(record)
+        })
+      }
+      return record.paramName
+    }
+  },
+  {
+    title: '排序',
+    dataIndex: 'sort',
+    width: '20%',
+    align: 'center',
+    customRender: ({ record }) => {
+      if (editingParamId.value === record.id) {
+        return h(InputNumber, {
+          value: editingParamSort.value,
+          min: 0,
+          onChange: v => (editingParamSort.value = v)
+        })
+      }
+      return record.sort
+    }
+  },
+  {
+    title: '操作',
+    width: '40%',
+    align: 'center',
+    customRender: ({ record }) => {
+      if (editingParamId.value === record.id) {
+        return h('div', { class: 'flex justify-center gap-2' }, [
+          h(Button, { size: 'small', type: 'primary', onClick: () => handleSaveEditParam(record) }, () => '保存'),
+          h(Button, { size: 'small', onClick: handleCancelEditParam }, () => '取消')
+        ])
+      }
+      return h('div', { class: 'flex justify-center gap-2' }, [
+        h(Button, {
+          size: 'small',
+          onClick: () => {
+            editingParamId.value = record.id
+            editingParamName.value = record.paramName
+            editingParamSort.value = record.sort
+          }
+        }, () => '编辑'),
+        h(
+          Popconfirm,
+          { title: '确定删除该参数？', onConfirm: () => handleDeleteParamDef(record.id) },
+          { default: () => h(Button, { size: 'small', danger: true }, () => '删除') }
+        )
+      ])
+    }
+  }
+]
 
 </script>

@@ -55,7 +55,7 @@ public class SmsHomeRecommendProductServiceImpl implements SmsHomeRecommendProdu
 
         PmsProductDO productDO = pmsProductMapper.selectById(reqVO.getProductId());
         if (Objects.isNull(productDO) ||
-                !Objects.equals(productDO.getDeleteStatus(), 0) ||
+                !Objects.equals(productDO.getIsDeleted(), 0) ||
                 !Objects.equals(productDO.getPublishStatus(), 1)) {
             throw new BizException(ResponseCodeEnum.PRODUCT_NOT_FOUND);
         }
@@ -131,7 +131,7 @@ public class SmsHomeRecommendProductServiceImpl implements SmsHomeRecommendProdu
 
         PmsProductDO productDO = pmsProductMapper.selectById(reqVO.getProductId());
         if (Objects.isNull(productDO) ||
-                !Objects.equals(productDO.getDeleteStatus(), 0) ||
+                !Objects.equals(productDO.getIsDeleted(), 0) ||
                 !Objects.equals(productDO.getPublishStatus(), 1)) {
             throw new BizException(ResponseCodeEnum.PRODUCT_NOT_FOUND);
         }

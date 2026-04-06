@@ -34,11 +34,6 @@ public class PmsProductDO {
     private Long productCategoryId;
 
     /**
-     * 商品属性分类ID
-     */
-    private Long productAttributeCategoryId;
-
-    /**
      * 农户ID
      */
     private Long farmerId;
@@ -79,9 +74,9 @@ public class PmsProductDO {
     private BigDecimal price;
 
     /**
-     * 原价
+     * 原价/市场价（用于显示划线价）
      */
-    private BigDecimal originalPrice;
+    private BigDecimal marketPrice;
 
     /**
      * 促销价格
@@ -114,15 +109,20 @@ public class PmsProductDO {
     private Integer publishStatus;
 
     /**
-     * 审核状态：0未审核，1通过
+     * 是否新品推荐：0否 1是
      */
-    private Integer verifyStatus;
+    private Integer isNew;
+
+    /**
+     * 是否人气推荐：0否 1是
+     */
+    private Integer isRecommend;
 
     /**
      * 删除状态：0未删除，1已删除
      */
-    @TableLogic
-    private Integer deleteStatus;
+    @TableLogic(value = "0", delval = "1")
+    private Integer isDeleted;
 
     /**
      * 销量
@@ -145,19 +145,24 @@ public class PmsProductDO {
     private String note;
 
     /**
-     * 详情标题
-     */
-    private String detailTitle;
-
-    /**
-     * 详情描述
-     */
-    private String detailDesc;
-
-    /**
      * 产品详情网页内容
      */
     private String detailHtml;
+
+    /**
+     * 是否助农商品：0否 1是（用于助农专区展示）
+     */
+    private Integer isAidAgriculture;
+
+    /**
+     * 认证类型：如 绿色食品、有机认证、地理标志等（逗号分隔）
+     */
+    private String certType;
+
+    /**
+     * 认证描述
+     */
+    private String certDesc;
 
     /**
      * 促销类型：0没有促销使用原价；1使用满减价格；2使用会员价

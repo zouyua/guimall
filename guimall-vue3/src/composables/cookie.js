@@ -4,23 +4,40 @@ const cookie = useCookies()
 
 // ============================== Token 令牌 ==============================
 
-// 存储在 Cookie 中的 Token 的 key
+// 管理端 Token 的 key
 const TOKEN_KEY = 'Authorization'
 
-// 获取 Token 值
+// 前台会员 Token 的 key
+const MEMBER_TOKEN_KEY = 'MemberToken'
+
+// 获取管理端 Token 值
 export function getToken() {
     return cookie.get(TOKEN_KEY)
 }
 
-// 设置 Token 到 Cookie 中
+// 设置管理端 Token 到 Cookie 中
 export function setToken(token) {
-    // 统一将 token 写到根路径，避免只在 /admin/login 等子路径下可见，导致刷新/跳转后读不到 token → 接口 401
     return cookie.set(TOKEN_KEY, token, { path: '/' })
 }
 
-// 删除 Token
+// 删除管理端 Token
 export function removeToken() {
     return cookie.remove(TOKEN_KEY, { path: '/' })
+}
+
+// 获取前台会员 Token 值
+export function getMemberToken() {
+    return cookie.get(MEMBER_TOKEN_KEY)
+}
+
+// 设置前台会员 Token 到 Cookie 中
+export function setMemberToken(token) {
+    return cookie.set(MEMBER_TOKEN_KEY, token, { path: '/' })
+}
+
+// 删除前台会员 Token
+export function removeMemberToken() {
+    return cookie.remove(MEMBER_TOKEN_KEY, { path: '/' })
 }
 
 // ============================== 标签页 ==============================

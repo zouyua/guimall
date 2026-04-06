@@ -18,7 +18,7 @@ public interface OmsCartItemMapper extends BaseMapper<OmsCartItemDO> {
     default List<OmsCartItemDO> selectByMemberId(Long memberId) {
         return selectList(new LambdaQueryWrapper<OmsCartItemDO>()
                 .eq(OmsCartItemDO::getMemberId, memberId)
-                .eq(OmsCartItemDO::getDeleteStatus, 0)
+                .eq(OmsCartItemDO::getIsDeleted, 0)
                 .orderByDesc(OmsCartItemDO::getUpdateTime)
                 .orderByDesc(OmsCartItemDO::getId));
     }
@@ -27,7 +27,7 @@ public interface OmsCartItemMapper extends BaseMapper<OmsCartItemDO> {
         LambdaQueryWrapper<OmsCartItemDO> wrapper = new LambdaQueryWrapper<OmsCartItemDO>()
                 .eq(OmsCartItemDO::getMemberId, memberId)
                 .eq(OmsCartItemDO::getProductSkuId, productSkuId)
-                .eq(OmsCartItemDO::getDeleteStatus, 0);
+                .eq(OmsCartItemDO::getIsDeleted, 0);
         if (Objects.nonNull(productAttr) && productAttr.trim().length() > 0) {
             wrapper.eq(OmsCartItemDO::getProductAttr, productAttr);
         } else {
@@ -39,7 +39,7 @@ public interface OmsCartItemMapper extends BaseMapper<OmsCartItemDO> {
     default int clearByMemberId(Long memberId) {
         return delete(new LambdaQueryWrapper<OmsCartItemDO>()
                 .eq(OmsCartItemDO::getMemberId, memberId)
-                .eq(OmsCartItemDO::getDeleteStatus, 0));
+                .eq(OmsCartItemDO::getIsDeleted, 0));
     }
 }
 

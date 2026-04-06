@@ -12,21 +12,23 @@ router.beforeEach((to, from, next) => {
     showPageLoading()
 
     // 若用户想访问后台（以/admin为前缀的路由）
-    //未登录，则强制跳转到登录页
     let token = getToken()
-    if (!token && to.path.startsWith('/admin')) {
-        showMessage('请先登录', 'warning')
-        next({ path: '/login' })
-    } else if (token && to.path === '/login') {
-      //若用户已经登录，且重复访问登录页
-      showMessage('您已登录，无需重复登录', 'warning')
-      //跳转后台首页
-      next({ path: '/admin/index' })
 
-    } else {
-      next()
+    if (to.path.startsWith('/admin')) {
+        // 未登录
+        if (!token) {
+            showMessage('请先登录', 'warning')
+            return next({ path: '/login' })
+        }
     }
 
+    // 若用户已经登录且访问登录页
+    if (token && to.path === '/login') {
+      showMessage('您已登录，无需重复登录', 'warning')
+      return next({ path: '/admin/index' })
+    }
+
+    next()
 })
 
 // 全局路由后置守卫

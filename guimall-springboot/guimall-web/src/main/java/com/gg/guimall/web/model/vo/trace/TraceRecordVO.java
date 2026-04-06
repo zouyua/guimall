@@ -21,12 +21,17 @@ import java.time.LocalDateTime;
 @ApiModel("溯源记录 VO")
 public class TraceRecordVO {
 
-    private String recordType;
+    private Long recordTypeId;
+
+    private String recordTypeName;
 
     private String content;
 
     private LocalDateTime recordTime;
 
     private String pic;
+
+    /** 操作农户姓名 */
+    private String farmerName;
 }
 

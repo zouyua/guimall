@@ -53,9 +53,9 @@ public class CreateSmsCouponReqVO {
     @Positive(message = "每人限领数量必须为正数")
     private Integer perLimit;
 
-    /** 最低消费金额 */
+    /** 使用门槛（满X元可用，0表示无门槛）*/
     @NotNull(message = "最低消费金额不能为空")
-    private BigDecimal minPoint;
+    private BigDecimal minAmount;
 
     /** 开始时间 */
     @NotNull(message = "开始时间不能为空")

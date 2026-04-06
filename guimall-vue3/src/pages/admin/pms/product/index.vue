@@ -35,16 +35,25 @@
     <!-- 商品列表 -->
     <a-card :bordered="false">
 
-      <!-- 新增 -->
-      <div class="mb-4">
+      <!-- 新增 & 批量操作 -->
+      <div class="mb-4 flex items-center gap-3">
         <a-button type="primary" class="flex items-center gap-1" @click="router.push('/admin/pms/product/add')">
           <PlusOutlined />
           新增商品
         </a-button>
+        <template v-if="selectedRowKeys.length > 0">
+          <a-button @click="handleBatchPublish">批量上架</a-button>
+          <a-button @click="handleBatchUnpublish">批量下架</a-button>
+          <a-popconfirm title="确定批量删除选中商品吗？" @confirm="handleBatchDelete">
+            <a-button danger>批量删除</a-button>
+          </a-popconfirm>
+          <span class="text-gray-400 text-sm">已选 {{ selectedRowKeys.length }} 项</span>
+        </template>
       </div>
 
       <!-- 表格 -->
-      <a-table :dataSource="pagedData" :columns="columns" :pagination="false" rowKey="id" bordered class="w-full" />
+      <a-table :dataSource="pagedData" :columns="columns" :pagination="false" rowKey="id" bordered class="w-full"
+        :row-selection="{ selectedRowKeys: selectedRowKeys, onChange: onSelectChange }" />
 
       <!-- 分页 -->
       <div class="mt-6 flex justify-center">
@@ -74,13 +83,17 @@ import {
   PlusOutlined,
   EyeOutlined,
   EditOutlined,
-  DeleteOutlined
+  DeleteOutlined,
+  DeploymentUnitOutlined
 } from '@ant-design/icons-vue'
 import {
   fetchProductList,
   deleteProduct,
   publishProduct,
-  unpublishProduct
+  unpublishProduct,
+  batchDeleteProducts,
+  batchPublishProducts,
+  batchUnpublishProducts
 } from '@/api/admin/product'
 import { fetchProductCategoryTree } from '@/api/admin/productCategory'
 import {
@@ -95,6 +108,36 @@ import {
 } from '@/api/admin/homeRecommendProduct'
 
 const router = useRouter()
+
+/* 批量选择 */
+const selectedRowKeys = ref([])
+const onSelectChange = (keys) => { selectedRowKeys.value = keys }
+
+const handleBatchDelete = async () => {
+  const res = await batchDeleteProducts(selectedRowKeys.value)
+  if (res.success) {
+    message.success('批量删除成功')
+    selectedRowKeys.value = []
+    await fetchStatusRelations()
+    await fetchProducts()
+  }
+}
+const handleBatchPublish = async () => {
+  const res = await batchPublishProducts(selectedRowKeys.value)
+  if (res.success) {
+    message.success('批量上架成功')
+    selectedRowKeys.value = []
+    await fetchProducts()
+  }
+}
+const handleBatchUnpublish = async () => {
+  const res = await batchUnpublishProducts(selectedRowKeys.value)
+  if (res.success) {
+    message.success('批量下架成功')
+    selectedRowKeys.value = []
+    await fetchProducts()
+  }
+}
 
 /* 分页查询参数 */
 const searchProductName = ref('')
@@ -264,6 +307,20 @@ const columns = [
           {
             icon: () => h(EyeOutlined),
             default: () => '查看'
+          }
+        ),
+
+        h(
+          Button,
+          {
+            size: 'small',
+            style: { color: '#059669', borderColor: '#059669' },
+            class: 'flex items-center gap-1',
+            onClick: () => router.push({ path: '/admin/trace/record', query: { productId: record.id } })
+          },
+          {
+            icon: () => h(DeploymentUnitOutlined),
+            default: () => '溯源'
           }
         ),
 

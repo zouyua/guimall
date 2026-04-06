@@ -6,6 +6,8 @@ import com.gg.guimall.admin.model.vo.pms.FindPmsProductPageListReqVO;
 import com.gg.guimall.common.utils.PageResponse;
 import com.gg.guimall.common.utils.Response;
 
+import java.util.List;
+
 /*
  * @author:wly
  * @url:www.gg.com
@@ -47,5 +49,15 @@ public interface PmsProductService {
      * 下架商品
      */
     Response unpublishProduct(Long id);
+
+    /**
+     * 批量删除商品
+     */
+    Response batchDelete(List<Long> ids);
+
+    /**
+     * 批量更新上架状态
+     */
+    Response batchUpdatePublishStatus(List<Long> ids, Integer publishStatus);
 
 }

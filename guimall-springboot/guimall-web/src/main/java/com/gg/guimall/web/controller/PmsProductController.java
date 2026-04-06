@@ -30,8 +30,8 @@ public class PmsProductController {
     @GetMapping("/category/tree")
     @ApiOperation(value = "获取商品分类树（前台）")
     @ApiOperationLog(description = "获取商品分类树（前台）")
-    public List<ProductCategoryTreeVO> categoryTree() {
-        return pmsProductService.findCategoryTree();
+    public Response categoryTree() {
+        return Response.success(pmsProductService.findCategoryTree());
     }
 
     @PostMapping("/list")

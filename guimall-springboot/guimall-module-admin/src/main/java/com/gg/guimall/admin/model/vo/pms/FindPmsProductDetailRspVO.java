@@ -6,6 +6,7 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /*@author:wgg
  * @url:www.gg.com
@@ -27,12 +28,6 @@ public class FindPmsProductDetailRspVO {
 
     @ApiModelProperty(value = "商品分类名称（关联展示）")
     private String categoryName;
-
-    @ApiModelProperty(value = "商品属性分类ID")
-    private Long productAttributeCategoryId;
-
-    @ApiModelProperty(value = "商品属性分类名称（关联展示）")
-    private String productAttributeCategoryName;
 
     @ApiModelProperty(value = "农户ID")
     private Long farmerId;
@@ -61,8 +56,8 @@ public class FindPmsProductDetailRspVO {
     @ApiModelProperty(value = "销售价格")
     private BigDecimal price;
 
-    @ApiModelProperty(value = "原价")
-    private BigDecimal originalPrice;
+    @ApiModelProperty(value = "市场价/原价（划线价）")
+    private BigDecimal marketPrice;
 
     @ApiModelProperty(value = "促销价格")
     private BigDecimal promotionPrice;
@@ -82,11 +77,11 @@ public class FindPmsProductDetailRspVO {
     @ApiModelProperty(value = "上架状态：0下架，1上架")
     private Integer publishStatus;
 
-    @ApiModelProperty(value = "审核状态：0未审核，1通过")
-    private Integer verifyStatus;
+    @ApiModelProperty(value = "是否新品推荐：0否 1是")
+    private Integer isNew;
 
-    @ApiModelProperty(value = "销量")
-    private Integer sale;
+    @ApiModelProperty(value = "是否人气推荐：0否 1是")
+    private Integer isRecommend;
 
     @ApiModelProperty(value = "排序")
     private Integer sort;
@@ -97,14 +92,11 @@ public class FindPmsProductDetailRspVO {
     @ApiModelProperty(value = "备注")
     private String note;
 
-    @ApiModelProperty(value = "详情标题")
-    private String detailTitle;
-
-    @ApiModelProperty(value = "详情描述")
-    private String detailDesc;
-
     @ApiModelProperty(value = "产品详情网页内容")
     private String detailHtml;
+
+    @ApiModelProperty(value = "商品参数列表")
+    private List<ProductParamItemVO> productParams;
 
     @ApiModelProperty(value = "促销类型：0没有促销使用原价；1使用满减价格；2使用会员价")
     private Integer promotionType;

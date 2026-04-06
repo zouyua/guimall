@@ -104,10 +104,16 @@ const menus = [
         icon: AppstoreOutlined,
         children: [
             { title: '商品管理', icon: ShoppingOutlined, path: '/admin/pms/product' },
-            { title: '添加商品', icon: PlusOutlined, path: '/admin/pms/product/add' },
-            { title: '商品分类', icon: ApartmentOutlined, path: '/admin/pms/productCate' },
-            { title: '商品类型', icon: SettingOutlined, path: '/admin/pms/productAttr' },
-            { title: '产地信息', icon: EnvironmentOutlined, path: '/admin/trace/origin' }
+            { title: '商品分类', icon: ApartmentOutlined, path: '/admin/pms/productCate' }
+        ]
+    },
+    {
+        key: 'trace',
+        title: '溯源管理',
+        icon: SafetyCertificateOutlined,
+        children: [
+            { title: '产地信息', icon: EnvironmentOutlined, path: '/admin/trace/origin' },
+            { title: '溯源记录', icon: UnorderedListOutlined, path: '/admin/trace/record' }
         ]
     },
     {

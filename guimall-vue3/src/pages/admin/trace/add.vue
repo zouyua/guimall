@@ -24,16 +24,14 @@
           <a-input v-model:value="form.originName" placeholder="如：桂林砂糖橘基地" allow-clear />
         </a-form-item>
 
-        <a-form-item label="省" name="province" :required="true">
-          <a-input v-model:value="form.province" placeholder="如：广西壮族自治区" allow-clear />
-        </a-form-item>
-
-        <a-form-item label="市" name="city" :required="true">
-          <a-input v-model:value="form.city" placeholder="如：桂林市" allow-clear />
-        </a-form-item>
-
-        <a-form-item label="区/县" name="region" :required="true">
-          <a-input v-model:value="form.region" placeholder="如：临桂区/阳朔县" allow-clear />
+        <a-form-item label="所在区域" name="region" :required="true">
+          <a-cascader
+            v-model:value="regionValue"
+            :options="regionData"
+            placeholder="请选择省/市/区"
+            style="width: 100%"
+            @change="onRegionChange"
+          />
         </a-form-item>
 
         <a-form-item label="产地简介" name="description">
@@ -61,23 +59,36 @@ import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { ArrowLeftOutlined } from '@ant-design/icons-vue'
 import { createTraceOrigin } from '@/api/admin/traceOrigin'
+import regionData from '@/utils/regionData'
 
 const router = useRouter()
 const formRef = ref()
 
+const regionValue = ref([])
+
 const form = reactive({
   originName: '',
-  province: '广西壮族自治区',
-  city: '桂林市',
+  province: '',
+  city: '',
   region: '',
   description: ''
 })
 
+const onRegionChange = (value) => {
+  if (value && value.length >= 2) {
+    form.province = value[0]
+    form.city = value[1]
+    form.region = value[2] || ''
+  } else {
+    form.province = ''
+    form.city = ''
+    form.region = ''
+  }
+}
+
 const rules = {
   originName: [{ required: true, message: '请输入产地名称', trigger: 'blur' }],
-  province: [{ required: true, message: '请输入省', trigger: 'blur' }],
-  city: [{ required: true, message: '请输入市', trigger: 'blur' }],
-  region: [{ required: true, message: '请输入区/县', trigger: 'blur' }]
+  region: [{ required: true, message: '请选择所在区域', trigger: 'change', validator: (_, __, callback) => { if (!form.province || !form.city) { callback(new Error('请选择所在区域')) } else { callback() } } }]
 }
 
 const goBack = () => {

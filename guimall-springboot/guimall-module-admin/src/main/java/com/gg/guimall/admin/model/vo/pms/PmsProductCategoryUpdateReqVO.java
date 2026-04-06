@@ -53,16 +53,10 @@ public class PmsProductCategoryUpdateReqVO {
     private String productUnit;
 
     /**
-     * 导航栏显示状态
+     * 启用状态：0禁用 1启用
      */
-    @ApiModelProperty(value = "导航栏显示状态")
-    private Integer navStatus;
-
-    /**
-     * 显示状态
-     */
-    @ApiModelProperty(value = "显示状态")
-    private Integer showStatus;
+    @ApiModelProperty(value = "启用状态：0禁用 1启用")
+    private Integer status;
 
     /**
      * 排序

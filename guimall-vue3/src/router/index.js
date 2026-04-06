@@ -1,13 +1,3 @@
-import Index from '@/pages/frontend/index.vue'
-import Login from '@/pages/admin/login.vue'
-import AdminIndex from '@/pages/admin/index.vue'
-// import AdminDashboard from '@/pages/admin/dashboard/index.vue'
-// import AdminFarmer from '@/pages/admin/farmer/index.vue'
-// import AdminOms from '@/pages/admin/oms'
-// import AdminPms from '@/pages/admin/product/index.vue'
-// import AdminSms from '@/pages/admin/sms'
-// import AdminTrace from '@/pages/admin/trace'
-// import AdminUms from '@/pages/admin/ums'
 import { createRouter, createWebHashHistory } from 'vue-router'
 import Admin from '@/layouts/admin/admin.vue'
 
@@ -15,16 +5,81 @@ import Admin from '@/layouts/admin/admin.vue'
 const routes = [
     {
         path: '/', // 路由地址
-        component: Index, // 对应组件
+        component: () => import('@/pages/frontend/home/index.vue'), // 对应组件
         meta: { // meta 信息
             title: 'guimall 首页' // 页面标题
         }
     },
     {
+        path: '/trace/:productId', // 溯源详情页
+        component: () => import('@/pages/frontend/trace/index.vue'),
+        meta: {
+            title: '商品溯源'
+        }
+    },
+    {
+        path: '/category', // 商品分类
+        component: () => import('@/pages/frontend/product/category.vue'),
+        meta: { title: '商品分类' }
+    },
+    {
+        path: '/support', // 助农专区
+        component: () => import('@/pages/frontend/support/index.vue'),
+        meta: { title: '助农专区' }
+    },
+    {
+        path: '/about', // 关于我们
+        component: () => import('@/pages/frontend/common/placeholder.vue'),
+        props: { title: '关于我们', description: 'GUIMALL 致力于通过数字化手段，让桂林深山里的好物走向全国，助力农户增收。' },
+        meta: { title: '关于我们' }
+    },
+    {
+        path: '/cart',
+        component: () => import('@/pages/frontend/cart/index.vue'),
+        meta: { title: '购物车' }
+    },
+    {
+        path: '/checkout',
+        component: () => import('@/pages/frontend/checkout/index.vue'),
+        meta: { title: '确认订单' }
+    },
+    {
+        path: '/pay',
+        component: () => import('@/pages/frontend/pay/index.vue'),
+        meta: { title: '订单支付' }
+    },
+    {
+        path: '/pay/result',
+        component: () => import('@/pages/frontend/pay/result.vue'),
+        meta: { title: '支付结果' }
+    },
+    {
+        path: '/my-orders',
+        component: () => import('@/pages/frontend/order/index.vue'),
+        meta: { title: '我的订单' }
+    },
+    {
+        path: '/member/center',
+        component: () => import('@/pages/frontend/member/center.vue'),
+        meta: { title: '个人中心' }
+    },
+    {
+        path: '/member/login',
+        component: () => import('@/pages/frontend/member/login.vue'),
+        meta: { title: '会员登录' }
+    },
+    {
         path: '/login',//登录页
-        component: Login,
+        component: () => import('@/pages/admin/login.vue'),
         meta: {
             title: 'guimall 登录页'
+        }
+    },
+    {
+        path: '/product/detail', // 前台商品详情页
+        component: () => import('@/pages/frontend/product/detail.vue'),
+        meta: {
+            title: '商品详情'
         }
     },
     {
@@ -34,7 +89,7 @@ const routes = [
         children: [
             {
                 path: '/admin/index',
-                component: AdminIndex,
+                component: () => import('@/pages/admin/index.vue'),
                 meta: { title: '仪表盘' }
             },
             {
@@ -91,26 +146,6 @@ const routes = [
                 path: 'pms/productCate/update',
                 component: () => import('@/pages/admin/pms/productCate/update.vue'),
                 meta: { title: '更改商品分类' }
-            },
-            {
-                path: 'pms/productAttr',
-                component: () => import('@/pages/admin/pms/productAttr/index.vue'),
-                meta: { title: '商品类型' }
-            },
-            {
-                path: 'pms/productAttr/productAttrList',
-                component: () => import('@/pages/admin/pms/productAttr/index.vue'),
-                meta: { title: '商品类型列表' }
-            },
-            {
-                path: 'pms/productAttr/addProductAttr',
-                component: () => import('@/pages/admin/pms/productAttr/addProductAttr.vue'),
-                meta: { title: '添加商品类型' }
-            },
-            {
-                path: 'pms/productAttr/updateProductAttr',
-                component: () => import('@/pages/admin/pms/productAttr/updateProductAttr.vue'),
-                meta: { title: '更改商品类型' }
             },
             {
                 path: 'oms/order',
@@ -201,6 +236,11 @@ const routes = [
                 path: 'trace/origin/update',
                 component: () => import('@/pages/admin/trace/update.vue'),
                 meta: { title: '编辑产地' }
+            },
+            {
+                path: 'trace/record',
+                component: () => import('@/pages/admin/trace/record.vue'),
+                meta: { title: '溯源记录管理' }
             },
             {
                 path: 'ums/admin',

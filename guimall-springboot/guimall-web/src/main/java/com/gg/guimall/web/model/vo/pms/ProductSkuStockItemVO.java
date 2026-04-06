@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * SKU库存项 VO（前台）
@@ -39,7 +40,13 @@ public class ProductSkuStockItemVO {
     private Integer sale;
 
     /**
-     * 销售属性(JSON)
+     * 规格列表（替代 spData JSON 字段）
+     */
+    private List<SkuSpecItemVO> specs;
+
+    @Deprecated
+    /**
+     * 销售属性JSON（已废弃，请使用 specs 字段）
      */
     private String spData;
 }

@@ -8,9 +8,11 @@ import com.gg.guimall.admin.service.TraceRecordService;
 import com.gg.guimall.common.domain.dos.PmsFarmerDO;
 import com.gg.guimall.common.domain.dos.PmsProductDO;
 import com.gg.guimall.common.domain.dos.TraceRecordDO;
+import com.gg.guimall.common.domain.dos.TraceRecordTypeDO;
 import com.gg.guimall.common.domain.mapper.PmsFarmerMapper;
 import com.gg.guimall.common.domain.mapper.PmsProductMapper;
 import com.gg.guimall.common.domain.mapper.TraceRecordMapper;
+import com.gg.guimall.common.domain.mapper.TraceRecordTypeMapper;
 import com.gg.guimall.common.enums.ResponseCodeEnum;
 import com.gg.guimall.common.exception.BizException;
 import com.gg.guimall.common.utils.Response;
@@ -20,7 +22,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -44,6 +48,9 @@ public class TraceRecordServiceImpl implements TraceRecordService {
     @Autowired
     private PmsFarmerMapper pmsFarmerMapper;
 
+    @Autowired
+    private TraceRecordTypeMapper traceRecordTypeMapper;
+
     @Override
     public Response create(CreateTraceRecordReqVO reqVO) {
 
@@ -63,7 +70,7 @@ public class TraceRecordServiceImpl implements TraceRecordService {
         TraceRecordDO recordDO = TraceRecordDO.builder()
                 .productId(reqVO.getProductId())
                 .farmerId(farmerId)
-                .recordType(reqVO.getRecordType())
+                .recordTypeId(reqVO.getRecordTypeId())
                 .content(reqVO.getContent())
                 .recordTime(Objects.nonNull(reqVO.getRecordTime()) ? reqVO.getRecordTime() : LocalDateTime.now())
                 .pic(reqVO.getPic())
@@ -98,7 +105,7 @@ public class TraceRecordServiceImpl implements TraceRecordService {
                 .id(reqVO.getId())
                 .productId(reqVO.getProductId())
                 .farmerId(farmerId)
-                .recordType(reqVO.getRecordType())
+                .recordTypeId(reqVO.getRecordTypeId())
                 .content(reqVO.getContent())
                 .recordTime(reqVO.getRecordTime())
                 .pic(reqVO.getPic())
@@ -133,10 +140,26 @@ public class TraceRecordServiceImpl implements TraceRecordService {
         }
 
         List<TraceRecordDO> list = traceRecordMapper.selectByProductId(reqVO.getProductId());
+
+        // 批量查询所有记录类型，用于翻译 recordTypeId → typeName
+        List<Long> typeIds = list.stream()
+                .map(TraceRecordDO::getRecordTypeId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<Long, String> typeNameMap = new HashMap<>();
+        if (!typeIds.isEmpty()) {
+            List<TraceRecordTypeDO> typeList = traceRecordTypeMapper.selectBatchIds(typeIds);
+            typeNameMap = typeList.stream()
+                    .collect(Collectors.toMap(TraceRecordTypeDO::getId, TraceRecordTypeDO::getTypeName));
+        }
+
+        Map<Long, String> finalTypeNameMap = typeNameMap;
         List<TraceRecordRspVO> rspList = list.stream()
                 .map(r -> {
                     TraceRecordRspVO vo = new TraceRecordRspVO();
                     BeanUtils.copyProperties(r, vo);
+                    vo.setRecordTypeName(finalTypeNameMap.getOrDefault(r.getRecordTypeId(), "未知类型"));
                     return vo;
                 })
                 .collect(Collectors.toList());

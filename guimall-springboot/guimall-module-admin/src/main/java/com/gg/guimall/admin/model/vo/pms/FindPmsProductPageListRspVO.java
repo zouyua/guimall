@@ -11,7 +11,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * 商品分页列表项响应 VO（含关联展示：分类名、农户名、属性分类名）
+ * 商品分页列表项响应 VO（含关联展示：分类名、农户名）
  *
  * @author wly
  * @url www.gg.com
@@ -32,12 +32,6 @@ public class FindPmsProductPageListRspVO {
 
     @ApiModelProperty(value = "商品分类名称（关联展示）")
     private String categoryName;
-
-    @ApiModelProperty(value = "商品属性分类ID")
-    private Long productAttributeCategoryId;
-
-    @ApiModelProperty(value = "商品属性分类名称（关联展示）")
-    private String productAttributeCategoryName;
 
     @ApiModelProperty(value = "农户ID")
     private Long farmerId;

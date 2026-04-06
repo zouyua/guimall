@@ -45,7 +45,7 @@ public class OmsCartItemServiceImpl implements OmsCartItemService {
         }
 
         PmsProductDO productDO = productMapper.selectById(reqVO.getProductId());
-        if (productDO == null || !Objects.equals(productDO.getDeleteStatus(), 0)) {
+        if (productDO == null || !Objects.equals(productDO.getIsDeleted(), 0)) {
             throw new BizException(ResponseCodeEnum.PRODUCT_NOT_FOUND);
         }
 
@@ -87,7 +87,7 @@ public class OmsCartItemServiceImpl implements OmsCartItemService {
                 .productCategoryId(productDO.getProductCategoryId())
                 .productSn(productDO.getProductSn())
                 .productAttr(reqVO.getProductAttr())
-                .deleteStatus(0)
+                .isDeleted(0)
                 .createTime(LocalDateTime.now())
                 .updateTime(LocalDateTime.now())
                 .build();
@@ -144,7 +144,7 @@ public class OmsCartItemServiceImpl implements OmsCartItemService {
         }
 
         PmsProductDO productDO = productMapper.selectById(reqVO.getProductId());
-        if (productDO == null || !Objects.equals(productDO.getDeleteStatus(), 0)) {
+        if (productDO == null || !Objects.equals(productDO.getIsDeleted(), 0)) {
             throw new BizException(ResponseCodeEnum.PRODUCT_NOT_FOUND);
         }
 

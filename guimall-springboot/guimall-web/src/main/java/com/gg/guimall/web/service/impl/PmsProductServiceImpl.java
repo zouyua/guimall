@@ -4,12 +4,17 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.gg.guimall.common.domain.dos.PmsFarmerDO;
 import com.gg.guimall.common.domain.dos.PmsProductCategoryDO;
 import com.gg.guimall.common.domain.dos.PmsProductDO;
+import com.gg.guimall.common.domain.dos.PmsProductParamDO;
+import com.gg.guimall.common.domain.dos.PmsParamDefinitionDO;
+import com.gg.guimall.common.domain.dos.PmsSkuSpecDO;
 import com.gg.guimall.common.domain.dos.PmsSkuStockDO;
-import com.gg.guimall.common.domain.dos.PmsProductAttributeCategoryDO;
+import com.gg.guimall.common.domain.dos.PmsFarmerDO;
 import com.gg.guimall.common.domain.mapper.PmsFarmerMapper;
-import com.gg.guimall.common.domain.mapper.PmsProductAttributeCategoryMapper;
 import com.gg.guimall.common.domain.mapper.PmsProductCategoryMapper;
 import com.gg.guimall.common.domain.mapper.PmsProductMapper;
+import com.gg.guimall.common.domain.mapper.PmsProductParamMapper;
+import com.gg.guimall.common.domain.mapper.PmsParamDefinitionMapper;
+import com.gg.guimall.common.domain.mapper.PmsSkuSpecMapper;
 import com.gg.guimall.common.domain.mapper.PmsSkuStockMapper;
 import com.gg.guimall.common.enums.ResponseCodeEnum;
 import com.gg.guimall.common.exception.BizException;
@@ -47,13 +52,23 @@ public class PmsProductServiceImpl implements PmsProductService {
     @Autowired
     private PmsSkuStockMapper pmsSkuStockMapper;
 
-    // 这里并不强依赖属性分类名称，但保留字段扩展时可用
-    @Autowired(required = false)
-    private PmsProductAttributeCategoryMapper pmsProductAttributeCategoryMapper;
+    @Autowired
+    private PmsSkuSpecMapper pmsSkuSpecMapper;
+
+    @Autowired
+    private PmsProductParamMapper pmsProductParamMapper;
+
+    @Autowired
+    private PmsParamDefinitionMapper pmsParamDefinitionMapper;
 
     @Override
     public List<ProductCategoryTreeVO> findCategoryTree() {
-        List<PmsProductCategoryDO> list = pmsProductCategoryMapper.selectList(null);
+        // 只查询 show_status 为 1 的分类，并按 sort 排序
+        List<PmsProductCategoryDO> list = pmsProductCategoryMapper.selectList(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<PmsProductCategoryDO>()
+                        .eq(PmsProductCategoryDO::getStatus, 1)
+                        .orderByAsc(PmsProductCategoryDO::getSort)
+        );
         if (Objects.isNull(list) || list.isEmpty()) {
             return Collections.emptyList();
         }
@@ -91,53 +106,75 @@ public class PmsProductServiceImpl implements PmsProductService {
 
     @Override
     public PageResponse<ProductPageItemVO> findProductPageList(FindPmsProductPageListReqVO reqVO) {
+        // 预查询分类ID列表（含子分类），避免 inSql 子查询
+        List<Long> categoryIds = null;
+        if (Objects.nonNull(reqVO.getCategoryId())) {
+            categoryIds = pmsProductCategoryMapper.selectList(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<PmsProductCategoryDO>()
+                    .eq(PmsProductCategoryDO::getParentId, reqVO.getCategoryId())
+            ).stream().map(PmsProductCategoryDO::getId).collect(Collectors.toList());
+            categoryIds.add(reqVO.getCategoryId());
+        }
+
         Page<PmsProductDO> page = pmsProductMapper.selectActivePageList(
                 reqVO.getCurrent(),
                 reqVO.getSize(),
                 reqVO.getKeyword(),
-                reqVO.getCategoryId(),
-                reqVO.getSortType()
+                categoryIds,
+                reqVO.getSortType(),
+                reqVO.getIsAidAgriculture()
         );
 
+        if (page.getRecords().isEmpty()) {
+            return PageResponse.success(page, Collections.emptyList());
+        }
+
+        // 批量查询分类信息
+        List<Long> pageCategoryIds = page.getRecords().stream()
+                .map(PmsProductDO::getProductCategoryId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<Long, String> categoryNameMap = Collections.emptyMap();
+        if (!pageCategoryIds.isEmpty()) {
+            categoryNameMap = pmsProductCategoryMapper.selectBatchIds(pageCategoryIds).stream()
+                    .collect(Collectors.toMap(PmsProductCategoryDO::getId, PmsProductCategoryDO::getName));
+        }
+
+        // 批量查询农户信息
+        List<Long> farmerIds = page.getRecords().stream()
+                .map(PmsProductDO::getFarmerId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<Long, String> farmerNameMap = Collections.emptyMap();
+        if (!farmerIds.isEmpty()) {
+            farmerNameMap = pmsFarmerMapper.selectBatchIds(farmerIds).stream()
+                    .collect(Collectors.toMap(PmsFarmerDO::getId, PmsFarmerDO::getName));
+        }
+
+        final Map<Long, String> finalCategoryNameMap = categoryNameMap;
+        final Map<Long, String> finalFarmerNameMap = farmerNameMap;
+
         List<ProductPageItemVO> voList = page.getRecords().stream()
-                .map(this::convertToPageItemVO)
+                .map(product -> ProductPageItemVO.builder()
+                        .id(product.getId())
+                        .productCategoryId(product.getProductCategoryId())
+                        .categoryName(finalCategoryNameMap.get(product.getProductCategoryId()))
+                        .farmerId(product.getFarmerId())
+                        .farmerName(finalFarmerNameMap.get(product.getFarmerId()))
+                        .name(product.getName())
+                        .subTitle(product.getSubTitle())
+                        .pic(product.getPic())
+                        .price(product.getPromotionPrice() != null ? product.getPromotionPrice() : product.getPrice())
+                        .stock(product.getStock())
+                        .publishStatus(product.getPublishStatus())
+                        .sale(product.getSale())
+                        .createTime(product.getCreateTime())
+                        .build())
                 .collect(Collectors.toList());
 
         return PageResponse.success(page, voList);
-    }
-
-    private ProductPageItemVO convertToPageItemVO(PmsProductDO product) {
-        if (Objects.isNull(product)) {
-            return null;
-        }
-
-        ProductPageItemVO vo = new ProductPageItemVO();
-        vo.setId(product.getId());
-        vo.setProductCategoryId(product.getProductCategoryId());
-        vo.setFarmerId(product.getFarmerId());
-        vo.setName(product.getName());
-        vo.setSubTitle(product.getSubTitle());
-        vo.setPic(product.getPic());
-        vo.setPrice(product.getPromotionPrice() != null ? product.getPromotionPrice() : product.getPrice());
-        vo.setStock(product.getStock());
-        vo.setPublishStatus(product.getPublishStatus());
-        vo.setSale(product.getSale());
-        vo.setCreateTime(product.getCreateTime());
-
-        if (Objects.nonNull(product.getProductCategoryId())) {
-            PmsProductCategoryDO category = pmsProductCategoryMapper.selectById(product.getProductCategoryId());
-            if (Objects.nonNull(category)) {
-                vo.setCategoryName(category.getName());
-            }
-        }
-        if (Objects.nonNull(product.getFarmerId())) {
-            PmsFarmerDO farmer = pmsFarmerMapper.selectById(product.getFarmerId());
-            if (Objects.nonNull(farmer)) {
-                vo.setFarmerName(farmer.getName());
-            }
-        }
-
-        return vo;
     }
 
     @Override
@@ -147,7 +184,7 @@ public class PmsProductServiceImpl implements PmsProductService {
         }
 
         PmsProductDO productDO = pmsProductMapper.selectById(id);
-        if (Objects.isNull(productDO) || Objects.equals(productDO.getDeleteStatus(), 1)) {
+        if (Objects.isNull(productDO) || Objects.equals(productDO.getIsDeleted(), 1)) {
             throw new BizException(ResponseCodeEnum.PRODUCT_NOT_FOUND);
         }
         if (!Objects.equals(productDO.getPublishStatus(), 1)) {
@@ -172,16 +209,43 @@ public class PmsProductServiceImpl implements PmsProductService {
             }
         }
 
-        // SKU 列表
+        // 查询商品参数（关联参数定义表拿参数名）
+        List<PmsProductParamDO> paramDOs = pmsProductParamMapper.selectByProductId(id);
+        if (paramDOs != null && !paramDOs.isEmpty()) {
+            List<Long> paramIds = paramDOs.stream()
+                    .map(PmsProductParamDO::getParamId).distinct().collect(Collectors.toList());
+            Map<Long, String> paramNameMap = paramIds.isEmpty() ? Collections.emptyMap() :
+                    pmsParamDefinitionMapper.selectBatchIds(paramIds).stream()
+                            .collect(Collectors.toMap(PmsParamDefinitionDO::getId, PmsParamDefinitionDO::getParamName));
+
+            List<ProductParamItemVO> paramVOs = paramDOs.stream()
+                    .map(p -> ProductParamItemVO.builder()
+                            .paramId(p.getParamId())
+                            .key(paramNameMap.getOrDefault(p.getParamId(), ""))
+                            .value(p.getParamValue())
+                            .build())
+                    .collect(Collectors.toList());
+            rspVO.setProductParams(paramVOs);
+        }
+
+        // SKU 列表（含规格明细）
         List<PmsSkuStockDO> skuList = pmsSkuStockMapper.selectByProductId(id);
         if (Objects.isNull(skuList) || skuList.isEmpty()) {
             rspVO.setSkus(Collections.emptyList());
         } else {
+            // 批量查询规格，按 skuId 分组
+            List<PmsSkuSpecDO> allSpecs = pmsSkuSpecMapper.selectByProductId(id);
+            java.util.Map<Long, List<com.gg.guimall.web.model.vo.pms.SkuSpecItemVO>> specMap = allSpecs.stream()
+                    .collect(Collectors.groupingBy(PmsSkuSpecDO::getSkuId,
+                            Collectors.mapping(s -> com.gg.guimall.web.model.vo.pms.SkuSpecItemVO.builder()
+                                    .specKey(s.getSpecKey())
+                                    .specValue(s.getSpecValue())
+                                    .sort(s.getSort())
+                                    .build(), Collectors.toList())));
+
             List<ProductSkuStockItemVO> skuVOList = skuList.stream()
+                    .filter(Objects::nonNull)
                     .map(sku -> {
-                        if (Objects.isNull(sku)) {
-                            return null;
-                        }
                         ProductSkuStockItemVO vo = new ProductSkuStockItemVO();
                         vo.setId(sku.getId());
                         vo.setProductId(sku.getProductId());
@@ -193,10 +257,9 @@ public class PmsProductServiceImpl implements PmsProductService {
                         vo.setLockStock(sku.getLockStock());
                         vo.setPic(sku.getPic());
                         vo.setSale(sku.getSale());
-                        vo.setSpData(sku.getSpData());
+                        vo.setSpecs(specMap.getOrDefault(sku.getId(), Collections.emptyList()));
                         return vo;
                     })
-                    .filter(Objects::nonNull)
                     .collect(Collectors.toList());
             rspVO.setSkus(skuVOList);
         }

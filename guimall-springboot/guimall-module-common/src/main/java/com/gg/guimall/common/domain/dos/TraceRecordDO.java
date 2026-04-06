@@ -33,8 +33,8 @@ public class TraceRecordDO {
     /** 农户ID */
     private Long farmerId;
 
-    /** 记录类型(播种/施肥/采摘) */
-    private String recordType;
+    /** 记录类型ID（关联trace_record_type表） */
+    private Long recordTypeId;
 
     /** 溯源内容 */
     private String content;

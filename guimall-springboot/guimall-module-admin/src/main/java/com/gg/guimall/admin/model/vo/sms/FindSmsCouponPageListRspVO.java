@@ -44,8 +44,8 @@ public class FindSmsCouponPageListRspVO {
     @ApiModelProperty(value = "每人限领数量")
     private Integer perLimit;
 
-    @ApiModelProperty(value = "最低消费金额")
-    private BigDecimal minPoint;
+    @ApiModelProperty(value = "使用门槛金额")
+    private BigDecimal minAmount;
 
     @ApiModelProperty(value = "开始时间")
     private LocalDateTime startTime;
