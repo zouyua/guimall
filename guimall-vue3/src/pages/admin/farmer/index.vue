@@ -83,7 +83,7 @@
 </template>
 
 <script setup>
-import { ref, computed, h, onMounted, watch } from 'vue'
+import { ref, computed, h, onMounted, watch, onActivated } from 'vue'
 import { useRouter } from 'vue-router'
 import { Image, Button, Popconfirm, Tag, message } from 'ant-design-vue'
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons-vue'
@@ -349,6 +349,10 @@ const fetchList = async () => {
 onMounted(async () => {
   const originRsp = await fetchTraceOriginOptions()
   if (originRsp?.success) originOptions.value = originRsp.data || []
+  fetchList()
+})
+
+onActivated(() => {
   fetchList()
 })
 

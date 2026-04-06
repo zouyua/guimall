@@ -68,7 +68,7 @@
             </div>
 
             <!-- 使用新地址按钮 -->
-            <button @click="showManualInput = !showManualInput"
+            <button @click="toggleManualInput"
               class="text-emerald-600 hover:text-emerald-700 font-bold text-sm mb-4 flex items-center gap-1">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
               {{ showManualInput ? '收起手动输入' : '使用新地址' }}
@@ -312,6 +312,25 @@ const selectAddress = (addr) => {
   }
   // 同步级联选择器的值
   selectedRegion.value = [addr.province, addr.city, addr.region]
+}
+
+// 切换手动输入
+const toggleManualInput = () => {
+  showManualInput.value = !showManualInput.value
+  if (!showManualInput.value) {
+    // 收起时，如果有已保存地址，自动选中第一个或默认地址
+    if (savedAddresses.value.length > 0) {
+      const defaultAddr = savedAddresses.value.find(a => a.isDefault === 1)
+      if (defaultAddr) {
+        selectAddress(defaultAddr)
+      } else {
+        selectAddress(savedAddresses.value[0])
+      }
+    }
+  } else {
+    // 展开时，清空选中的地址ID
+    selectedAddressId.value = null
+  }
 }
 
 // 加载已有地址列表
