@@ -78,34 +78,28 @@ public class OmsOrderServiceImpl implements OmsOrderService {
             throw new BizException(ResponseCodeEnum.PARAM_NOT_VALID);
         }
 
-        List<OmsCartItemDO> cartItems = cartItemMapper.selectByMemberId(reqVO.getMemberId());
-        if (Objects.isNull(cartItems) || cartItems.isEmpty()) {
+        // 使用前端传过来的商品列表
+        if (Objects.isNull(reqVO.getItems()) || reqVO.getItems().isEmpty()) {
             throw new BizException(ResponseCodeEnum.PARAM_NOT_VALID);
         }
 
+        log.info("提交订单请求, memberId={}, couponId={}, totalAmount={}, payAmount={}",
+                reqVO.getMemberId(), reqVO.getCouponId(), reqVO.getTotalAmount(), reqVO.getPayAmount());
+
         LocalDateTime now = LocalDateTime.now();
 
-        BigDecimal totalAmount = BigDecimal.ZERO;
+        BigDecimal totalAmount = reqVO.getTotalAmount();
         Long farmerId = null;
 
-        for (OmsCartItemDO item : cartItems) {
-            if (Objects.isNull(item) || Objects.isNull(item.getQuantity()) || item.getQuantity() <= 0) {
-                continue;
-            }
-            BigDecimal price = Objects.isNull(item.getPrice()) ? BigDecimal.ZERO : item.getPrice();
-            BigDecimal quantity = BigDecimal.valueOf(item.getQuantity());
-            totalAmount = totalAmount.add(price.multiply(quantity));
-
-            if (Objects.isNull(farmerId) && Objects.nonNull(item.getProductId())) {
-                PmsProductDO productDO = pmsProductMapper.selectById(item.getProductId());
+        // 从第一个商品获取 farmerId
+        if (!reqVO.getItems().isEmpty()) {
+            Long productId = reqVO.getItems().get(0).getProductId();
+            if (Objects.nonNull(productId)) {
+                PmsProductDO productDO = pmsProductMapper.selectById(productId);
                 if (Objects.nonNull(productDO)) {
                     farmerId = productDO.getFarmerId();
                 }
             }
-        }
-
-        if (totalAmount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new BizException(ResponseCodeEnum.PARAM_NOT_VALID);
         }
 
         // ========== 优惠券逻辑 ==========
@@ -141,9 +135,14 @@ public class OmsOrderServiceImpl implements OmsOrderService {
             }
         }
 
-        BigDecimal payAmount = totalAmount.subtract(couponAmount);
+        BigDecimal payAmount = reqVO.getPayAmount();
         if (payAmount.compareTo(BigDecimal.ZERO) < 0) {
             payAmount = BigDecimal.ZERO;
+        }
+        // 确保最低支付金额为0.01元
+        BigDecimal minPayAmount = new BigDecimal("0.01");
+        if (payAmount.compareTo(minPayAmount) < 0) {
+            payAmount = minPayAmount;
         }
 
         String orderSn = "SN" + System.currentTimeMillis() + "_" + reqVO.getMemberId();
@@ -189,6 +188,10 @@ public class OmsOrderServiceImpl implements OmsOrderService {
             matchedHistory.setOrderId(orderId);
             matchedHistory.setOrderSn(orderSn);
             smsCouponHistoryMapper.updateById(matchedHistory);
+            log.info("优惠券已使用, couponId={}, historyId={}, orderId={}, orderSn={}",
+                    couponId, matchedHistory.getId(), orderId, orderSn);
+        } else {
+            log.info("订单未使用优惠券, orderId={}, orderSn={}", orderId, orderSn);
         }
 
         // 发送 RocketMQ 延迟消息，30 分钟后自动取消未支付订单
@@ -201,8 +204,9 @@ public class OmsOrderServiceImpl implements OmsOrderService {
         );
         log.info("订单超时延迟消息已发送, orderSn={}, delayLevel={}", orderSn, MQConstants.ORDER_TIMEOUT_DELAY_LEVEL);
 
+        // 插入订单商品明细
         BigDecimal realAmount;
-        for (OmsCartItemDO item : cartItems) {
+        for (SubmitOmsOrderReqVO.OrderItemVO item : reqVO.getItems()) {
             if (Objects.isNull(item) || Objects.isNull(item.getQuantity()) || item.getQuantity() <= 0) {
                 continue;
             }
@@ -219,7 +223,7 @@ public class OmsOrderServiceImpl implements OmsOrderService {
                     .productPrice(price)
                     .productQuantity(item.getQuantity())
                     .productSkuId(item.getProductSkuId())
-                    .productSkuCode(item.getProductSkuCode())
+                    .productSkuCode(null)
                     .realAmount(realAmount)
                     .productAttr(item.getProductAttr())
                     .build();
@@ -227,8 +231,15 @@ public class OmsOrderServiceImpl implements OmsOrderService {
             orderItemMapper.insert(orderItemDO);
         }
 
-        // 提交成功：清空购物车
-        cartItemMapper.clearByMemberId(reqVO.getMemberId());
+        // 如果是从购物车结算，删除购物车中已结算的商品
+        if (Boolean.TRUE.equals(reqVO.getFromCart())) {
+            for (SubmitOmsOrderReqVO.OrderItemVO item : reqVO.getItems()) {
+                if (Objects.nonNull(item.getCartItemId()) && item.getCartItemId() > 0) {
+                    cartItemMapper.deleteById(item.getCartItemId());
+                }
+            }
+            log.info("已清空购物车中的已结算商品, orderId={}, orderSn={}", orderId, orderSn);
+        }
 
         SubmitOmsOrderRspVO rspVO = new SubmitOmsOrderRspVO();
         rspVO.setOrderId(orderId);
@@ -262,6 +273,25 @@ public class OmsOrderServiceImpl implements OmsOrderService {
                 .map(order -> {
                     FindOmsOrderPageListRspVO vo = new FindOmsOrderPageListRspVO();
                     BeanUtils.copyProperties(order, vo);
+
+                    // 查询订单商品列表
+                    List<OmsOrderItemDO> itemDOList = orderItemMapper.selectByOrderId(order.getId());
+                    List<FindOmsOrderPageListRspVO.OrderItemVO> items = itemDOList.stream()
+                            .map(itemDO -> FindOmsOrderPageListRspVO.OrderItemVO.builder()
+                                    .id(itemDO.getId())
+                                    .productId(itemDO.getProductId())
+                                    .productName(itemDO.getProductName())
+                                    .productPic(itemDO.getProductPic())
+                                    .productSkuId(itemDO.getProductSkuId())
+                                    .productSkuCode(itemDO.getProductSkuCode())
+                                    .productPrice(itemDO.getProductPrice())
+                                    .productQuantity(itemDO.getProductQuantity())
+                                    .realAmount(itemDO.getRealAmount())
+                                    .productAttr(itemDO.getProductAttr())
+                                    .build())
+                            .collect(Collectors.toList());
+                    vo.setItems(items);
+
                     return vo;
                 })
                 .collect(Collectors.toList());
@@ -301,6 +331,15 @@ public class OmsOrderServiceImpl implements OmsOrderService {
         FindOmsOrderDetailRspVO rspVO = new FindOmsOrderDetailRspVO();
         BeanUtils.copyProperties(orderDO, rspVO);
         rspVO.setItems(items);
+
+        // 查询优惠券名称
+        if (Objects.nonNull(orderDO.getCouponId()) && orderDO.getCouponId() > 0) {
+            SmsCouponDO coupon = smsCouponMapper.selectById(orderDO.getCouponId());
+            if (Objects.nonNull(coupon)) {
+                rspVO.setCouponName(coupon.getName());
+            }
+        }
+
         return Response.success(rspVO);
     }
 }

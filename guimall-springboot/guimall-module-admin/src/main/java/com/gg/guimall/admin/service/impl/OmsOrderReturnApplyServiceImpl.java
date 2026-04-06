@@ -1,12 +1,19 @@
 package com.gg.guimall.admin.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.gg.guimall.admin.model.vo.oms.*;
 import com.gg.guimall.admin.service.OmsOrderReturnApplyService;
 import com.gg.guimall.common.domain.dos.OmsCompanyAddressDO;
+import com.gg.guimall.common.domain.dos.OmsOrderDO;
 import com.gg.guimall.common.domain.dos.OmsOrderReturnApplyDO;
+import com.gg.guimall.common.domain.dos.SmsCouponHistoryDO;
 import com.gg.guimall.common.domain.mapper.OmsCompanyAddressMapper;
+import com.gg.guimall.common.domain.mapper.OmsOrderMapper;
 import com.gg.guimall.common.domain.mapper.OmsOrderReturnApplyMapper;
+import com.gg.guimall.common.domain.mapper.SmsCouponHistoryMapper;
+import com.gg.guimall.common.domain.mapper.SmsCouponMapper;
 import com.gg.guimall.common.enums.ResponseCodeEnum;
 import com.gg.guimall.common.exception.BizException;
 import com.gg.guimall.common.utils.PageResponse;
@@ -15,7 +22,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -35,6 +44,15 @@ public class OmsOrderReturnApplyServiceImpl implements OmsOrderReturnApplyServic
 
     @Autowired
     private OmsCompanyAddressMapper companyAddressMapper;
+
+    @Autowired
+    private OmsOrderMapper orderMapper;
+
+    @Autowired
+    private SmsCouponHistoryMapper couponHistoryMapper;
+
+    @Autowired
+    private SmsCouponMapper couponMapper;
 
     @Override
     public PageResponse<FindOmsOrderReturnApplyPageRspVO> findReturnApplyPageList(FindOmsOrderReturnApplyPageReqVO reqVO) {
@@ -85,6 +103,7 @@ public class OmsOrderReturnApplyServiceImpl implements OmsOrderReturnApplyServic
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Response updateReturnApplyStatus(UpdateOmsOrderReturnApplyStatusReqVO reqVO) {
         OmsOrderReturnApplyDO applyDO = returnApplyMapper.selectById(reqVO.getId());
         if (Objects.isNull(applyDO)) {
@@ -98,11 +117,43 @@ public class OmsOrderReturnApplyServiceImpl implements OmsOrderReturnApplyServic
             throw new BizException(ResponseCodeEnum.ORDER_RETURN_STATUS_ILLEGAL);
         }
 
+        // 更新退货申请状态
         OmsOrderReturnApplyDO updateDO = OmsOrderReturnApplyDO.builder()
                 .id(applyDO.getId())
                 .status(toStatus)
                 .build();
         returnApplyMapper.updateById(updateDO);
+
+        // 如果退货申请通过（状态变为1-退货中），更新订单状态为已关闭（4）并恢复优惠券
+        if (toStatus == 1 && Objects.nonNull(applyDO.getOrderId())) {
+            OmsOrderDO orderDO = orderMapper.selectById(applyDO.getOrderId());
+            if (Objects.nonNull(orderDO)) {
+                orderDO.setStatus(4); // 已关闭
+                orderDO.setUpdateTime(LocalDateTime.now());
+                orderMapper.updateById(orderDO);
+                log.info("退货申请通过，订单状态已更新为已关闭, orderId={}, orderSn={}", orderDO.getId(), orderDO.getOrderSn());
+
+                // 恢复优惠券
+                if (Objects.nonNull(orderDO.getCouponId()) && orderDO.getCouponId() > 0) {
+                    LambdaQueryWrapper<SmsCouponHistoryDO> wrapper = Wrappers.lambdaQuery();
+                    wrapper.eq(SmsCouponHistoryDO::getOrderId, orderDO.getId())
+                            .eq(SmsCouponHistoryDO::getUseStatus, 1);
+                    SmsCouponHistoryDO history = couponHistoryMapper.selectOne(wrapper);
+                    if (Objects.nonNull(history)) {
+                        history.setUseStatus(0);
+                        history.setUseTime(null);
+                        history.setOrderId(null);
+                        history.setOrderSn(null);
+                        couponHistoryMapper.updateById(history);
+
+                        // 减少优惠券使用数量
+                        couponMapper.decrementUseCount(orderDO.getCouponId());
+                        log.info("退货申请通过，优惠券已恢复, couponId={}, orderId={}", orderDO.getCouponId(), orderDO.getId());
+                    }
+                }
+            }
+        }
+
         return Response.success();
     }
 

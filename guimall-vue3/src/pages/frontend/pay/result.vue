@@ -19,8 +19,17 @@
 
     <main class="max-w-screen-xl mx-auto px-4 py-12">
       <div class="max-w-xl mx-auto">
+        <!-- 加载中 -->
+        <div v-if="loading" class="bg-white rounded-3xl border border-stone-100 shadow-xl p-12 text-center">
+          <div class="w-24 h-24 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-8">
+            <a-spin size="large" />
+          </div>
+          <h1 class="text-2xl font-black text-stone-900 mb-3">正在确认支付结果...</h1>
+          <p class="text-stone-400">请稍候，不要关闭页面</p>
+        </div>
+
         <!-- 支付成功 -->
-        <div v-if="isSuccess" class="bg-white rounded-3xl border border-stone-100 shadow-xl p-12 text-center">
+        <div v-else-if="isSuccess" class="bg-white rounded-3xl border border-stone-100 shadow-xl p-12 text-center">
           <div class="w-24 h-24 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-8">
             <svg class="w-14 h-14 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
@@ -85,6 +94,7 @@ import { queryAlipayStatus } from '@/api/frontend/order'
 const route = useRoute()
 const router = useRouter()
 
+const loading = ref(true)
 const orderSn = ref('')
 const tradeStatus = ref('')
 
@@ -125,7 +135,11 @@ onMounted(async () => {
     } catch (e) {
       // 查询失败，有 orderSn 默认视为成功（沙箱可能不返回状态）
       tradeStatus.value = outTradeNo ? 'TRADE_SUCCESS' : ''
+    } finally {
+      loading.value = false
     }
+  } else {
+    loading.value = false
   }
 })
 </script>

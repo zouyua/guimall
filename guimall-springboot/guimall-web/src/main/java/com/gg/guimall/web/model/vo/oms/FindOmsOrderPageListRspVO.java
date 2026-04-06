@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 订单列表分页响应 VO（前台）
@@ -40,5 +41,25 @@ public class FindOmsOrderPageListRspVO {
 
     @ApiModelProperty(value = "订单状态：0待付款；1待发货；2已发货；3已完成；4已关闭；5无效订单")
     private Integer status;
+
+    @ApiModelProperty(value = "订单商品列表")
+    private List<OrderItemVO> items;
+
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Builder
+    public static class OrderItemVO {
+        private Long id;
+        private Long productId;
+        private String productName;
+        private String productPic;
+        private Long productSkuId;
+        private String productSkuCode;
+        private BigDecimal productPrice;
+        private Integer productQuantity;
+        private BigDecimal realAmount;
+        private String productAttr;
+    }
 }
 

@@ -34,6 +34,14 @@ public class FindOmsOrderDetailRspVO {
 
     private BigDecimal payAmount;
 
+    private BigDecimal freightAmount;
+
+    private BigDecimal couponAmount;
+
+    private Long couponId;
+
+    private String couponName;
+
     private Integer status;
 
     private String deliveryCompany;
