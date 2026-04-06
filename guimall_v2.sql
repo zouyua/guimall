@@ -73,18 +73,17 @@ CREATE TABLE `pms_farmer` (
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 DEFAULT CHARSET = utf8mb4 COMMENT = '农户信息';
 
 -- ----------------------------
--- pms_param_definition 商品参数定义（模板，挂在分类下）
+-- pms_param_definition 商品参数定义（全局数据字典，存储参数名和参数值）
 -- ----------------------------
 DROP TABLE IF EXISTS `pms_param_definition`;
 CREATE TABLE `pms_param_definition` (
   `id`          bigint       NOT NULL AUTO_INCREMENT COMMENT 'ID',
-  `category_id` bigint       NOT NULL               COMMENT '所属商品分类ID',
   `param_name`  varchar(64)  NOT NULL               COMMENT '参数名（如：保质期、产地）',
+  `param_value` varchar(255) NOT NULL DEFAULT ''     COMMENT '参数值（如：1个月、山东）',
   `sort`        int          NOT NULL DEFAULT 0      COMMENT '排序',
   `create_time` datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  PRIMARY KEY (`id`),
-  INDEX `idx_category` (`category_id`)
-) ENGINE = InnoDB AUTO_INCREMENT = 1 DEFAULT CHARSET = utf8mb4 COMMENT = '商品参数定义（模板，挂在分类下）';
+  PRIMARY KEY (`id`)
+) ENGINE = InnoDB AUTO_INCREMENT = 1 DEFAULT CHARSET = utf8mb4 COMMENT = '商品参数定义（全局数据字典）';
 
 -- ----------------------------
 -- pms_product 商品主表
@@ -157,20 +156,19 @@ CREATE TABLE `pms_sku_stock` (
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 DEFAULT CHARSET = utf8mb4 COMMENT = 'SKU库存';
 
 -- ----------------------------
--- pms_product_param 商品参数值（中间表：商品 ↔ 参数定义）
+-- pms_product_param 商品参数关联表（多对多中间表）
 -- ----------------------------
 DROP TABLE IF EXISTS `pms_product_param`;
 CREATE TABLE `pms_product_param` (
   `id`          bigint       NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `product_id`  bigint       NOT NULL               COMMENT '商品ID',
   `param_id`    bigint       NOT NULL               COMMENT '参数定义ID',
-  `param_value` varchar(255) NOT NULL DEFAULT ''     COMMENT '参数值',
   `sort`        int          NOT NULL DEFAULT 0      COMMENT '排序',
   PRIMARY KEY (`id`),
   INDEX `idx_product` (`product_id`),
   INDEX `idx_param` (`param_id`),
   UNIQUE `uk_product_param` (`product_id`, `param_id`)
-) ENGINE = InnoDB AUTO_INCREMENT = 1 DEFAULT CHARSET = utf8mb4 COMMENT = '商品参数值（中间表）';
+) ENGINE = InnoDB AUTO_INCREMENT = 1 DEFAULT CHARSET = utf8mb4 COMMENT = '商品参数关联表（多对多）';
 
 -- ----------------------------
 -- pms_product_full_reduction 满减规则

@@ -8,7 +8,9 @@ import com.gg.guimall.common.utils.Response;
  */
 public interface PmsParamDefinitionService {
 
-    Response listByCategoryId(Long categoryId);
+    Response listAll();
+
+    Response page(Integer current, Integer size, String paramName);
 
     Response create(ParamDefinitionReqVO reqVO);
 

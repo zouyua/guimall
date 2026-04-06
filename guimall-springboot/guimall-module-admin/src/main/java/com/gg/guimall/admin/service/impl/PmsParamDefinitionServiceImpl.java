@@ -1,10 +1,12 @@
 package com.gg.guimall.admin.service.impl;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.gg.guimall.admin.model.vo.pms.ParamDefinitionReqVO;
 import com.gg.guimall.admin.model.vo.pms.ParamDefinitionRspVO;
 import com.gg.guimall.admin.service.PmsParamDefinitionService;
 import com.gg.guimall.common.domain.dos.PmsParamDefinitionDO;
 import com.gg.guimall.common.domain.mapper.PmsParamDefinitionMapper;
+import com.gg.guimall.common.utils.PageResponse;
 import com.gg.guimall.common.utils.Response;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -22,13 +24,13 @@ public class PmsParamDefinitionServiceImpl implements PmsParamDefinitionService 
     private PmsParamDefinitionMapper pmsParamDefinitionMapper;
 
     @Override
-    public Response listByCategoryId(Long categoryId) {
-        List<PmsParamDefinitionDO> list = pmsParamDefinitionMapper.selectByCategoryId(categoryId);
+    public Response listAll() {
+        List<PmsParamDefinitionDO> list = pmsParamDefinitionMapper.selectAllOrderBySort();
         List<ParamDefinitionRspVO> voList = list.stream()
                 .map(d -> ParamDefinitionRspVO.builder()
                         .id(d.getId())
-                        .categoryId(d.getCategoryId())
                         .paramName(d.getParamName())
+                        .paramValue(d.getParamValue())
                         .sort(d.getSort())
                         .createTime(d.getCreateTime())
                         .build())
@@ -37,10 +39,25 @@ public class PmsParamDefinitionServiceImpl implements PmsParamDefinitionService 
     }
 
     @Override
+    public Response page(Integer current, Integer size, String paramName) {
+        Page<PmsParamDefinitionDO> page = pmsParamDefinitionMapper.selectPageList(current, size, paramName);
+        List<ParamDefinitionRspVO> voList = page.getRecords().stream()
+                .map(d -> ParamDefinitionRspVO.builder()
+                        .id(d.getId())
+                        .paramName(d.getParamName())
+                        .paramValue(d.getParamValue())
+                        .sort(d.getSort())
+                        .createTime(d.getCreateTime())
+                        .build())
+                .collect(Collectors.toList());
+        return PageResponse.success(page, voList);
+    }
+
+    @Override
     public Response create(ParamDefinitionReqVO reqVO) {
         PmsParamDefinitionDO paramDO = PmsParamDefinitionDO.builder()
-                .categoryId(reqVO.getCategoryId())
                 .paramName(reqVO.getParamName().trim())
+                .paramValue(reqVO.getParamValue().trim())
                 .sort(reqVO.getSort() != null ? reqVO.getSort() : 0)
                 .build();
         pmsParamDefinitionMapper.insert(paramDO);
@@ -52,6 +69,7 @@ public class PmsParamDefinitionServiceImpl implements PmsParamDefinitionService 
         PmsParamDefinitionDO paramDO = PmsParamDefinitionDO.builder()
                 .id(reqVO.getId())
                 .paramName(reqVO.getParamName().trim())
+                .paramValue(reqVO.getParamValue().trim())
                 .sort(reqVO.getSort() != null ? reqVO.getSort() : 0)
                 .build();
         pmsParamDefinitionMapper.updateById(paramDO);

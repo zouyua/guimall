@@ -1,34 +1,45 @@
 <template>
   <div class="min-h-screen bg-stone-50 font-sans">
     <!-- 导航栏 -->
-    <nav class="bg-white/90 backdrop-blur-md border-b border-stone-200 sticky top-0 z-50">
-      <div class="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4">
-        <router-link to="/" class="flex items-center space-x-3">
-          <div class="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-200">
-            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <nav class="bg-white border-b border-stone-200 p-4 sticky top-0 z-50">
+      <div class="max-w-screen-xl mx-auto flex items-center justify-between">
+        <router-link to="/" class="flex items-center space-x-2">
+          <div class="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
             </svg>
           </div>
-          <span class="text-2xl font-black tracking-tighter text-emerald-900 uppercase">Guimall</span>
+          <span class="text-xl font-bold text-emerald-900">GUIMALL</span>
         </router-link>
-
-        <div class="flex items-center md:order-2 space-x-4">
-          <div class="relative hidden md:block">
-            <input type="text" v-model="keyword" @keyup.enter="handleSearch"
-              class="block w-64 p-2 pl-4 text-sm text-stone-900 border border-stone-200 rounded-full bg-stone-100 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
-              placeholder="搜索助农农产品...">
-          </div>
-          <button @click="$router.push('/login')" class="text-stone-600 hover:text-emerald-600 font-medium transition-colors">登录</button>
-          <button @click="$router.push('/admin')" class="bg-emerald-600 text-white px-6 py-2 rounded-full font-bold hover:bg-emerald-700 transition-all shadow-md">管理端</button>
+        <div class="flex space-x-8 font-bold text-stone-600">
+          <router-link to="/" class="hover:text-emerald-600" active-class="text-emerald-600">首页</router-link>
+          <router-link to="/category" class="hover:text-emerald-600" active-class="text-emerald-600">商品分类</router-link>
+          <router-link to="/coupon-center" class="hover:text-emerald-600" active-class="text-emerald-600">领券中心</router-link>
+          <router-link to="/support" class="hover:text-emerald-600" active-class="text-emerald-600">助农专区</router-link>
+          <router-link to="/about" class="hover:text-emerald-600" active-class="text-emerald-600">关于我们</router-link>
         </div>
-
-        <div class="items-center justify-between hidden w-full md:flex md:w-auto md:order-1">
-          <ul class="flex flex-col p-4 md:p-0 mt-4 font-bold md:flex-row md:space-x-12 md:mt-0">
-            <li><router-link to="/" exact class="block py-2 text-stone-600 hover:text-emerald-600 transition-colors relative group" exact-active-class="text-emerald-600 nav-active">首页<span class="absolute bottom-0 left-0 w-0 h-0.5 bg-emerald-500 transition-all group-hover:w-full"></span></router-link></li>
-            <li><router-link to="/category" class="block py-2 text-stone-600 hover:text-emerald-600 transition-colors relative group" active-class="text-emerald-600 nav-active">全部分类<span class="absolute bottom-0 left-0 w-0 h-0.5 bg-emerald-500 transition-all group-hover:w-full"></span></router-link></li>
-            <li><router-link to="/support" class="block py-2 text-stone-600 hover:text-emerald-600 transition-colors relative group" active-class="text-emerald-600 nav-active">助农专区<span class="absolute bottom-0 left-0 w-0 h-0.5 bg-emerald-500 transition-all group-hover:w-full"></span></router-link></li>
-            <li><router-link to="/about" class="block py-2 text-stone-600 hover:text-emerald-600 transition-colors relative group" active-class="text-emerald-600 nav-active">关于我们<span class="absolute bottom-0 left-0 w-0 h-0.5 bg-emerald-500 transition-all group-hover:w-full"></span></router-link></li>
-          </ul>
+        <div class="flex items-center space-x-4">
+          <input type="text" v-model="keyword" @keyup.enter="handleSearch"
+            class="w-48 p-2 pl-4 text-sm text-stone-900 border border-stone-200 rounded-full bg-stone-100 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
+            placeholder="搜索助农农产品...">
+          <!-- 已登录 -->
+          <template v-if="memberLoggedIn">
+            <router-link to="/cart" class="text-stone-600 hover:text-emerald-600 transition-colors">
+              <a-badge :count="cartStore.cartCount" :offset="[-2, 2]" size="small">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z" /></svg>
+              </a-badge>
+            </router-link>
+            <router-link to="/member/center" class="flex items-center gap-1.5 text-sm text-stone-600 hover:text-emerald-600 transition-colors">
+              <img :src="memberAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + memberNickname" class="w-6 h-6 rounded-full border border-emerald-100" />
+              <span>{{ memberNickname }}</span>
+            </router-link>
+            <button @click="handleLogout" class="text-sm text-stone-500 hover:text-red-500 transition-colors">退出</button>
+          </template>
+          <!-- 未登录 -->
+          <template v-else>
+            <button @click="$router.push('/member/login')" class="text-stone-600 hover:text-emerald-600 font-medium transition-colors">登录</button>
+          </template>
+          <button @click="$router.push('/admin')" class="bg-emerald-600 text-white px-6 py-2 rounded-full font-bold hover:bg-emerald-700 transition-all shadow-md">管理端</button>
         </div>
       </div>
     </nav>
@@ -46,8 +57,8 @@
           <h1 class="text-6xl font-black mb-6 leading-tight">桂林助农<br/><span class="text-emerald-400">· 诚信溯源</span></h1>
           <p class="text-xl text-emerald-100/70 leading-relaxed mb-10">连接桂林深山农户与千家万户餐桌。每一笔购买，都是对一位农户最直接的支持。平台承诺全程区块链溯源，让爱心消费看得见、信得过。</p>
           <div class="flex gap-4">
-            <a href="#products" class="bg-emerald-500 hover:bg-emerald-400 text-white px-8 py-3 rounded-2xl font-bold transition-all shadow-lg shadow-emerald-900/50">选购助农好物</a>
-            <a href="#farmers" class="border border-emerald-400/50 text-emerald-300 hover:bg-emerald-800 px-8 py-3 rounded-2xl font-bold transition-all">认识农户朋友</a>
+            <button @click="scrollToProducts" class="bg-emerald-500 hover:bg-emerald-400 text-white px-8 py-3 rounded-2xl font-bold transition-all shadow-lg shadow-emerald-900/50">选购助农好物</button>
+            <button @click="scrollToFarmers" class="border border-emerald-400/50 text-emerald-300 hover:bg-emerald-800 px-8 py-3 rounded-2xl font-bold transition-all">认识农户朋友</button>
           </div>
         </div>
       </div>
@@ -195,8 +206,38 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getAidAgricultureProducts, getSupportFarmers } from '@/api/frontend/product'
+import { isMemberLoggedIn, getMemberInfo } from '@/composables/member'
+import { removeMemberInfo } from '@/composables/member'
+import { removeMemberToken } from '@/composables/cookie'
+import { useCartStore } from '@/stores/cart'
 
 const router = useRouter()
+const cartStore = useCartStore()
+
+// 会员登录状态
+const memberLoggedIn = ref(isMemberLoggedIn())
+const memberNickname = ref('')
+const memberAvatar = ref('')
+
+const initMemberStatus = () => {
+  memberLoggedIn.value = isMemberLoggedIn()
+  if (memberLoggedIn.value) {
+    const info = getMemberInfo()
+    memberNickname.value = info?.nickname || info?.username || '会员'
+    memberAvatar.value = info?.icon || ''
+    cartStore.loadCartCount()
+  }
+}
+
+const handleLogout = () => {
+  removeMemberInfo()
+  removeMemberToken()
+  memberLoggedIn.value = false
+  memberNickname.value = ''
+  memberAvatar.value = ''
+  cartStore.reset()
+  router.push('/')
+}
 
 // 搜索
 const keyword = ref('')
@@ -252,6 +293,14 @@ const handleSearch = () => {
 const viewDetail = (id) => router.push(`/product/detail?id=${id}`)
 const goTrace = (id) => router.push(`/trace/${id}`)
 
+const scrollToProducts = () => {
+  document.querySelector('#products')?.scrollIntoView({ behavior: 'smooth' })
+}
+
+const scrollToFarmers = () => {
+  document.querySelector('#farmers')?.scrollIntoView({ behavior: 'smooth' })
+}
+
 const setupDragScroll = (el) => {
   if (!el) return
   let isDown = false, startX = 0, scrollLeft = 0
@@ -262,6 +311,7 @@ const setupDragScroll = (el) => {
 }
 
 onMounted(() => {
+  initMemberStatus()
   loadFarmers().then(() => setupDragScroll(farmerScrollRef.value))
   loadProducts()
 })
@@ -270,8 +320,5 @@ onMounted(() => {
 <style scoped>
 .support-spin :deep(.ant-spin-container) {
   min-height: 400px;
-}
-.nav-active span {
-  width: 100% !important;
 }
 </style>

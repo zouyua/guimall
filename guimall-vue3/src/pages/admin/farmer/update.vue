@@ -126,12 +126,13 @@ import { getFarmerDetail, updateFarmer } from '@/api/admin/farmer'
 import { fetchTraceOriginOptions } from '@/api/admin/traceOrigin'
 import { uploadFile } from '@/api/admin/upload'
 import { chinaAreaData } from '@/utils/chinaArea'
+import regionData from '@/utils/regionData'
 
 const router = useRouter()
 const route = useRoute()
 const formRef = ref()
 
-const areaOptions = chinaAreaData
+const areaOptions = regionData
 const areaValue = ref([])
 const originOptions = ref([])
 const avatarFileList = ref([])
@@ -180,8 +181,7 @@ const rules = {
   phone: [
     { required: true, message: '请输入手机号', trigger: 'blur' },
     { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的11位手机号', trigger: 'blur' }
-  ],
-  area: [{ required: true, message: '请选择所在地区', trigger: 'change' }]
+  ]
 }
 
 // 级联选择器搜索过滤
@@ -190,11 +190,11 @@ const filter = (inputValue, path) => {
 }
 
 // 处理地区选择变化
-const handleAreaChange = (value, selectedOptions) => {
-  if (selectedOptions && selectedOptions.length === 3) {
-    form.province = selectedOptions[0].label
-    form.city = selectedOptions[1].label
-    form.region = selectedOptions[2].label
+const handleAreaChange = (value) => {
+  if (value && value.length === 3) {
+    form.province = value[0]
+    form.city = value[1]
+    form.region = value[2]
   } else {
     form.province = ''
     form.city = ''
@@ -208,22 +208,8 @@ const setAreaValueFromForm = () => {
     areaValue.value = []
     return
   }
-
-  for (const province of areaOptions) {
-    if (province.label === form.province) {
-      for (const city of province.children || []) {
-        if (city.label === form.city) {
-          for (const region of city.children || []) {
-            if (region.label === form.region) {
-              areaValue.value = [province.value, city.value, region.value]
-              return
-            }
-          }
-        }
-      }
-    }
-  }
-  areaValue.value = []
+  // regionData 的 value 就是省市区名称
+  areaValue.value = [form.province, form.city, form.region]
 }
 
 const loadDetail = async () => {
@@ -284,6 +270,13 @@ const handleSubmit = async () => {
   } catch {
     return
   }
+
+  // 验证地区是否已选择
+  if (!form.province || !form.city || !form.region) {
+    message.warning('请选择所在地区')
+    return
+  }
+
   const reqVO = {
     id: form.id,
     name: form.name.trim(),

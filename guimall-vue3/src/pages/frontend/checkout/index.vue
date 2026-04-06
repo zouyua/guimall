@@ -68,7 +68,7 @@
             </div>
 
             <!-- 使用新地址按钮 -->
-            <button @click="showManualInput = !showManualInput"
+            <button @click="toggleManualInput"
               class="text-emerald-600 hover:text-emerald-700 font-bold text-sm mb-4 flex items-center gap-1">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
               {{ showManualInput ? '收起手动输入' : '使用新地址' }}
@@ -86,20 +86,18 @@
                 <a-input v-model:value="address.receiverPhone" placeholder="请输入手机号码"
                   size="large" class="!rounded-xl" />
               </div>
-              <div>
-                <label class="block text-sm font-bold text-stone-500 mb-2">省份</label>
-                <a-input v-model:value="address.receiverProvince" placeholder="请输入省份"
-                  size="large" class="!rounded-xl" />
-              </div>
-              <div>
-                <label class="block text-sm font-bold text-stone-500 mb-2">城市</label>
-                <a-input v-model:value="address.receiverCity" placeholder="请输入城市"
-                  size="large" class="!rounded-xl" />
-              </div>
-              <div>
-                <label class="block text-sm font-bold text-stone-500 mb-2">区/县</label>
-                <a-input v-model:value="address.receiverRegion" placeholder="请输入区/县"
-                  size="large" class="!rounded-xl" />
+              <div class="col-span-3">
+                <label class="block text-sm font-bold text-stone-500 mb-2">省/市/区</label>
+                <a-cascader
+                  v-model:value="selectedRegion"
+                  :options="regionData"
+                  placeholder="请选择省/市/区"
+                  @change="handleRegionChange"
+                  :show-search="{ filter }"
+                  size="large"
+                  class="w-full !rounded-xl"
+                  :field-names="{ label: 'label', value: 'value', children: 'children' }"
+                />
               </div>
               <div>
                 <label class="block text-sm font-bold text-stone-500 mb-2">详细地址</label>
@@ -231,6 +229,7 @@ import { submitOrder } from '@/api/frontend/order'
 import { getAddressList } from '@/api/frontend/member'
 import { getOrderAvailableCoupons } from '@/api/frontend/coupon'
 import { getMemberId, isMemberLoggedIn } from '@/composables/member'
+import regionData from '@/utils/regionData'
 
 const router = useRouter()
 
@@ -283,6 +282,22 @@ const address = ref({
   receiverDetailAddress: ''
 })
 
+const selectedRegion = ref([])
+
+// 级联选择器搜索过滤
+const filter = (inputValue, path) => {
+  return path.some(option => option.label.toLowerCase().indexOf(inputValue.toLowerCase()) > -1)
+}
+
+// 处理省市区选择变化
+const handleRegionChange = (value) => {
+  if (value && value.length === 3) {
+    address.value.receiverProvince = value[0]
+    address.value.receiverCity = value[1]
+    address.value.receiverRegion = value[2]
+  }
+}
+
 // 选择已有地址
 const selectAddress = (addr) => {
   selectedAddressId.value = addr.id
@@ -294,6 +309,27 @@ const selectAddress = (addr) => {
     receiverCity: addr.city,
     receiverRegion: addr.region,
     receiverDetailAddress: addr.detailAddress
+  }
+  // 同步级联选择器的值
+  selectedRegion.value = [addr.province, addr.city, addr.region]
+}
+
+// 切换手动输入
+const toggleManualInput = () => {
+  showManualInput.value = !showManualInput.value
+  if (!showManualInput.value) {
+    // 收起时，如果有已保存地址，自动选中第一个或默认地址
+    if (savedAddresses.value.length > 0) {
+      const defaultAddr = savedAddresses.value.find(a => a.isDefault === 1)
+      if (defaultAddr) {
+        selectAddress(defaultAddr)
+      } else {
+        selectAddress(savedAddresses.value[0])
+      }
+    }
+  } else {
+    // 展开时，清空选中的地址ID
+    selectedAddressId.value = null
   }
 }
 

@@ -17,13 +17,13 @@ public class ParamDefinitionReqVO {
     @ApiModelProperty("参数定义ID（修改时必填）")
     private Long id;
 
-    @ApiModelProperty("所属分类ID")
-    @NotNull(message = "分类ID不能为空")
-    private Long categoryId;
-
     @ApiModelProperty("参数名")
     @NotBlank(message = "参数名不能为空")
     private String paramName;
+
+    @ApiModelProperty("参数值")
+    @NotBlank(message = "参数值不能为空")
+    private String paramValue;
 
     @ApiModelProperty("排序")
     private Integer sort;

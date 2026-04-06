@@ -32,18 +32,46 @@
         <a-form-item label="优惠金额" name="amount" required>
           <a-input-number v-model:value="form.amount" :min="0" :precision="2" class="w-full max-w-xs" />
         </a-form-item>
-        <a-form-item label="最低消费金额" name="minPoint" required>
-          <a-input-number v-model:value="form.minPoint" :min="0" :precision="2" class="w-full max-w-xs" />
+        <a-form-item label="最低消费金额" name="minAmount" required>
+          <a-input-number v-model:value="form.minAmount" :min="0" :precision="2" class="w-full max-w-xs" />
         </a-form-item>
         <a-form-item label="每人限领数量" name="perLimit" required>
           <a-input-number v-model:value="form.perLimit" :min="1" :precision="0" class="w-full max-w-xs" />
         </a-form-item>
         <a-form-item label="使用范围" name="useType" required>
-          <a-select v-model:value="form.useType" class="w-full max-w-xs">
+          <a-select v-model:value="form.useType" class="w-full max-w-xs" @change="handleUseTypeChange">
             <a-select-option :value="0">全场</a-select-option>
             <a-select-option :value="1">指定分类</a-select-option>
             <a-select-option :value="2">指定商品</a-select-option>
           </a-select>
+        </a-form-item>
+
+        <!-- 指定分类 -->
+        <a-form-item v-if="form.useType === 1" label="选择分类">
+          <a-select
+            v-model:value="selectedCategoryIds"
+            mode="multiple"
+            placeholder="请选择分类"
+            class="w-full"
+            :options="categoryOptions"
+            :field-names="{ label: 'name', value: 'id' }"
+          />
+        </a-form-item>
+
+        <!-- 指定商品 -->
+        <a-form-item v-if="form.useType === 2" label="选择商品">
+          <a-button @click="showProductModal = true">选择商品</a-button>
+          <div v-if="selectedProducts.length > 0" class="mt-2">
+            <a-tag
+              v-for="product in selectedProducts"
+              :key="product.id"
+              closable
+              @close="removeProduct(product.id)"
+              class="mb-2"
+            >
+              {{ product.name }}
+            </a-tag>
+          </div>
         </a-form-item>
         <a-form-item label="开始时间" name="startTime" required>
           <a-date-picker
@@ -76,17 +104,47 @@
       </div>
     </a-card>
 
+    <!-- 商品选择弹窗 -->
+    <a-modal
+      v-model:open="showProductModal"
+      title="选择商品"
+      width="800px"
+      @ok="handleProductModalOk"
+      @cancel="showProductModal = false"
+    >
+      <a-table
+        :dataSource="productList"
+        :columns="productColumns"
+        :loading="productLoading"
+        :pagination="productPagination"
+        :row-selection="{ selectedRowKeys: selectedProductIds, onChange: onProductSelectChange }"
+        @change="handleProductTableChange"
+        rowKey="id"
+      >
+        <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'pic'">
+            <img :src="record.pic" class="w-12 h-12 object-cover rounded" />
+          </template>
+          <template v-if="column.key === 'price'">
+            ¥{{ record.price }}
+          </template>
+        </template>
+      </a-table>
+    </a-modal>
+
   </div>
 </template>
 
 <script setup>
 // 新增优惠券页
 // 职责：表单校验 + 调用创建接口
-import { reactive, ref } from 'vue'
+import { reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { ArrowLeftOutlined } from '@ant-design/icons-vue'
 import { createCoupon } from '@/api/admin/coupon'
+import { fetchProductCategoryOptions } from '@/api/admin/productCategory'
+import { fetchProductList } from '@/api/admin/product'
 
 const router = useRouter()
 
@@ -100,12 +158,33 @@ const form = reactive({
   count: 1,
   amount: undefined,
   perLimit: 1,
-  minPoint: undefined,
+  minAmount: undefined,
   useType: 0,
   startTime: undefined,
   endTime: undefined,
   note: ''
 })
+
+// 分类和商品选择
+const categoryOptions = ref([])
+const selectedCategoryIds = ref([])
+const selectedProducts = ref([])
+const selectedProductIds = ref([])
+const showProductModal = ref(false)
+const productList = ref([])
+const productLoading = ref(false)
+const productPagination = reactive({
+  current: 1,
+  pageSize: 10,
+  total: 0
+})
+
+const productColumns = [
+  { title: '商品图片', key: 'pic', width: 100 },
+  { title: '商品名称', dataIndex: 'name' },
+  { title: '价格', key: 'price', width: 120 },
+  { title: '库存', dataIndex: 'stock', width: 100 }
+]
 
 // 表单规则（必填项提示）
 const rules = {
@@ -114,7 +193,7 @@ const rules = {
   count: [{ required: true, message: '请输入发行总量', trigger: 'change' }],
   amount: [{ required: true, message: '请输入优惠金额', trigger: 'change' }],
   perLimit: [{ required: true, message: '请输入每人限领数量', trigger: 'change' }],
-  minPoint: [{ required: true, message: '请输入最低消费金额', trigger: 'change' }],
+  minAmount: [{ required: true, message: '请输入最低消费金额', trigger: 'change' }],
   useType: [{ required: true, message: '请选择使用范围', trigger: 'change' }],
   startTime: [{ required: true, message: '请选择开始时间', trigger: 'change' }],
   endTime: [{ required: true, message: '请选择结束时间', trigger: 'change' }]
@@ -125,6 +204,64 @@ const goBack = () => {
   router.push('/admin/sms/coupon')
 }
 
+// 加载分类选项
+const loadCategoryOptions = async () => {
+  const res = await fetchProductCategoryOptions()
+  if (res.success) {
+    categoryOptions.value = res.data || []
+  }
+}
+
+// 加载商品列表
+const loadProductList = async () => {
+  productLoading.value = true
+  try {
+    const res = await fetchProductList({
+      current: productPagination.current,
+      size: productPagination.pageSize
+    })
+    if (res.success) {
+      productList.value = res.data || []
+      productPagination.total = res.total || 0
+    }
+  } finally {
+    productLoading.value = false
+  }
+}
+
+// 使用范围改变
+const handleUseTypeChange = (value) => {
+  if (value === 0) {
+    selectedCategoryIds.value = []
+    selectedProducts.value = []
+    selectedProductIds.value = []
+  }
+}
+
+// 商品表格分页
+const handleProductTableChange = (pagination) => {
+  productPagination.current = pagination.current
+  productPagination.pageSize = pagination.pageSize
+  loadProductList()
+}
+
+// 商品选择改变
+const onProductSelectChange = (selectedKeys, selectedRows) => {
+  selectedProductIds.value = selectedKeys
+}
+
+// 确认选择商品
+const handleProductModalOk = () => {
+  selectedProducts.value = productList.value.filter(p => selectedProductIds.value.includes(p.id))
+  showProductModal.value = false
+}
+
+// 移除商品
+const removeProduct = (productId) => {
+  selectedProducts.value = selectedProducts.value.filter(p => p.id !== productId)
+  selectedProductIds.value = selectedProductIds.value.filter(id => id !== productId)
+}
+
 const handleSubmit = async () => {
   // 先做前端校验，校验不通过直接返回
   try {
@@ -132,6 +269,17 @@ const handleSubmit = async () => {
   } catch (e) {
     return
   }
+
+  // 校验使用范围
+  if (form.useType === 1 && selectedCategoryIds.value.length === 0) {
+    message.warning('请选择分类')
+    return
+  }
+  if (form.useType === 2 && selectedProducts.value.length === 0) {
+    message.warning('请选择商品')
+    return
+  }
+
   // 提交入参与后端 VO 严格对齐
   const payload = {
     type: Number(form.type),
@@ -140,18 +288,35 @@ const handleSubmit = async () => {
     count: Number(form.count),
     amount: Number(form.amount),
     perLimit: Number(form.perLimit),
-    minPoint: Number(form.minPoint),
+    minAmount: Number(form.minAmount),
     startTime: form.startTime,
     endTime: form.endTime,
+    enableTime: form.startTime, // 领取开始时间默认等于使用开始时间
     useType: Number(form.useType),
     note: form.note?.trim() || ''
   }
+
+  // 根据使用范围添加对应的ID列表
+  if (form.useType === 1) {
+    payload.productCategoryIds = selectedCategoryIds.value
+  } else if (form.useType === 2) {
+    payload.productIds = selectedProductIds.value
+  }
+
   const rsp = await createCoupon(payload)
   if (!rsp?.success) {
     message.error(rsp?.message || '新增失败')
     return
   }
   message.success('新增成功')
-  goBack()
+  // 延迟跳转，确保后端数据已保存
+  setTimeout(() => {
+    goBack()
+  }, 300)
 }
+
+onMounted(() => {
+  loadCategoryOptions()
+  loadProductList()
+})
 </script>
