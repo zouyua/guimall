@@ -14,6 +14,7 @@ import com.gg.guimall.web.model.vo.oms.SubmitOmsOrderRspVO;
 import com.gg.guimall.web.service.OmsOrderService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -28,6 +29,7 @@ import java.util.Objects;
 @RestController("webOmsOrderController")
 @RequestMapping("/order")
 @Api(tags = "订单模块")
+@Slf4j
 public class OmsOrderController {
 
     @Autowired
@@ -43,6 +45,8 @@ public class OmsOrderController {
     @ApiOperation(value = "提交订单（前台）")
     @ApiOperationLog(description = "提交订单（前台）")
     public Response submit(@RequestBody @Validated SubmitOmsOrderReqVO reqVO) {
+        log.info("收到订单提交请求: memberId={}, couponId={}, totalAmount={}, payAmount={}",
+                reqVO.getMemberId(), reqVO.getCouponId(), reqVO.getTotalAmount(), reqVO.getPayAmount());
         return omsOrderService.submitOrder(reqVO);
     }
 

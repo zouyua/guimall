@@ -82,7 +82,7 @@
 
           <!-- 订单商品 -->
           <div class="px-8 py-6">
-            <div v-for="item in order.orderItemList" :key="item.id"
+            <div v-for="item in order.items" :key="item.id"
               class="flex items-center space-x-4 py-3 first:pt-0">
               <img :src="item.productPic" class="w-16 h-16 rounded-xl object-cover border border-stone-100 flex-shrink-0" />
               <div class="flex-1 min-w-0">
@@ -99,19 +99,36 @@
           <!-- 订单底部 -->
           <div class="flex flex-col sm:flex-row items-center justify-between px-8 py-5 border-t border-stone-100">
             <div class="text-stone-500 text-sm mb-3 sm:mb-0">
-              共 <span class="font-bold text-stone-800">{{ order.orderItemList?.length || 0 }}</span> 件商品
+              共 <span class="font-bold text-stone-800">{{ order.items?.length || 0 }}</span> 件商品
             </div>
             <div class="flex items-center space-x-6">
               <span class="text-stone-600">
-                合计：<span class="text-xl font-black text-emerald-600">¥{{ order.totalAmount }}</span>
+                实付：<span class="text-xl font-black text-emerald-600">¥{{ order.payAmount }}</span>
               </span>
-              <!-- 待付款 → 去支付 -->
-              <button v-if="order.status === 0" @click="$router.push(`/pay?orderSn=${order.orderSn}&payAmount=${order.payAmount}`)"
-                class="bg-emerald-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-md text-sm">
-                去支付
-              </button>
-              <!-- 已完成 → 查看详情（可扩展） -->
-              <button v-else
+              <!-- 待付款 → 去支付 + 取消订单 -->
+              <template v-if="order.status === 0">
+                <button @click="handleCancelOrder(order.id)"
+                  class="bg-stone-100 text-stone-600 px-6 py-2.5 rounded-xl font-bold hover:bg-stone-200 transition-all text-sm">
+                  取消订单
+                </button>
+                <button @click="$router.push(`/pay?orderSn=${order.orderSn}&payAmount=${order.payAmount}`)"
+                  class="bg-emerald-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-md text-sm">
+                  去支付
+                </button>
+              </template>
+              <!-- 已支付（待发货/已发货/已完成）→ 查看详情 + 申请退货 -->
+              <template v-else-if="order.status >= 1 && order.status <= 3">
+                <button @click="viewOrderDetail(order.id)"
+                  class="bg-stone-100 text-stone-600 px-6 py-2.5 rounded-xl font-bold hover:bg-stone-200 transition-all text-sm">
+                  查看详情
+                </button>
+                <button @click="handleReturnApply(order.id)"
+                  class="bg-orange-100 text-orange-600 px-6 py-2.5 rounded-xl font-bold hover:bg-orange-200 transition-all text-sm">
+                  申请退货
+                </button>
+              </template>
+              <!-- 其他状态 → 查看详情 -->
+              <button v-else @click="viewOrderDetail(order.id)"
                 class="bg-stone-100 text-stone-600 px-6 py-2.5 rounded-xl font-bold hover:bg-stone-200 transition-all text-sm">
                 查看详情
               </button>
@@ -137,8 +154,9 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { message } from 'ant-design-vue'
+import { message, Modal } from 'ant-design-vue'
 import { getOrderList } from '@/api/frontend/order'
+import { cancelOrder } from '@/api/frontend/orderReturn'
 import { getMemberId, isMemberLoggedIn } from '@/composables/member'
 import { useCartStore } from '@/stores/cart'
 
@@ -200,6 +218,36 @@ const loadOrders = async () => {
 const handlePageChange = (page) => {
   currentPage.value = page
   loadOrders()
+}
+
+const viewOrderDetail = (orderId) => {
+  router.push(`/order/detail?id=${orderId}`)
+}
+
+const handleCancelOrder = (orderId) => {
+  Modal.confirm({
+    title: '确认取消订单？',
+    content: '取消后订单将关闭，如已使用优惠券将自动退回',
+    okText: '确认取消',
+    cancelText: '我再想想',
+    onOk: async () => {
+      try {
+        const res = await cancelOrder({ orderId, memberId })
+        if (res.success) {
+          message.success('订单已取消')
+          loadOrders()
+        } else {
+          message.error(res.message || '取消失败')
+        }
+      } catch (e) {
+        message.error('取消失败')
+      }
+    }
+  })
+}
+
+const handleReturnApply = (orderId) => {
+  router.push(`/order/return?orderId=${orderId}`)
 }
 
 onMounted(() => {

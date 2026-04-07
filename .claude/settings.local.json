@@ -43,7 +43,8 @@
       "Bash(\"D:/Nodejs/node.exe\" node_modules/vite/bin/vite.js build)",
       "Bash(find D:\\\\Java\\\\Project\\\\guimall\\\\guimall-vue3\\\\src\\\\api:*)",
       "Bash(mvn spring-boot:run -pl guimall-module-admin -am)",
-      "Bash(find . -name \"pom.xml\" -path \"*/guimall-web/*\" -exec grep -l \"spring-boot-starter-web\" {} \\\\;)"
+      "Bash(find . -name \"pom.xml\" -path \"*/guimall-web/*\" -exec grep -l \"spring-boot-starter-web\" {} \\\\;)",
+      "Bash(taskkill:*)"
     ]
   }
 }

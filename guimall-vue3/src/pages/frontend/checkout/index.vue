@@ -149,9 +149,9 @@
               暂无可用优惠券
             </div>
             <div v-else class="space-y-3">
-              <div v-for="coupon in availableCoupons" :key="coupon.id"
+              <div v-for="coupon in availableCoupons" :key="coupon.couponId || coupon.id"
                 @click="toggleCoupon(coupon)"
-                :class="selectedCouponId === coupon.id
+                :class="selectedCouponId === (coupon.couponId || coupon.id)
                   ? 'border-orange-400 bg-orange-50/60 ring-1 ring-orange-200'
                   : 'border-stone-200 hover:border-orange-300'"
                 class="border rounded-2xl p-4 cursor-pointer transition-all flex items-center justify-between">
@@ -165,9 +165,9 @@
                     <p class="text-xs text-stone-300 mt-0.5">{{ String(coupon.startTime || '').slice(0, 10) }} ~ {{ String(coupon.endTime || '').slice(0, 10) }}</p>
                   </div>
                 </div>
-                <div :class="selectedCouponId === coupon.id ? 'bg-orange-500' : 'bg-stone-200'"
+                <div :class="selectedCouponId === (coupon.couponId || coupon.id) ? 'bg-orange-500' : 'bg-stone-200'"
                   class="w-5 h-5 rounded-full flex items-center justify-center transition-colors shrink-0">
-                  <svg v-if="selectedCouponId === coupon.id" class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <svg v-if="selectedCouponId === (coupon.couponId || coupon.id)" class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/>
                   </svg>
                 </div>
@@ -253,13 +253,17 @@ const selectedCouponId = ref(null)
 const couponDiscount = ref(0)
 
 const toggleCoupon = (coupon) => {
-  if (selectedCouponId.value === coupon.id) {
+  console.log('toggleCoupon 被调用, coupon:', coupon)
+  const couponId = coupon.couponId || coupon.id
+  if (selectedCouponId.value === couponId) {
     // 取消选择
     selectedCouponId.value = null
     couponDiscount.value = 0
+    console.log('取消选择优惠券')
   } else {
-    selectedCouponId.value = coupon.id
+    selectedCouponId.value = couponId
     couponDiscount.value = parseFloat(coupon.amount) || 0
+    console.log('选择优惠券, ID:', selectedCouponId.value, '折扣:', couponDiscount.value)
   }
 }
 
@@ -361,7 +365,8 @@ const payAmount = computed(() => {
   const total = parseFloat(totalAmount.value) || 0
   const discount = couponDiscount.value || 0
   const result = total - discount
-  return (result > 0 ? result : 0).toFixed(2)
+  // 确保最低支付金额为0.01元
+  return result > 0.01 ? result.toFixed(2) : '0.01'
 })
 
 const validateAddress = () => {
@@ -382,11 +387,19 @@ const handleSubmit = async () => {
     return
   }
 
+  console.log('=== 提交订单前状态检查 ===')
+  console.log('selectedCouponId.value:', selectedCouponId.value)
+  console.log('couponDiscount.value:', couponDiscount.value)
+  console.log('totalAmount:', totalAmount.value)
+  console.log('payAmount:', payAmount.value)
+
   submitting.value = true
   try {
+    // 判断是否从购物车结算（如果商品有 id 字段，说明是购物车项）
+    const isFromCart = orderItems.value.some(item => item.id)
+
     const data = {
       memberId,
-      couponId: selectedCouponId.value,
       ...address.value,
       items: orderItems.value.map(item => ({
         productId: item.productId,
@@ -395,13 +408,31 @@ const handleSubmit = async () => {
         productPic: item.productPic,
         productAttr: item.productAttr,
         price: item.price,
-        quantity: item.quantity
+        quantity: item.quantity,
+        cartItemId: item.id // 购物车项ID，直接购买时为 undefined
       })),
       totalAmount: parseFloat(totalAmount.value),
       freightAmount: 0,
-      payAmount: parseFloat(totalAmount.value)
+      payAmount: parseFloat(payAmount.value),
+      fromCart: isFromCart // 根据是否有购物车ID判断
     }
 
+    // 只有选择了优惠券才添加 couponId
+    if (selectedCouponId.value) {
+      data.couponId = selectedCouponId.value
+      console.log('已选择优惠券ID:', selectedCouponId.value)
+    } else {
+      console.log('未选择优惠券')
+      // 如果没有选择优惠券，但有折扣，说明数据不一致，重置折扣
+      if (couponDiscount.value > 0) {
+        console.warn('检测到优惠券折扣但未选择优惠券ID，重置折扣')
+        couponDiscount.value = 0
+        message.warning('优惠券状态异常，已重置，请重新选择')
+        return
+      }
+    }
+
+    console.log('提交订单数据:', JSON.stringify(data, null, 2))
     const res = await submitOrder(data)
     if (res.success) {
       message.success('订单提交成功')

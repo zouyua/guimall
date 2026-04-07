@@ -69,6 +69,16 @@ const routes = [
         meta: { title: '我的订单' }
     },
     {
+        path: '/order/detail',
+        component: () => import('@/pages/frontend/order/detail.vue'),
+        meta: { title: '订单详情' }
+    },
+    {
+        path: '/order/return',
+        component: () => import('@/pages/frontend/order/return.vue'),
+        meta: { title: '申请退货' }
+    },
+    {
         path: '/member/center',
         component: () => import('@/pages/frontend/member/center.vue'),
         meta: { title: '个人中心' }
