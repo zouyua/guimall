@@ -38,6 +38,18 @@
           </a-select>
         </a-form-item>
 
+        <a-form-item label="属性分类">
+          <a-select v-model:value="form.productAttributeCategoryId" allow-clear class="gm-field">
+            <a-select-option
+              v-for="item in attrCategoryOptions"
+              :key="item.id"
+              :value="item.id"
+            >
+              {{ item.name }}
+            </a-select-option>
+          </a-select>
+        </a-form-item>
+
         <a-form-item name="farmerId" label="关联农户">
           <a-select v-model:value="form.farmerId" allow-clear class="gm-field">
             <a-select-option
@@ -54,20 +66,8 @@
           <a-input v-model:value="form.productSn" class="gm-field" />
         </a-form-item>
 
-        <a-form-item label="商品主图">
-          <a-upload
-            :max-count="1"
-            list-type="picture-card"
-            :file-list="picFileList"
-            :custom-request="handlePicUpload"
-            @remove="handlePicRemove"
-            accept="image/*"
-          >
-            <div v-if="picFileList.length === 0">
-              <PlusOutlined />
-              <div class="mt-2">上传图片</div>
-            </div>
-          </a-upload>
+        <a-form-item label="主图地址">
+          <a-input v-model:value="form.pic" class="gm-field" />
         </a-form-item>
 
         <a-form-item name="price" label="销售价格">
@@ -95,33 +95,16 @@
         </a-form-item>
 
         <a-form-item label="商品描述">
-          <RichEditor v-model="form.detailHtml" />
+          <a-textarea v-model:value="form.description" :rows="4" class="gm-field" />
         </a-form-item>
 
       </a-form>
-    </a-card>
 
-    <!-- 商品参数 -->
-    <a-card :bordered="false" title="商品参数" class="mt-5">
-      <a-alert
-        class="mb-4"
-        type="info"
-        show-icon
-        banner
-        message="从参数字典中选择参数。如需添加新参数，请前往【参数管理】页面。"
-      />
+      <div class="mt-6 flex justify-center gap-3">
+        <a-button type="primary" @click="handleSubmit">保存</a-button>
+        <a-button @click="goBack">取消</a-button>
+      </div>
 
-      <a-spin :spinning="paramLoading">
-        <a-table
-          :dataSource="paramRows"
-          :columns="paramColumns"
-          rowKey="paramId"
-          :pagination="paramPagination"
-          @change="handleParamTableChange"
-          bordered
-          size="small"
-        />
-      </a-spin>
     </a-card>
 
     <!-- SKU库存 -->
@@ -149,20 +132,14 @@
 
     </a-card>
 
-    <!-- 底部固定操作栏 -->
-    <div class="fixed-bottom-bar">
-      <a-button type="primary" @click="handleSubmit">保存</a-button>
-      <a-button @click="goBack">取消</a-button>
-    </div>
-
   </div>
 </template>
 
 <script setup>
 import { reactive, ref, onMounted, h } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { message, Input, InputNumber, Button, Popconfirm, Checkbox } from 'ant-design-vue'
-import { ArrowLeftOutlined, PlusOutlined } from '@ant-design/icons-vue'
+import { message, Input, InputNumber, Button, Popconfirm } from 'ant-design-vue'
+import { ArrowLeftOutlined } from '@ant-design/icons-vue'
 
 import {
   getProductDetail,
@@ -176,9 +153,7 @@ import {
 } from '@/api/admin/productCategory'
 
 import { fetchFarmerOptions } from '@/api/admin/farmer'
-import { uploadFile } from '@/api/admin/upload'
-import { fetchParamDefinitions, createParamDefinition } from '@/api/admin/paramDefinition'
-import RichEditor from '@/components/RichEditor.vue'
+import { fetchProductAttrCategoryOptions } from '@/api/admin/productAttrCategory'
 
 import {
   fetchSkuListByProductId,
@@ -193,43 +168,9 @@ const formRef = ref()
 
 const categoryOptions = ref([])
 const farmerOptions = ref([])
+const attrCategoryOptions = ref([])
 
 const publishChecked = ref(false)
-const picFileList = ref([])
-
-// 动态参数行（全局字典）
-const paramRows = ref([])
-const paramLoading = ref(false)
-const paramPagination = ref({
-  current: 1,
-  pageSize: 10,
-  total: 0,
-  showSizeChanger: true,
-  showTotal: total => `共 ${total} 条`
-})
-// 全局维护已选中的参数ID集合
-const selectedParamIds = ref(new Set())
-
-const handlePicUpload = async ({ file, onSuccess, onError }) => {
-  try {
-    const res = await uploadFile(file)
-    if (res.success) {
-      form.pic = res.data
-      picFileList.value = [{ uid: '-1', name: file.name, status: 'done', url: res.data }]
-      onSuccess(res)
-    } else {
-      message.error(res.message || '上传失败')
-      onError(new Error(res.message))
-    }
-  } catch (e) {
-    message.error('上传失败')
-    onError(e)
-  }
-}
-const handlePicRemove = () => {
-  form.pic = ''
-  picFileList.value = []
-}
 
 const skuRows = ref([])
 const skuSaveLoading = ref(false)
@@ -238,6 +179,7 @@ const form = reactive({
   id: null,
   name: '',
   productCategoryId: undefined,
+  productAttributeCategoryId: undefined,
   farmerId: undefined,
   productSn: '',
   pic: '',
@@ -247,12 +189,13 @@ const form = reactive({
   sale: 0,
   unit: '斤',
   publishStatus: 0,
-  detailHtml: ''
+  description: ''
 })
 
 const normalizeUnit = (v) => {
   const unit = String(v ?? '').trim()
   if (!unit || unit === 'null' || unit === 'undefined') return '斤'
+  // 常见乱码/占位符：问号、替换字符等
   if (/[?\uFF1F\uFFFD�]/.test(unit)) return '斤'
   return unit
 }
@@ -270,103 +213,6 @@ const goBack = () => {
   router.push('/admin/pms/product')
 }
 
-// 商品参数表格列（从字典选择）
-const paramColumns = [
-  {
-    title: '选择',
-    width: '10%',
-    align: 'center',
-    customRender: ({ record }) =>
-      h(Checkbox, {
-        checked: record.selected,
-        onChange: e => {
-          record.selected = e.target.checked
-          // 同步更新全局选中集合
-          if (e.target.checked) {
-            selectedParamIds.value.add(record.paramId)
-          } else {
-            selectedParamIds.value.delete(record.paramId)
-          }
-          console.log('Checkbox changed:', record.key, 'selected:', record.selected)
-        }
-      })
-  },
-  {
-    title: '参数名',
-    dataIndex: 'key',
-    width: '30%'
-  },
-  {
-    title: '参数值',
-    dataIndex: 'value',
-    width: '60%'
-  }
-]
-
-// 加载全局参数字典并合并已有值
-const loadAllParams = async (existingParams) => {
-  paramLoading.value = true
-  try {
-    console.log('loadAllParams - existingParams:', existingParams)
-
-    const rsp = await fetchParamDefinitions({
-      current: paramPagination.value.current,
-      size: paramPagination.value.pageSize
-    })
-
-    console.log('loadAllParams - rsp:', rsp)
-
-    if (!rsp?.success) return
-
-    // PageResponse 的数据直接在 data 字段，不是 data.records
-    const defs = rsp?.data || []
-    paramPagination.value.total = rsp?.total || 0
-
-    console.log('loadAllParams - defs:', defs)
-
-    // 首次加载时，初始化已选中的参数ID集合
-    if (existingParams && Array.isArray(existingParams)) {
-      selectedParamIds.value.clear()
-      existingParams.forEach(p => {
-        if (p.paramId) {
-          selectedParamIds.value.add(p.paramId)
-          console.log('Adding paramId to selectedParamIds:', p.paramId)
-        }
-      })
-    }
-
-    console.log('loadAllParams - selectedParamIds:', selectedParamIds.value)
-
-    paramRows.value = defs.map(d => ({
-      paramId: d.id,
-      key: d.paramName,
-      value: d.paramValue,
-      selected: selectedParamIds.value.has(d.id) // 从全局集合判断是否选中
-    }))
-
-    console.log('loadAllParams - paramRows:', paramRows.value)
-  } finally {
-    paramLoading.value = false
-  }
-}
-
-// 分页切换
-const handleParamTableChange = (pagination) => {
-  paramPagination.value.current = pagination.current
-  paramPagination.value.pageSize = pagination.pageSize
-
-  // 不需要传 existingParams，因为已经在全局 selectedParamIds 中维护了
-  loadAllParams()
-}
-
-// 构建 productParams 数组（只提交已勾选的参数ID）
-const buildProductParams = () => {
-  const result = Array.from(selectedParamIds.value).map(paramId => ({ paramId }))
-  console.log('buildProductParams - selectedParamIds:', selectedParamIds.value)
-  console.log('buildProductParams - result:', result)
-  return result
-}
-
 onMounted(() => {
   init()
 })
@@ -376,27 +222,21 @@ const init = async () => {
   const id = Number(route.query.id)
   if (!id) return
 
-  const [categoryRsp, farmerRsp, detailRsp] = await Promise.all([
+  const [categoryRsp, farmerRsp, attrRsp, detailRsp] = await Promise.all([
     fetchProductCategoryOptions(),
     fetchFarmerOptions(),
+    fetchProductAttrCategoryOptions(),
     getProductDetail(id)
   ])
 
   categoryOptions.value = categoryRsp?.data || []
   farmerOptions.value = farmerRsp?.data || []
+  attrCategoryOptions.value = attrRsp?.data || []
 
   Object.assign(form, detailRsp.data)
   form.unit = normalizeUnit(form.unit)
 
   publishChecked.value = form.publishStatus === 1
-
-  // 回填已有主图
-  if (form.pic) {
-    picFileList.value = [{ uid: '-1', name: '商品主图', status: 'done', url: form.pic }]
-  }
-
-  // 回填商品参数（加载全局字典 + 合并已有值）
-  await loadAllParams(detailRsp.data?.productParams)
 
   await fetchSkuList()
 }
@@ -551,8 +391,7 @@ const handleSubmit = async () => {
   await updateProduct({
     ...form,
     unit: normalizeUnit(form.unit),
-    publishStatus: publishChecked.value ? 1 : 0,
-    productParams: buildProductParams()
+    publishStatus: publishChecked.value ? 1 : 0
   })
 
   if (publishChecked.value) {
@@ -568,26 +407,7 @@ const handleSubmit = async () => {
 </script>
 
 <style scoped>
-.fixed-bottom-bar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 99;
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-  padding: 12px 24px;
-  background: #fff;
-  border-top: 1px solid #f0f0f0;
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
-}
-
-.box {
-  padding-bottom: 72px;
-}
-
-/* 统一把"更改商品信息"页的表单控件改成浅灰圆角风格 */
+/* 统一把“更改商品信息”页的表单控件改成浅灰圆角风格 */
 :deep(.gm-field .ant-input),
 :deep(.gm-field.ant-input),
 :deep(.gm-field .ant-input-number),

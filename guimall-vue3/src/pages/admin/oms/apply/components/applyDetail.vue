@@ -14,13 +14,13 @@
     <a-card :bordered="false" title="申请信息" class="mb-5">
       <a-descriptions bordered :column="2" size="middle" class="max-w-5xl">
         <a-descriptions-item label="退货单号" :span="2">TH{{ String(detail.id || '').padStart(8, '0') }}</a-descriptions-item>
-        <a-descriptions-item label="原订单号">{{ detail.orderNo }}</a-descriptions-item>
+        <a-descriptions-item label="原订单号">{{ detail.orderSn }}</a-descriptions-item>
         <a-descriptions-item label="状态">
           <a-tag :color="APPLY_STATUS_COLOR[detail.status]">{{ APPLY_STATUS_LABEL[detail.status] || '-' }}</a-tag>
         </a-descriptions-item>
         <a-descriptions-item label="申请人">{{ detail.memberUsername }}</a-descriptions-item>
         <a-descriptions-item label="联系电话">{{ detail.returnPhone }}</a-descriptions-item>
-        <a-descriptions-item label="退款金额">¥ {{ detail.refundAmount }}</a-descriptions-item>
+        <a-descriptions-item label="退款金额">¥ {{ detail.returnAmount }}</a-descriptions-item>
         <a-descriptions-item label="申请时间">{{ detail.createTime }}</a-descriptions-item>
         <a-descriptions-item label="退货原因" :span="2">{{ detail.reason }}</a-descriptions-item>
         <a-descriptions-item label="问题说明" :span="2">{{ detail.description || '—' }}</a-descriptions-item>
