@@ -3,8 +3,11 @@ package com.gg.guimall.web.listener;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.gg.guimall.common.domain.dos.OmsOrderDO;
+import com.gg.guimall.common.domain.dos.OmsOrderItemDO;
 import com.gg.guimall.common.domain.dos.SmsCouponHistoryDO;
+import com.gg.guimall.common.domain.mapper.OmsOrderItemMapper;
 import com.gg.guimall.common.domain.mapper.OmsOrderMapper;
+import com.gg.guimall.common.domain.mapper.PmsSkuStockMapper;
 import com.gg.guimall.common.domain.mapper.SmsCouponHistoryMapper;
 import com.gg.guimall.common.domain.mapper.SmsCouponMapper;
 import com.gg.guimall.web.constants.MQConstants;
@@ -39,6 +42,12 @@ public class OrderTimeoutConsumer implements RocketMQListener<OrderTimeoutMessag
     @Autowired
     private SmsCouponHistoryMapper smsCouponHistoryMapper;
 
+    @Autowired
+    private OmsOrderItemMapper omsOrderItemMapper;
+
+    @Autowired
+    private PmsSkuStockMapper pmsSkuStockMapper;
+
     @Override
     public void onMessage(OrderTimeoutMessageDTO message) {
         String orderSn = message.getOrderSn();
@@ -67,10 +76,38 @@ public class OrderTimeoutConsumer implements RocketMQListener<OrderTimeoutMessag
             omsOrderMapper.updateById(updateOrder);
             log.info("订单已自动取消, orderSn={}, orderId={}", orderSn, order.getId());
 
+            // 解锁库存
+            unlockStock(order.getId());
+
             // 回滚优惠券
             rollbackCoupon(order);
         } catch (Exception e) {
             log.error("处理订单超时消息异常, orderSn={}", orderSn, e);
+        }
+    }
+
+    /**
+     * 解锁库存：恢复锁定的库存
+     */
+    private void unlockStock(Long orderId) {
+        try {
+            // 查询订单商品明细
+            LambdaQueryWrapper<OmsOrderItemDO> wrapper = Wrappers.lambdaQuery();
+            wrapper.eq(OmsOrderItemDO::getOrderId, orderId);
+            java.util.List<OmsOrderItemDO> items = omsOrderItemMapper.selectList(wrapper);
+
+            for (OmsOrderItemDO item : items) {
+                if (Objects.nonNull(item.getProductSkuId()) && item.getProductSkuId() > 0) {
+                    int unlockResult = pmsSkuStockMapper.unlockStock(item.getProductSkuId(), item.getProductQuantity());
+                    if (unlockResult > 0) {
+                        log.info("库存已解锁, skuId={}, quantity={}, orderId={}", item.getProductSkuId(), item.getProductQuantity(), orderId);
+                    } else {
+                        log.warn("库存解锁失败, skuId={}, quantity={}, orderId={}", item.getProductSkuId(), item.getProductQuantity(), orderId);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("解锁库存异常, orderId={}", orderId, e);
         }
     }
 

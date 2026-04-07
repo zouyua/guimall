@@ -107,10 +107,14 @@ public class PmsSkuStockServiceImpl implements PmsSkuStockService {
                 skuStockMapper.insert(skuDO);
                 Long skuId = skuDO.getId();
 
-                // 写入规格明细
+                // 写入规格明细（过滤空值）
                 if (Objects.nonNull(vo.getSpecs()) && !vo.getSpecs().isEmpty()) {
                     int sort = 0;
                     for (PmsSkuSpecItemVO spec : vo.getSpecs()) {
+                        // 跳过空的规格值
+                        if (spec.getSpecValue() == null || spec.getSpecValue().trim().isEmpty()) {
+                            continue;
+                        }
                         skuSpecMapper.insert(PmsSkuSpecDO.builder()
                                 .skuId(skuId)
                                 .productId(productId)

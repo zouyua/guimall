@@ -126,6 +126,13 @@
 
     <!-- SKU库存 -->
     <a-card title="SKU库存管理" class="mt-5">
+      <a-alert
+        class="mb-4"
+        type="warning"
+        show-icon
+        banner
+        message="SKU库存需要单独保存，不会随底部的【保存基本信息】按钮一起保存"
+      />
 
       <div class="mb-4">
         <a-button @click="handleAddSku">新增SKU</a-button>
@@ -151,7 +158,7 @@
 
     <!-- 底部固定操作栏 -->
     <div class="fixed-bottom-bar">
-      <a-button type="primary" @click="handleSubmit">保存</a-button>
+      <a-button type="primary" @click="handleSubmit">保存基本信息</a-button>
       <a-button @click="goBack">取消</a-button>
     </div>
 
@@ -159,7 +166,7 @@
 </template>
 
 <script setup>
-import { reactive, ref, onMounted, h } from 'vue'
+import { reactive, ref, onMounted, watch, h } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { message, Input, InputNumber, Button, Popconfirm, Checkbox } from 'ant-design-vue'
 import { ArrowLeftOutlined, PlusOutlined } from '@ant-design/icons-vue'
@@ -371,6 +378,35 @@ onMounted(() => {
   init()
 })
 
+// 监听路由变化，当编辑不同商品时重新加载数据
+watch(() => route.query.id, (newId, oldId) => {
+  if (newId && newId !== oldId) {
+    // 重置表单和数据
+    Object.assign(form, {
+      id: null,
+      name: '',
+      productCategoryId: undefined,
+      farmerId: undefined,
+      productSn: '',
+      pic: '',
+      price: undefined,
+      originalPrice: undefined,
+      stock: 0,
+      sale: 0,
+      unit: '斤',
+      publishStatus: 0,
+      detailHtml: ''
+    })
+    picFileList.value = []
+    skuRows.value = []
+    paramRows.value = []
+    selectedParamIds.value = new Set()
+
+    // 重新加载数据
+    init()
+  }
+})
+
 const init = async () => {
 
   const id = Number(route.query.id)
@@ -412,35 +448,58 @@ const fetchSkuList = async () => {
 
   skuRows.value = (rsp.data || []).map((item, i) => {
 
-    let spec = ''
+    // 从 specs 数组中提取规格名称和规格值
+    let specKey = ''
+    let specValue = ''
+    if (Array.isArray(item.specs) && item.specs.length > 0) {
+      // 取第一个规格（通常一个SKU只有一个主规格）
+      specKey = item.specs[0].specKey || ''
+      specValue = item.specs[0].specValue || ''
+    }
 
-    try {
-      const arr = JSON.parse(item.spData || '[]')
-      spec = arr?.[0]?.value || ''
-    } catch {}
+    console.log('SKU item:', item.id, 'specs:', item.specs, 'specKey:', specKey, 'specValue:', specValue)
 
     return {
       ...item,
-      spec,
+      specKey,
+      specValue,
       tempKey: item.id || `${Date.now()}-${i}`,
       price: item.price ? Number(item.price) : undefined,
-      stock: item.stock ? Number(item.stock) : 0
+      stock: item.stock ? Number(item.stock) : 0,
+      promotionPrice: item.promotionPrice ? Number(item.promotionPrice) : undefined,
+      lowStock: item.lowStock || 0
     }
   })
+
+  console.log('skuRows:', skuRows.value)
 }
 
 const skuColumns = [
   {
-    title: '规格',
+    title: '规格名称',
+    width: '15%',
     customRender: ({ record }) =>
       h(Input, {
         class: 'gm-field',
-        value: record.spec,
-        onChange: e => (record.spec = e.target.value)
+        value: record.specKey,
+        onChange: e => (record.specKey = e.target.value),
+        placeholder: '如：重量'
+      })
+  },
+  {
+    title: '规格值',
+    width: '15%',
+    customRender: ({ record }) =>
+      h(Input, {
+        class: 'gm-field',
+        value: record.specValue,
+        onChange: e => (record.specValue = e.target.value),
+        placeholder: '如：3斤'
       })
   },
   {
     title: 'SKU编码',
+    width: '15%',
     customRender: ({ record }) =>
       h(Input, {
         class: 'gm-field',
@@ -450,24 +509,56 @@ const skuColumns = [
   },
   {
     title: '价格',
+    width: '12%',
     customRender: ({ record }) =>
       h(InputNumber, {
         class: 'gm-field',
         value: record.price,
-        onChange: v => (record.price = v)
+        onChange: v => (record.price = v),
+        min: 0,
+        precision: 2
       })
   },
   {
     title: '库存',
+    width: '12%',
     customRender: ({ record }) =>
       h(InputNumber, {
         class: 'gm-field',
         value: record.stock,
-        onChange: v => (record.stock = v)
+        onChange: v => (record.stock = v),
+        min: 0
+      })
+  },
+  {
+    title: '促销价',
+    width: '12%',
+    customRender: ({ record }) =>
+      h(InputNumber, {
+        class: 'gm-field',
+        value: record.promotionPrice,
+        onChange: v => (record.promotionPrice = v),
+        min: 0,
+        precision: 2,
+        placeholder: '选填'
+      })
+  },
+  {
+    title: '预警库存',
+    width: '10%',
+    customRender: ({ record }) =>
+      h(InputNumber, {
+        class: 'gm-field',
+        value: record.lowStock,
+        onChange: v => (record.lowStock = v),
+        min: 0,
+        placeholder: '选填'
       })
   },
   {
     title: '操作',
+    width: '9%',
+    align: 'center',
     customRender: ({ record }) =>
       h(
         Popconfirm,
@@ -488,9 +579,13 @@ const handleAddSku = () => {
     tempKey: Date.now(),
     productId: form.id,
     skuCode: '',
-    spec: '',
+    specKey: '',
+    specValue: '',
     price: undefined,
-    stock: 0
+    stock: 0,
+    promotionPrice: undefined,
+    lowStock: 0,
+    pic: ''
   })
 }
 
@@ -520,12 +615,12 @@ const handleSaveSku = async () => {
       skuCode: row.skuCode,
       price: row.price,
       stock: row.stock,
-      promotionPrice: null,
-      lowStock: 0,
-      pic: '',
-      spData: JSON.stringify([
-        { key: '规格', value: row.spec }
-      ])
+      promotionPrice: row.promotionPrice || null,
+      lowStock: row.lowStock || 0,
+      pic: row.pic || '',
+      specs: [
+        { specKey: row.specKey || '', specValue: row.specValue || '' }
+      ]
     }))
 
     const rsp = await saveSkuList(form.id, payload)
@@ -571,7 +666,7 @@ const handleSubmit = async () => {
 .fixed-bottom-bar {
   position: fixed;
   bottom: 0;
-  left: 0;
+  left: 200px;
   right: 0;
   z-index: 99;
   display: flex;
@@ -581,6 +676,12 @@ const handleSubmit = async () => {
   background: #fff;
   border-top: 1px solid #f0f0f0;
   box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
+}
+
+@media (max-width: 768px) {
+  .fixed-bottom-bar {
+    left: 0;
+  }
 }
 
 .box {

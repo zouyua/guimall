@@ -53,6 +53,7 @@ public enum ResponseCodeEnum implements BaseExceptionInterface {
 
     // ----------- SKU库存异常状态码 -----------
     SKU_NOT_FOUND("30019", "SKU不存在"),
+    STOCK_NOT_ENOUGH("30021", "库存不足"),
 
     // ----------- 满减异常状态码 -----------
     FULL_REDUCTION_NOT_FOUND("30020", "满减规则不存在"),

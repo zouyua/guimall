@@ -1,5 +1,7 @@
 package com.gg.guimall.admin.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.gg.guimall.admin.model.vo.oms.*;
 import com.gg.guimall.admin.model.vo.oms.FindOmsOrderPageListReqVO;
@@ -7,8 +9,12 @@ import com.gg.guimall.admin.model.vo.oms.FindOmsOrderPageListRspVO;
 import com.gg.guimall.admin.service.OmsOrderService;
 import com.gg.guimall.common.domain.dos.OmsOrderDO;
 import com.gg.guimall.common.domain.dos.OmsOrderItemDO;
+import com.gg.guimall.common.domain.dos.SmsCouponHistoryDO;
 import com.gg.guimall.common.domain.mapper.OmsOrderItemMapper;
 import com.gg.guimall.common.domain.mapper.OmsOrderMapper;
+import com.gg.guimall.common.domain.mapper.PmsSkuStockMapper;
+import com.gg.guimall.common.domain.mapper.SmsCouponHistoryMapper;
+import com.gg.guimall.common.domain.mapper.SmsCouponMapper;
 import com.gg.guimall.common.enums.ResponseCodeEnum;
 import com.gg.guimall.common.exception.BizException;
 import com.gg.guimall.common.utils.PageResponse;
@@ -17,6 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -38,6 +45,15 @@ public class OmsOrderServiceImpl implements OmsOrderService {
 
     @Autowired
     private OmsOrderItemMapper orderItemMapper;
+
+    @Autowired
+    private PmsSkuStockMapper pmsSkuStockMapper;
+
+    @Autowired
+    private SmsCouponMapper smsCouponMapper;
+
+    @Autowired
+    private SmsCouponHistoryMapper smsCouponHistoryMapper;
 
     @Override
     public PageResponse<FindOmsOrderPageListRspVO> findOrderPageList(FindOmsOrderPageListReqVO reqVO) {
@@ -119,6 +135,7 @@ public class OmsOrderServiceImpl implements OmsOrderService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Response closeOrder(CloseOmsOrderReqVO reqVO) {
         OmsOrderDO orderDO = getValidOrder(reqVO.getId());
         // 允许关闭：待付款(0)、待发货(1)
@@ -132,6 +149,21 @@ public class OmsOrderServiceImpl implements OmsOrderService {
                 .note(reqVO.getNote())
                 .build();
         orderMapper.updateById(updateDO);
+
+        // 如果是待付款订单，解锁库存
+        if (Objects.equals(orderDO.getStatus(), 0)) {
+            unlockStock(orderDO.getId());
+            log.info("取消待付款订单，已解锁库存, orderId={}", orderDO.getId());
+        }
+        // 如果是待发货订单，恢复库存
+        else if (Objects.equals(orderDO.getStatus(), 1)) {
+            restoreStock(orderDO.getId());
+            log.info("取消待发货订单，已恢复库存, orderId={}", orderDO.getId());
+        }
+
+        // 恢复优惠券
+        rollbackCoupon(orderDO);
+
         return Response.success();
     }
 
@@ -160,6 +192,87 @@ public class OmsOrderServiceImpl implements OmsOrderService {
             throw new BizException(ResponseCodeEnum.ORDER_NOT_FOUND);
         }
         return orderDO;
+    }
+
+    /**
+     * 解锁库存（待付款订单取消时）
+     */
+    private void unlockStock(Long orderId) {
+        try {
+            LambdaQueryWrapper<OmsOrderItemDO> wrapper = Wrappers.lambdaQuery();
+            wrapper.eq(OmsOrderItemDO::getOrderId, orderId);
+            List<OmsOrderItemDO> items = orderItemMapper.selectList(wrapper);
+
+            for (OmsOrderItemDO item : items) {
+                if (Objects.nonNull(item.getProductSkuId()) && item.getProductSkuId() > 0) {
+                    int unlockResult = pmsSkuStockMapper.unlockStock(item.getProductSkuId(), item.getProductQuantity());
+                    if (unlockResult > 0) {
+                        log.info("库存已解锁, skuId={}, quantity={}, orderId={}", item.getProductSkuId(), item.getProductQuantity(), orderId);
+                    } else {
+                        log.warn("库存解锁失败, skuId={}, quantity={}, orderId=", item.getProductSkuId(), item.getProductQuantity(), orderId);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("解锁库存异常, orderId={}", orderId, e);
+        }
+    }
+
+    /**
+     * 恢复库存（待发货订单取消时）
+     */
+    private void restoreStock(Long orderId) {
+        try {
+            LambdaQueryWrapper<OmsOrderItemDO> wrapper = Wrappers.lambdaQuery();
+            wrapper.eq(OmsOrderItemDO::getOrderId, orderId);
+            List<OmsOrderItemDO> items = orderItemMapper.selectList(wrapper);
+
+            for (OmsOrderItemDO item : items) {
+                if (Objects.nonNull(item.getProductSkuId()) && item.getProductSkuId() > 0) {
+                    int restoreResult = pmsSkuStockMapper.restoreStock(item.getProductSkuId(), item.getProductQuantity());
+                    if (restoreResult > 0) {
+                        log.info("库存已恢复, skuId={}, quantity={}, orderId=", item.getProductSkuId(), item.getProductQuantity(), orderId);
+                    } else {
+                        log.warn("库存恢复失败, skuId={}, quantity={}, orderId={}", item.getProductSkuId(), item.getProductQuantity(), orderId);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("恢复库存异常, orderId={}", orderId, e);
+        }
+    }
+
+    /**
+     * 回滚优惠券
+     */
+    private void rollbackCoupon(OmsOrderDO order) {
+        if (Objects.isNull(order.getCouponId()) || order.getCouponId() <= 0) {
+            return;
+        }
+
+        try {
+            LambdaQueryWrapper<SmsCouponHistoryDO> wrapper = Wrappers.lambdaQuery();
+            wrapper.eq(SmsCouponHistoryDO::getOrderId, order.getId())
+                    .eq(SmsCouponHistoryDO::getCouponId, order.getCouponId())
+                    .eq(SmsCouponHistoryDO::getUseStatus, 1)
+                    .last("LIMIT 1");
+            SmsCouponHistoryDO history = smsCouponHistoryMapper.selectOne(wrapper);
+
+            if (Objects.nonNull(history)) {
+                SmsCouponHistoryDO updateHistory = new SmsCouponHistoryDO();
+                updateHistory.setId(history.getId());
+                updateHistory.setUseStatus(0);
+                updateHistory.setUseTime(null);
+                updateHistory.setOrderId(null);
+                updateHistory.setOrderSn(null);
+                smsCouponHistoryMapper.updateById(updateHistory);
+
+                smsCouponMapper.decrementUseCount(order.getCouponId());
+                log.info("优惠券已回滚, couponId={}, orderId={}", order.getCouponId(), order.getId());
+            }
+        } catch (Exception e) {
+            log.error("回滚优惠券异常, orderId={}, couponId={}", order.getId(), order.getCouponId(), e);
+        }
     }
 }
 

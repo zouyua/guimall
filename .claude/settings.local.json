@@ -44,7 +44,12 @@
       "Bash(find D:\\\\Java\\\\Project\\\\guimall\\\\guimall-vue3\\\\src\\\\api:*)",
       "Bash(mvn spring-boot:run -pl guimall-module-admin -am)",
       "Bash(find . -name \"pom.xml\" -path \"*/guimall-web/*\" -exec grep -l \"spring-boot-starter-web\" {} \\\\;)",
-      "Bash(taskkill:*)"
+      "Bash(taskkill:*)",
+      "Bash(wmic process:*)",
+      "Bash(xargs -r taskkill //F //PID)",
+      "Bash(/d/Nodejs/node.exe --version)",
+      "Bash(rm -rf node_modules/.vite)",
+      "Bash(mvn spring-boot:run)"
     ]
   }
 }
