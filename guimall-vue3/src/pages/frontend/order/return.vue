@@ -188,10 +188,15 @@ const handleSubmit = async () => {
 
   submitting.value = true
   try {
+    // 取订单的第一个商品作为退货商品
+    const firstProduct = orderDetail.value.items && orderDetail.value.items.length > 0
+      ? orderDetail.value.items[0]
+      : null
+
     const data = {
       orderId: orderDetail.value.id,
       memberId,
-      productId: null, // 整单退货，不指定商品
+      productId: firstProduct ? firstProduct.productId : null,
       reason: formData.value.reason,
       description: formData.value.description,
       returnAmount: parseFloat(formData.value.returnAmount),

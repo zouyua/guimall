@@ -1,6 +1,7 @@
 import axios from "axios";
-import { getToken, getMemberToken } from "./composables/cookie";
+import { getToken, getMemberToken, removeToken, removeMemberToken } from "./composables/cookie";
 import { showMessage } from "./composables/util";
+import router from "./router";
 
 // 创建 Axios 实例
 const instance = axios.create({
@@ -40,11 +41,30 @@ instance.interceptors.response.use(function (response) {
     // 超出 2xx 范围的状态码都会触发该函数。
     // 对响应错误做点什么
 
-    //若后台有错误提示就用提示文字，默认提示为‘请求失败’
-    let errorMsg = error.response.data.message || '请求失败'
+    // 处理 token 失效（401 未授权）
+    if (error.response && error.response.status === 401) {
+        const token = getToken();
+        const memberToken = getMemberToken();
+
+        // 清除失效的 token
+        if (token) {
+            removeToken();
+            showMessage('登录已过期，请重新登录', 'error');
+            router.push('/admin/login');
+        } else if (memberToken) {
+            removeMemberToken();
+            showMessage('登录已过期，请重新登录', 'error');
+            router.push('/member/login');
+        }
+
+        return Promise.reject(error);
+    }
+
+    //若后台有错误提示就用提示文字，默认提示为’请求失败’
+    let errorMsg = error.response?.data?.message || '请求失败'
     //显示错误消息
     showMessage(errorMsg, 'error')
-    
+
     return Promise.reject(error)
 })
 

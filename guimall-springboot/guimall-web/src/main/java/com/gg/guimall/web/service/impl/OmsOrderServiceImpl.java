@@ -13,6 +13,7 @@ import com.gg.guimall.common.domain.mapper.OmsCartItemMapper;
 import com.gg.guimall.common.domain.mapper.OmsOrderItemMapper;
 import com.gg.guimall.common.domain.mapper.OmsOrderMapper;
 import com.gg.guimall.common.domain.mapper.PmsProductMapper;
+import com.gg.guimall.common.domain.mapper.PmsSkuStockMapper;
 import com.gg.guimall.common.domain.mapper.SmsCouponHistoryMapper;
 import com.gg.guimall.common.domain.mapper.SmsCouponMapper;
 import com.gg.guimall.common.enums.ResponseCodeEnum;
@@ -29,6 +30,7 @@ import com.gg.guimall.web.model.vo.oms.SubmitOmsOrderRspVO;
 import com.gg.guimall.web.constants.MQConstants;
 import com.gg.guimall.web.model.dto.OrderTimeoutMessageDTO;
 import com.gg.guimall.web.service.OmsOrderService;
+import com.gg.guimall.web.service.StockWarningService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.spring.core.RocketMQTemplate;
 import org.springframework.beans.BeanUtils;
@@ -69,7 +71,16 @@ public class OmsOrderServiceImpl implements OmsOrderService {
     private SmsCouponHistoryMapper smsCouponHistoryMapper;
 
     @Autowired
+    private PmsSkuStockMapper pmsSkuStockMapper;
+
+    @Autowired
     private RocketMQTemplate rocketMQTemplate;
+
+    @Autowired
+    private StockWarningService stockWarningService;
+
+    @Autowired
+    private com.gg.guimall.common.domain.mapper.UmsMemberMapper umsMemberMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -90,6 +101,13 @@ public class OmsOrderServiceImpl implements OmsOrderService {
 
         BigDecimal totalAmount = reqVO.getTotalAmount();
         Long farmerId = null;
+
+        // 查询会员信息获取用户名
+        String memberUsername = null;
+        com.gg.guimall.common.domain.dos.UmsMemberDO memberDO = umsMemberMapper.selectById(reqVO.getMemberId());
+        if (Objects.nonNull(memberDO)) {
+            memberUsername = memberDO.getUsername();
+        }
 
         // 从第一个商品获取 farmerId
         if (!reqVO.getItems().isEmpty()) {
@@ -154,7 +172,7 @@ public class OmsOrderServiceImpl implements OmsOrderService {
                 .orderSn(orderSn)
                 .createTime(now)
                 .updateTime(now)
-                .memberUsername(null)
+                .memberUsername(memberUsername)
                 .totalAmount(totalAmount)
                 .payAmount(payAmount)
                 .freightAmount(BigDecimal.ZERO)
@@ -204,7 +222,7 @@ public class OmsOrderServiceImpl implements OmsOrderService {
         );
         log.info("订单超时延迟消息已发送, orderSn={}, delayLevel={}", orderSn, MQConstants.ORDER_TIMEOUT_DELAY_LEVEL);
 
-        // 插入订单商品明细
+        // 插入订单商品明细并锁定库存
         BigDecimal realAmount;
         for (SubmitOmsOrderReqVO.OrderItemVO item : reqVO.getItems()) {
             if (Objects.isNull(item) || Objects.isNull(item.getQuantity()) || item.getQuantity() <= 0) {
@@ -229,6 +247,19 @@ public class OmsOrderServiceImpl implements OmsOrderService {
                     .build();
 
             orderItemMapper.insert(orderItemDO);
+
+            // 锁定库存
+            if (Objects.nonNull(item.getProductSkuId()) && item.getProductSkuId() > 0) {
+                int lockResult = pmsSkuStockMapper.lockStock(item.getProductSkuId(), item.getQuantity());
+                if (lockResult <= 0) {
+                    log.error("库存不足，锁定失败, skuId={}, quantity={}", item.getProductSkuId(), item.getQuantity());
+                    throw new BizException(ResponseCodeEnum.STOCK_NOT_ENOUGH);
+                }
+                log.info("库存已锁定, skuId={}, quantity={}, orderId={}", item.getProductSkuId(), item.getQuantity(), orderId);
+
+                // 检查库存预警
+                stockWarningService.checkStockWarning(item.getProductSkuId());
+            }
         }
 
         // 如果是从购物车结算，删除购物车中已结算的商品

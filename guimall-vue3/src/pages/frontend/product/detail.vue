@@ -59,11 +59,13 @@
              <div class="relative z-10">
                <div class="flex items-baseline space-x-3 mb-2">
                  <span class="text-stone-500 font-bold">价格</span>
-                 <!-- 划线市场价 -->
-                 <span class="text-stone-400 text-lg line-through" v-if="product.marketPrice">¥{{ product.marketPrice }}</span>
-                 <!-- 当前展示价：SKU选中时用SKU价，否则用商品促销价/售价 -->
+                 <!-- 划线价格：选中SKU时显示SKU原价，否则显示商品市场价 -->
+                 <span class="text-stone-400 text-lg line-through" v-if="selectedSku ? selectedSku.price : product.marketPrice">
+                   ¥{{ selectedSku ? selectedSku.price : product.marketPrice }}
+                 </span>
+                 <!-- 当前展示价：SKU选中时优先用SKU促销价，否则用商品促销价，最后用SKU/商品售价 -->
                  <span class="text-4xl font-black text-emerald-600">
-                   ¥{{ selectedSku ? (selectedSku.promotionPrice || selectedSku.price) : (product.promotionPrice || product.price) }}
+                   ¥{{ selectedSku ? (selectedSku.promotionPrice || product.promotionPrice || selectedSku.price) : (product.promotionPrice || product.price) }}
                  </span>
                  <span class="text-stone-400 text-sm">/ {{ product.unit || '件' }}</span>
                </div>

@@ -108,6 +108,30 @@
       </a-spin>
     </a-card>
 
+    <!-- SKU库存 -->
+    <a-card title="SKU库存管理（必填）" class="mt-5">
+      <a-alert
+        class="mb-4"
+        type="warning"
+        show-icon
+        banner
+        message="至少添加一个SKU规格，否则用户无法下单购买"
+      />
+
+      <div class="mb-4">
+        <a-button type="primary" @click="handleAddSku">新增SKU</a-button>
+      </div>
+
+      <a-table
+        :dataSource="skuRows"
+        :columns="skuColumns"
+        rowKey="tempKey"
+        :pagination="false"
+        bordered
+      />
+
+    </a-card>
+
     <!-- 底部固定操作栏 -->
     <div class="fixed-bottom-bar">
       <a-button type="primary" @click="handleSubmit">提交</a-button>
@@ -120,7 +144,7 @@
 <script setup>
 import { reactive, ref, h, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { message, Input, Spin, Checkbox } from 'ant-design-vue'
+import { message, Input, InputNumber, Button, Popconfirm, Spin, Checkbox } from 'ant-design-vue'
 import { ArrowLeftOutlined, PlusOutlined } from '@ant-design/icons-vue'
 import { createProduct } from '@/api/admin/product'
 import { fetchProductCategoryOptions } from '@/api/admin/productCategory'
@@ -135,6 +159,9 @@ const categoryOptions = ref([])
 const farmerOptions = ref([])
 const publishChecked = ref(false)
 const picFileList = ref([])
+
+// SKU 管理
+const skuRows = ref([])
 
 // 动态参数行（模板驱动）
 const paramRows = ref([])
@@ -271,6 +298,121 @@ const buildProductParams = () => {
   return result
 }
 
+// SKU 表格列
+const skuColumns = [
+  {
+    title: '规格名称',
+    width: '15%',
+    customRender: ({ record }) =>
+      h(Input, {
+        value: record.specKey,
+        onChange: e => (record.specKey = e.target.value),
+        placeholder: '如：重量'
+      })
+  },
+  {
+    title: '规格值',
+    width: '15%',
+    customRender: ({ record }) =>
+      h(Input, {
+        value: record.specValue,
+        onChange: e => (record.specValue = e.target.value),
+        placeholder: '如：3斤'
+      })
+  },
+  {
+    title: 'SKU编码',
+    width: '15%',
+    customRender: ({ record }) =>
+      h(Input, {
+        value: record.skuCode,
+        onChange: e => (record.skuCode = e.target.value),
+        placeholder: '必填'
+      })
+  },
+  {
+    title: '价格',
+    width: '12%',
+    customRender: ({ record }) =>
+      h(InputNumber, {
+        value: record.price,
+        onChange: v => (record.price = v),
+        min: 0,
+        precision: 2,
+        placeholder: '必填'
+      })
+  },
+  {
+    title: '库存',
+    width: '12%',
+    customRender: ({ record }) =>
+      h(InputNumber, {
+        value: record.stock,
+        onChange: v => (record.stock = v),
+        min: 0,
+        placeholder: '必填'
+      })
+  },
+  {
+    title: '促销价',
+    width: '12%',
+    customRender: ({ record }) =>
+      h(InputNumber, {
+        value: record.promotionPrice,
+        onChange: v => (record.promotionPrice = v),
+        min: 0,
+        precision: 2,
+        placeholder: '选填'
+      })
+  },
+  {
+    title: '预警库存',
+    width: '10%',
+    customRender: ({ record }) =>
+      h(InputNumber, {
+        value: record.lowStock,
+        onChange: v => (record.lowStock = v),
+        min: 0,
+        placeholder: '选填'
+      })
+  },
+  {
+    title: '操作',
+    width: '9%',
+    align: 'center',
+    customRender: ({ record }) =>
+      h(
+        Popconfirm,
+        {
+          title: '确认删除?',
+          onConfirm: () => handleDeleteSku(record)
+        },
+        {
+          default: () =>
+            h(Button, { danger: true, size: 'small' }, () => '删除')
+        }
+      )
+  }
+]
+
+const handleAddSku = () => {
+  skuRows.value.push({
+    tempKey: Date.now(),
+    skuCode: '',
+    specKey: '',
+    specValue: '',
+    price: undefined,
+    stock: 0,
+    promotionPrice: undefined,
+    lowStock: 0,
+    pic: ''
+  })
+}
+
+const handleDeleteSku = (record) => {
+  skuRows.value = skuRows.value.filter(r => r.tempKey !== record.tempKey)
+}
+
 onMounted(async () => {
   const [categoryRsp, farmerRsp] = await Promise.all([
     fetchProductCategoryOptions(),
@@ -290,7 +432,30 @@ const handleSubmit = async () => {
     return
   }
 
-  await createProduct({
+  // 验证 SKU
+  if (skuRows.value.length === 0) {
+    message.error('请至少添加一个SKU规格')
+    return
+  }
+
+  // 验证每个 SKU 的必填字段
+  for (let i = 0; i < skuRows.value.length; i++) {
+    const sku = skuRows.value[i]
+    if (!sku.skuCode || !sku.skuCode.trim()) {
+      message.error(`第 ${i + 1} 个SKU的编码不能为空`)
+      return
+    }
+    if (!sku.price || sku.price <= 0) {
+      message.error(`第 ${i + 1} 个SKU的价格必须大于0`)
+      return
+    }
+    if (sku.stock === undefined || sku.stock === null || sku.stock < 0) {
+      message.error(`第 ${i + 1} 个SKU的库存不能为空`)
+      return
+    }
+  }
+
+  const productData = {
     productCategoryId: form.productCategoryId,
     farmerId: form.farmerId,
     name: form.name.trim(),
@@ -301,14 +466,52 @@ const handleSubmit = async () => {
     originalPrice: form.originalPrice,
     stock: form.stock,
     unit: form.unit?.trim() || null,
-    productParams: buildProductParams()
-  })
+    productParams: buildProductParams(),
+    skuStockList: skuRows.value.map(sku => ({
+      skuCode: sku.skuCode.trim(),
+      price: sku.price,
+      stock: sku.stock,
+      promotionPrice: sku.promotionPrice || null,
+      lowStock: sku.lowStock || 0,
+      pic: sku.pic || '',
+      specs: [
+        { specKey: sku.specKey || '', specValue: sku.specValue || '' }
+      ]
+    }))
+  }
+
+  await createProduct(productData)
 
   if (publishChecked.value) {
     message.info('商品已创建。请在商品列表点击"上架"开关完成上架。')
   } else {
     message.success('创建成功')
   }
+
+  // 清空表单
+  Object.assign(form, {
+    name: '',
+    productCategoryId: undefined,
+    farmerId: undefined,
+    productSn: '',
+    pic: '',
+    price: undefined,
+    originalPrice: undefined,
+    stock: 0,
+    unit: '斤',
+    publishStatus: 0,
+    detailHtml: ''
+  })
+
+  // 清空其他状态
+  publishChecked.value = false
+  picFileList.value = []
+  skuRows.value = []
+  selectedParamIds.value.clear()
+
+  // 重新加载参数列表以重置选中状态
+  await loadAllParams()
+
   goBack()
 }
 </script>

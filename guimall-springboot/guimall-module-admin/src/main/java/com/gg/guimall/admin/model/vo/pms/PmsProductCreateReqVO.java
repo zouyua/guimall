@@ -90,4 +90,46 @@ public class PmsProductCreateReqVO {
     @ApiModelProperty(value = "商品参数列表")
     private List<ProductParamItemVO> productParams;
 
+    @ApiModelProperty(value = "SKU库存列表")
+    private List<SkuStockItemVO> skuStockList;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class SkuStockItemVO {
+        @ApiModelProperty(value = "SKU编码")
+        private String skuCode;
+
+        @ApiModelProperty(value = "价格")
+        private BigDecimal price;
+
+        @ApiModelProperty(value = "库存")
+        private Integer stock;
+
+        @ApiModelProperty(value = "促销价")
+        private BigDecimal promotionPrice;
+
+        @ApiModelProperty(value = "预警库存")
+        private Integer lowStock;
+
+        @ApiModelProperty(value = "SKU图片")
+        private String pic;
+
+        @ApiModelProperty(value = "规格列表")
+        private List<SkuSpecItemVO> specs;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class SkuSpecItemVO {
+        @ApiModelProperty(value = "规格键")
+        private String specKey;
+
+        @ApiModelProperty(value = "规格值")
+        private String specValue;
+    }
+
 }
