@@ -12,32 +12,40 @@
       />
 
       <!-- 新增参数表单 -->
-      <div class="flex items-center gap-2 mb-4">
-        <span class="text-gray-600 whitespace-nowrap">参数名：</span>
-        <a-input
-          v-model:value="newParamName"
-          placeholder="如：保质期、产地"
-          style="width: 200px"
-          @pressEnter="handleCreate"
-        />
-        <span class="text-gray-600 whitespace-nowrap">参数值：</span>
-        <a-input
-          v-model:value="newParamValue"
-          placeholder="如：12个月、山东"
-          class="flex-1"
-          @pressEnter="handleCreate"
-        />
-        <span class="text-gray-600 whitespace-nowrap">排序：</span>
-        <a-input-number
-          v-model:value="newParamSort"
-          placeholder="排序"
-          :min="0"
-          style="width: 100px"
-        />
-        <a-button type="primary" @click="handleCreate" :disabled="!newParamName.trim() || !newParamValue.trim()">
-          添加参数
-        </a-button>
-      </div>
+      <a-form layout="inline" class="flex flex-wrap items-center gap-4 mb-4">
+        <a-form-item label="参数名">
+          <a-input
+            v-model:value="newParamForm.paramName"
+            placeholder="如：保质期、产地"
+            class="w-56"
+            @pressEnter="handleCreate"
+          />
+        </a-form-item>
+
+        <a-form-item label="参数值">
+          <a-input
+            v-model:value="newParamForm.paramValue"
+            placeholder="如：12个月、山东"
+            class="w-40"
+            @pressEnter="handleCreate"
+          />
+        </a-form-item>
+
+        <a-form-item label="排序">
+          <a-input-number
+            v-model:value="newParamForm.sort"
+            placeholder="排序"
+            :min="0"
+            class="w-24"
+          />
+        </a-form-item>
+
+        <a-form-item>
+          <a-button type="primary" @click="handleCreate" :disabled="!newParamForm.paramName.trim() || !newParamForm.paramValue.trim()">
+            添加参数
+          </a-button>
+        </a-form-item>
+      </a-form>
 
       <a-table
         :dataSource="dataList"
@@ -53,7 +61,7 @@
 </template>
 
 <script setup>
-import { ref, h, onMounted } from 'vue'
+import { ref, h, onMounted, reactive } from 'vue'
 import { message, Button, Popconfirm, Input, InputNumber } from 'ant-design-vue'
 import {
   fetchParamDefinitions,
@@ -66,9 +74,11 @@ const dataList = ref([])
 const loading = ref(false)
 
 // 新增状态
-const newParamName = ref('')
-const newParamValue = ref('')
-const newParamSort = ref(0)
+const newParamForm = reactive({
+  paramName: '',
+  paramValue: '',
+  sort: 0
+})
 
 // 编辑状态
 const editingId = ref(null)
@@ -170,18 +180,18 @@ const fetchList = async () => {
 }
 
 const handleCreate = async () => {
-  const name = newParamName.value.trim()
-  const value = newParamValue.value.trim()
+  const name = newParamForm.paramName.trim()
+  const value = newParamForm.paramValue.trim()
   if (!name || !value) return
   await createParamDefinition({
     paramName: name,
     paramValue: value,
-    sort: newParamSort.value || 0
+    sort: newParamForm.sort || 0
   })
   message.success('添加成功')
-  newParamName.value = ''
-  newParamValue.value = ''
-  newParamSort.value = 0
+  newParamForm.paramName = ''
+  newParamForm.paramValue = ''
+  newParamForm.sort = 0
   await fetchList()
 }
 
@@ -224,5 +234,18 @@ onMounted(() => {
 <style scoped>
 .box {
   min-height: calc(100vh - 64px);
+}
+
+:deep(.ant-input),
+:deep(.ant-input-number),
+:deep(.ant-select-selector) {
+  border: 1px solid #d9d9d9 !important;
+  border-radius: 6px !important;
+  font-size: 14px !important;
+  height: 32px !important;
+}
+
+:deep(.ant-input-number-input) {
+  font-size: 14px !important;
 }
 </style>

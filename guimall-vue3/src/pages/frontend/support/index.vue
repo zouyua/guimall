@@ -89,12 +89,12 @@
            style="cursor:grab; scrollbar-width:thin; scrollbar-color:rgba(0,0,0,0.1) transparent;">
         <div v-for="farmer in farmers" :key="farmer.id"
              class="flex-none w-[280px] bg-white rounded-[2.5rem] p-8 border border-stone-100 shadow-sm hover:shadow-xl transition-all duration-500">
-          <div class="flex items-center gap-4 mb-6">
+          <div class="flex items-start gap-4 mb-6">
             <img :src="farmer.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + farmer.name"
                  class="w-16 h-16 rounded-2xl border-2 border-emerald-100 object-cover" />
-            <div>
+            <div class="min-w-0 min-h-[52px]">
               <h3 class="text-xl font-black text-stone-900">{{ farmer.name }}</h3>
-              <p class="text-stone-400 text-sm">{{ farmer.city }}{{ farmer.region }}</p>
+              <p class="text-stone-400 text-sm leading-5 min-h-[40px] line-clamp-2">{{ farmer.city }}{{ farmer.region }}</p>
             </div>
           </div>
           <p class="text-sm text-stone-500 mb-4 line-clamp-2">{{ farmer.farmName }}</p>
@@ -151,7 +151,7 @@
                       <span class="text-xs text-stone-400 mr-1">¥</span>
                       <span class="text-3xl font-black text-emerald-600">{{ item.price }}</span>
                     </div>
-                    <button class="w-12 h-12 bg-stone-100 rounded-2xl flex items-center justify-center text-stone-600 hover:bg-emerald-600 hover:text-white transition-all">
+                    <button @click.stop="viewDetail(item.id)" class="w-12 h-12 bg-stone-100 rounded-2xl flex items-center justify-center text-stone-600 hover:bg-emerald-600 hover:text-white transition-all">
                       <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg>
                     </button>
                   </div>

@@ -139,7 +139,7 @@
                         <span class="text-xs text-stone-400 mr-1">¥</span>
                         <span class="text-3xl font-black text-emerald-600">{{ item.price }}</span>
                       </div>
-                      <button class="w-12 h-12 bg-stone-100 rounded-2xl flex items-center justify-center text-stone-600 hover:bg-emerald-600 hover:text-white transition-all">
+                      <button @click.stop="viewDetail(item.id)" class="w-12 h-12 bg-stone-100 rounded-2xl flex items-center justify-center text-stone-600 hover:bg-emerald-600 hover:text-white transition-all">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg>
                       </button>
                     </div>
