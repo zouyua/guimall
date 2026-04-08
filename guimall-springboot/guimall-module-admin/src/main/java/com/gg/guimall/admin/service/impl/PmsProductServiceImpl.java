@@ -3,16 +3,19 @@ package com.gg.guimall.admin.service.impl;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.gg.guimall.admin.model.vo.pms.*;
 import com.gg.guimall.admin.service.PmsProductService;
+import com.gg.guimall.admin.service.TraceQrcodeService;
 import com.gg.guimall.common.domain.dos.PmsProductDO;
 import com.gg.guimall.common.domain.dos.PmsProductCategoryDO;
 import com.gg.guimall.common.domain.dos.PmsProductParamDO;
 import com.gg.guimall.common.domain.dos.PmsParamDefinitionDO;
 import com.gg.guimall.common.domain.dos.PmsFarmerDO;
+import com.gg.guimall.common.domain.dos.PmsSkuStockDO;
 import com.gg.guimall.common.domain.mapper.PmsFarmerMapper;
 import com.gg.guimall.common.domain.mapper.PmsProductCategoryMapper;
 import com.gg.guimall.common.domain.mapper.PmsProductMapper;
 import com.gg.guimall.common.domain.mapper.PmsProductParamMapper;
 import com.gg.guimall.common.domain.mapper.PmsParamDefinitionMapper;
+import com.gg.guimall.common.domain.mapper.PmsSkuStockMapper;
 import com.gg.guimall.common.enums.ResponseCodeEnum;
 import com.gg.guimall.common.exception.BizException;
 import com.gg.guimall.common.utils.PageResponse;
@@ -52,6 +55,10 @@ public class PmsProductServiceImpl implements PmsProductService {
     private PmsProductParamMapper pmsProductParamMapper;
     @Autowired
     private PmsParamDefinitionMapper pmsParamDefinitionMapper;
+    @Autowired
+    private PmsSkuStockMapper pmsSkuStockMapper;
+    @Autowired
+    private TraceQrcodeService traceQrcodeService;
 
     /**
      * 创建商品
@@ -105,6 +112,18 @@ public class PmsProductServiceImpl implements PmsProductService {
 
         // 保存商品参数
         saveProductParams(productDO.getId(), reqVO.getProductParams());
+
+        // 保存SKU库存
+        saveSkuStockList(productDO.getId(), reqVO.getSkuStockList());
+
+        // 自动生成溯源二维码
+        try {
+            traceQrcodeService.generate(productDO.getId());
+            log.info("商品创建成功，已自动生成溯源二维码，productId: {}", productDO.getId());
+        } catch (Exception e) {
+            log.error("自动生成溯源二维码失败，productId: {}", productDO.getId(), e);
+            // 不影响商品创建，只记录日志
+        }
 
         return Response.success();
     }
@@ -411,6 +430,55 @@ public class PmsProductServiceImpl implements PmsProductService {
                     .build();
             pmsProductParamMapper.insert(paramDO);
             System.out.println("参数保存成功: " + paramDO);
+        }
+    }
+
+    /**
+     * 保存SKU库存列表
+     */
+    private void saveSkuStockList(Long productId, List<PmsProductCreateReqVO.SkuStockItemVO> skuStockList) {
+        if (CollectionUtils.isEmpty(skuStockList)) {
+            log.warn("SKU库存列表为空，跳过保存");
+            return;
+        }
+
+        log.info("开始保存SKU库存，商品ID: {}, SKU数量: {}", productId, skuStockList.size());
+
+        for (PmsProductCreateReqVO.SkuStockItemVO skuItem : skuStockList) {
+            // 序列化规格数据为JSON
+            String spDataJson = null;
+            if (!CollectionUtils.isEmpty(skuItem.getSpecs())) {
+                try {
+                    // 构建JSON格式: [{"key":"规格名","value":"规格值"}]
+                    StringBuilder jsonBuilder = new StringBuilder("[");
+                    for (int i = 0; i < skuItem.getSpecs().size(); i++) {
+                        PmsProductCreateReqVO.SkuSpecItemVO spec = skuItem.getSpecs().get(i);
+                        if (i > 0) jsonBuilder.append(",");
+                        jsonBuilder.append("{\"key\":\"").append(spec.getSpecKey())
+                                .append("\",\"value\":\"").append(spec.getSpecValue()).append("\"}");
+                    }
+                    jsonBuilder.append("]");
+                    spDataJson = jsonBuilder.toString();
+                } catch (Exception e) {
+                    log.error("序列化SKU规格数据失败", e);
+                }
+            }
+
+            PmsSkuStockDO skuStockDO = PmsSkuStockDO.builder()
+                    .productId(productId)
+                    .skuCode(skuItem.getSkuCode())
+                    .price(skuItem.getPrice())
+                    .stock(skuItem.getStock())
+                    .promotionPrice(skuItem.getPromotionPrice())
+                    .lowStock(skuItem.getLowStock() != null ? skuItem.getLowStock() : 0)
+                    .lockStock(0)
+                    .pic(skuItem.getPic())
+                    .sale(0)
+                    .spData(spDataJson)
+                    .build();
+
+            pmsSkuStockMapper.insert(skuStockDO);
+            log.info("SKU保存成功: skuCode={}, price={}, stock={}", skuItem.getSkuCode(), skuItem.getPrice(), skuItem.getStock());
         }
     }
 }

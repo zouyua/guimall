@@ -72,7 +72,8 @@ const itemColumns = [
   { title: '商品名称', dataIndex: 'productName', align: 'center' },
   { title: '规格', dataIndex: 'productAttr', align: 'center' },
   { title: '退货数量', dataIndex: 'productCount', align: 'center' },
-  { title: '单价', dataIndex: 'productPrice', align: 'center', customRender: ({ text }) => `¥ ${text}` }
+  { title: '原价', dataIndex: 'productPrice', align: 'center', customRender: ({ text }) => `¥ ${text}` },
+  { title: '实付', dataIndex: 'realAmount', align: 'center', customRender: ({ text }) => `¥ ${text}` }
 ]
 
 onMounted(() => {
@@ -109,7 +110,8 @@ const loadDetail = async () => {
         productName: d.productName || '',
         productAttr: d.productAttr || '',
         productCount: d.productCount || 0,
-        productPrice: d.productPrice || 0
+        productPrice: d.productPrice || 0,
+        realAmount: d.returnAmount || 0
       }
     ]
   })

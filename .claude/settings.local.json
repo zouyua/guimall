@@ -49,7 +49,9 @@
       "Bash(xargs -r taskkill //F //PID)",
       "Bash(/d/Nodejs/node.exe --version)",
       "Bash(rm -rf node_modules/.vite)",
-      "Bash(mvn spring-boot:run)"
+      "Bash(mvn spring-boot:run)",
+      "mcp__ide__getDiagnostics",
+      "Bash(mvn spring-boot:run -DskipTests)"
     ]
   }
 }

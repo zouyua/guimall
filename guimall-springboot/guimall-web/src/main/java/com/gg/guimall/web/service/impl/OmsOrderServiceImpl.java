@@ -79,6 +79,9 @@ public class OmsOrderServiceImpl implements OmsOrderService {
     @Autowired
     private StockWarningService stockWarningService;
 
+    @Autowired
+    private com.gg.guimall.common.domain.mapper.UmsMemberMapper umsMemberMapper;
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Response submitOrder(SubmitOmsOrderReqVO reqVO) {
@@ -98,6 +101,13 @@ public class OmsOrderServiceImpl implements OmsOrderService {
 
         BigDecimal totalAmount = reqVO.getTotalAmount();
         Long farmerId = null;
+
+        // 查询会员信息获取用户名
+        String memberUsername = null;
+        com.gg.guimall.common.domain.dos.UmsMemberDO memberDO = umsMemberMapper.selectById(reqVO.getMemberId());
+        if (Objects.nonNull(memberDO)) {
+            memberUsername = memberDO.getUsername();
+        }
 
         // 从第一个商品获取 farmerId
         if (!reqVO.getItems().isEmpty()) {
@@ -162,7 +172,7 @@ public class OmsOrderServiceImpl implements OmsOrderService {
                 .orderSn(orderSn)
                 .createTime(now)
                 .updateTime(now)
-                .memberUsername(null)
+                .memberUsername(memberUsername)
                 .totalAmount(totalAmount)
                 .payAmount(payAmount)
                 .freightAmount(BigDecimal.ZERO)
