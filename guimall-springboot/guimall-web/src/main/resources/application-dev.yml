@@ -36,6 +36,7 @@ minio:
 
 # 溯源二维码配置
 trace:
+  # 前端访问地址（需配置内网穿透域名，如 https://your-domain.fy.takin.cc）
   frontend-base-url: http://localhost:5173
 alipay:
    # 应用ID

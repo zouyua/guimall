@@ -487,6 +487,31 @@ const handleSubmit = async () => {
   } else {
     message.success('创建成功')
   }
+
+  // 清空表单
+  Object.assign(form, {
+    name: '',
+    productCategoryId: undefined,
+    farmerId: undefined,
+    productSn: '',
+    pic: '',
+    price: undefined,
+    originalPrice: undefined,
+    stock: 0,
+    unit: '斤',
+    publishStatus: 0,
+    detailHtml: ''
+  })
+
+  // 清空其他状态
+  publishChecked.value = false
+  picFileList.value = []
+  skuRows.value = []
+  selectedParamIds.value.clear()
+
+  // 重新加载参数列表以重置选中状态
+  await loadAllParams()
+
   goBack()
 }
 </script>
