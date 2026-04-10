@@ -112,6 +112,15 @@ public class OmsOrderServiceImpl implements OmsOrderService {
         FindOmsOrderDetailRspVO rspVO = new FindOmsOrderDetailRspVO();
         BeanUtils.copyProperties(orderDO, rspVO);
         rspVO.setItems(items);
+
+        // 查询优惠券名称
+        if (Objects.nonNull(orderDO.getCouponId()) && orderDO.getCouponId() > 0) {
+            com.gg.guimall.common.domain.dos.SmsCouponDO coupon = smsCouponMapper.selectById(orderDO.getCouponId());
+            if (Objects.nonNull(coupon)) {
+                rspVO.setCouponName(coupon.getName());
+            }
+        }
+
         return Response.success(rspVO);
     }
 
@@ -178,6 +187,24 @@ public class OmsOrderServiceImpl implements OmsOrderService {
         OmsOrderDO updateDO = OmsOrderDO.builder()
                 .id(orderDO.getId())
                 .note(reqVO.getNote())
+                .build();
+        orderMapper.updateById(updateDO);
+        return Response.success();
+    }
+
+    @Override
+    public Response confirmReceipt(Long id) {
+        OmsOrderDO orderDO = getValidOrder(id);
+        // 仅"已发货(2)"允许确认收货 -> "已完成(3)"
+        if (!Objects.equals(orderDO.getStatus(), 2)) {
+            throw new BizException(ResponseCodeEnum.ORDER_STATUS_ILLEGAL);
+        }
+
+        OmsOrderDO updateDO = OmsOrderDO.builder()
+                .id(orderDO.getId())
+                .status(3)
+                .confirmStatus(1)
+                .receiveTime(LocalDateTime.now())
                 .build();
         orderMapper.updateById(updateDO);
         return Response.success();

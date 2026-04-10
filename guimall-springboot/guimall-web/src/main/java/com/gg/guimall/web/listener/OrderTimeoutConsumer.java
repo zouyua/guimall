@@ -5,11 +5,14 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.gg.guimall.common.domain.dos.OmsOrderDO;
 import com.gg.guimall.common.domain.dos.OmsOrderItemDO;
 import com.gg.guimall.common.domain.dos.SmsCouponHistoryDO;
+import com.gg.guimall.common.domain.dos.UmsIntegrationHistoryDO;
 import com.gg.guimall.common.domain.mapper.OmsOrderItemMapper;
 import com.gg.guimall.common.domain.mapper.OmsOrderMapper;
 import com.gg.guimall.common.domain.mapper.PmsSkuStockMapper;
 import com.gg.guimall.common.domain.mapper.SmsCouponHistoryMapper;
 import com.gg.guimall.common.domain.mapper.SmsCouponMapper;
+import com.gg.guimall.common.domain.mapper.UmsIntegrationHistoryMapper;
+import com.gg.guimall.common.domain.mapper.UmsMemberMapper;
 import com.gg.guimall.web.constants.MQConstants;
 import com.gg.guimall.web.model.dto.OrderTimeoutMessageDTO;
 import lombok.extern.slf4j.Slf4j;
@@ -48,6 +51,12 @@ public class OrderTimeoutConsumer implements RocketMQListener<OrderTimeoutMessag
     @Autowired
     private PmsSkuStockMapper pmsSkuStockMapper;
 
+    @Autowired
+    private UmsMemberMapper umsMemberMapper;
+
+    @Autowired
+    private UmsIntegrationHistoryMapper integrationHistoryMapper;
+
     @Override
     public void onMessage(OrderTimeoutMessageDTO message) {
         String orderSn = message.getOrderSn();
@@ -81,6 +90,9 @@ public class OrderTimeoutConsumer implements RocketMQListener<OrderTimeoutMessag
 
             // 回滚优惠券
             rollbackCoupon(order);
+
+            // 退还积分
+            rollbackIntegration(order);
         } catch (Exception e) {
             log.error("处理订单超时消息异常, orderSn={}", orderSn, e);
         }
@@ -144,6 +156,32 @@ public class OrderTimeoutConsumer implements RocketMQListener<OrderTimeoutMessag
             }
         } catch (Exception e) {
             log.error("回滚优惠券异常, orderId={}, couponId={}", order.getId(), order.getCouponId(), e);
+        }
+    }
+    /**
+     * 退还积分：将订单使用的积分退回会员账户
+     */
+    private void rollbackIntegration(OmsOrderDO order) {
+        if (Objects.isNull(order.getUseIntegration()) || order.getUseIntegration() <= 0) {
+            return;
+        }
+
+        try {
+            umsMemberMapper.addIntegration(order.getMemberId(), order.getUseIntegration());
+            // 记录积分退还历史
+            UmsIntegrationHistoryDO historyDO = UmsIntegrationHistoryDO.builder()
+                    .memberId(order.getMemberId())
+                    .changeCount(order.getUseIntegration())
+                    .changeType(0) // 获取
+                    .sourceType(4) // 取消退还
+                    .sourceId(order.getId())
+                    .note("订单超时取消退还积分，订单号：" + order.getOrderSn())
+                    .createTime(java.time.LocalDateTime.now())
+                    .build();
+            integrationHistoryMapper.insert(historyDO);
+            log.info("积分已退还, memberId={}, integration={}, orderId={}", order.getMemberId(), order.getUseIntegration(), order.getId());
+        } catch (Exception e) {
+            log.error("退还积分异常, orderId={}, integration={}", order.getId(), order.getUseIntegration(), e);
         }
     }
 }

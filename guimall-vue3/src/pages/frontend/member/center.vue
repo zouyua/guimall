@@ -43,6 +43,15 @@
             </div>
             <h3 class="mt-4 text-xl font-bold text-stone-800">{{ memberInfo.nickname || '用户' }}</h3>
             <p class="text-stone-400 text-sm mt-1">{{ memberInfo.phone || '暂无手机号' }}</p>
+            <div class="mt-3 flex items-center justify-center gap-1 text-emerald-600 font-semibold text-sm">
+              <GiftOutlined />
+              <span>积分：{{ memberInfo.integration || 0 }}</span>
+            </div>
+            <div v-if="currentLevelInfo" class="mt-2 flex items-center justify-center gap-1 text-amber-600 font-semibold text-sm">
+              <CrownOutlined />
+              <span>{{ currentLevelInfo.name }}</span>
+              <span v-if="currentLevelInfo.discount < 100" class="text-xs text-amber-500">（{{ (currentLevelInfo.discount / 10).toFixed(1) }}折）</span>
+            </div>
             <div class="mt-6 space-y-2">
               <div
                 v-for="tab in tabs" :key="tab.key"
@@ -96,6 +105,75 @@
             </a-form>
           </div>
 
+          <!-- 会员等级 -->
+          <div v-show="activeTab === 'level'" class="bg-white rounded-3xl shadow-sm border border-stone-100 p-8">
+            <h2 class="text-xl font-bold text-stone-800 mb-6 flex items-center gap-2">
+              <CrownOutlined class="text-amber-500" />
+              会员等级
+            </h2>
+
+            <!-- 当前等级卡片 -->
+            <div class="mb-8 rounded-2xl overflow-hidden"
+              :class="currentLevelInfo && currentLevelInfo.level > 0
+                ? 'bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200'
+                : 'bg-gradient-to-r from-stone-50 to-stone-100 border border-stone-200'">
+              <div class="p-6 flex items-center justify-between">
+                <div>
+                  <div class="text-sm text-stone-500 mb-1">当前等级</div>
+                  <div class="text-2xl font-black" :class="currentLevelInfo && currentLevelInfo.level > 0 ? 'text-amber-700' : 'text-stone-700'">
+                    {{ currentLevelInfo ? currentLevelInfo.name : '普通会员' }}
+                  </div>
+                  <div v-if="currentLevelInfo && currentLevelInfo.discount < 100" class="text-sm text-amber-600 mt-1 font-medium">
+                    享受全场 {{ (currentLevelInfo.discount / 10).toFixed(1) }} 折优惠
+                  </div>
+                  <div v-else class="text-sm text-stone-400 mt-1">暂无折扣特权</div>
+                </div>
+                <div class="text-5xl" :class="currentLevelInfo && currentLevelInfo.level > 0 ? 'text-amber-300' : 'text-stone-300'">
+                  <CrownOutlined />
+                </div>
+              </div>
+            </div>
+
+            <!-- 等级列表 -->
+            <h3 class="font-bold text-stone-700 mb-4">全部等级</h3>
+            <a-spin :spinning="levelLoading">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div v-for="lv in levelList" :key="lv.id"
+                  :class="[
+                    'rounded-2xl border p-5 transition-all',
+                    isCurrentLevel(lv) ? 'border-amber-400 bg-amber-50/50 ring-1 ring-amber-200' : 'border-stone-200 hover:border-amber-300 hover:shadow-md'
+                  ]">
+                  <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                      <CrownOutlined :class="isCurrentLevel(lv) ? 'text-amber-500' : 'text-stone-400'" />
+                      <span class="font-bold text-lg text-stone-800">{{ lv.name }}</span>
+                    </div>
+                    <span v-if="isCurrentLevel(lv)" class="bg-amber-100 text-amber-700 text-xs font-bold px-2.5 py-1 rounded-full">当前</span>
+                  </div>
+                  <div class="text-sm text-stone-500 mb-3">{{ lv.note || '暂无说明' }}</div>
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <span v-if="lv.discount < 100" class="text-emerald-600 font-bold text-sm">{{ (lv.discount / 10).toFixed(1) }}折优惠</span>
+                      <span v-else class="text-stone-400 text-sm">无折扣</span>
+                    </div>
+                    <div v-if="!isCurrentLevel(lv) && canUpgrade(lv)">
+                      <a-button type="primary" size="small"
+                        class="bg-amber-500 hover:bg-amber-600 border-amber-500"
+                        :loading="purchaseLoading === lv.id"
+                        @click="handlePurchase(lv)">
+                        ¥{{ lv.price }} 开通
+                      </a-button>
+                    </div>
+                    <div v-else-if="!isCurrentLevel(lv) && !canUpgrade(lv)">
+                      <span class="text-xs text-stone-400">已拥有更高等级</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <a-empty v-if="levelList.length === 0 && !levelLoading" description="暂无等级数据" class="my-10" />
+            </a-spin>
+          </div>
+
           <!-- 收货地址 -->
           <div v-show="activeTab === 'address'" class="bg-white rounded-3xl shadow-sm border border-stone-100 p-8">
             <div class="flex items-center justify-between mb-6">
@@ -137,6 +215,58 @@
                   </a-popconfirm>
                 </div>
               </div>
+            </div>
+          </div>
+
+          <!-- 我的积分 -->
+          <div v-show="activeTab === 'integration'" class="bg-white rounded-3xl shadow-sm border border-stone-100 p-8">
+            <h2 class="text-xl font-bold text-stone-800 mb-6 flex items-center gap-2">
+              <GiftOutlined class="text-emerald-600" />
+              我的积分
+            </h2>
+
+            <!-- 积分概览 -->
+            <div class="grid grid-cols-2 gap-6 mb-8">
+              <div class="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-2xl p-6 text-center">
+                <div class="text-3xl font-black text-emerald-700">{{ memberInfo.integration || 0 }}</div>
+                <div class="text-sm text-emerald-600 mt-1">当前可用积分</div>
+              </div>
+              <div class="bg-gradient-to-br from-stone-50 to-stone-100 rounded-2xl p-6 text-center">
+                <div class="text-3xl font-black text-stone-700">{{ memberInfo.historyIntegration || 0 }}</div>
+                <div class="text-sm text-stone-500 mt-1">历史累计积分</div>
+              </div>
+            </div>
+
+            <div class="text-xs text-stone-400 mb-4 p-3 bg-stone-50 rounded-xl">
+              <p>积分规则：确认收货后，按实付金额每1元获得1积分；下单时可使用积分抵扣，100积分 = 1元。</p>
+            </div>
+
+            <!-- 积分历史 -->
+            <h3 class="font-bold text-stone-700 mb-4">积分变动记录</h3>
+            <a-spin :spinning="integrationLoading">
+              <div v-if="integrationList.length > 0" class="space-y-3">
+                <div v-for="item in integrationList" :key="item.id"
+                     class="flex items-center justify-between p-4 border border-stone-100 rounded-xl hover:bg-stone-50 transition-colors">
+                  <div>
+                    <div class="font-medium text-stone-800">{{ item.note || '积分变动' }}</div>
+                    <div class="text-xs text-stone-400 mt-1">{{ formatDateTime(item.createTime) }}</div>
+                  </div>
+                  <div :class="item.changeType === 0 ? 'text-emerald-600' : 'text-red-500'" class="text-lg font-bold">
+                    {{ item.changeType === 0 ? '+' : '-' }}{{ item.changeCount }}
+                  </div>
+                </div>
+              </div>
+              <a-empty v-else description="暂无积分记录" class="my-10" />
+            </a-spin>
+
+            <div v-if="integrationTotal > integrationSize" class="mt-6 flex justify-center">
+              <a-pagination
+                v-model:current="integrationCurrent"
+                :pageSize="integrationSize"
+                :total="integrationTotal"
+                size="small"
+                :show-total="(t) => `共 ${t} 条`"
+              />
             </div>
           </div>
 
@@ -211,7 +341,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import {
@@ -221,7 +351,9 @@ import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
-  CameraOutlined
+  CameraOutlined,
+  GiftOutlined,
+  CrownOutlined
 } from '@ant-design/icons-vue'
 import {
   getMemberInfoApi,
@@ -231,7 +363,11 @@ import {
   addAddress,
   updateAddress,
   deleteAddress,
-  setDefaultAddress
+  setDefaultAddress,
+  getIntegrationHistory,
+  getMemberLevelList,
+  getCurrentMemberLevel,
+  purchaseMemberLevel
 } from '@/api/frontend/member'
 import { uploadFile } from '@/api/admin/upload'
 import { getMemberInfo, isMemberLoggedIn, setMemberInfo } from '@/composables/member'
@@ -243,7 +379,9 @@ const defaultAvatar = 'https://cdn-icons-png.flaticon.com/128/3135/3135715.png'
 // 标签页
 const tabs = [
   { key: 'profile', label: '个人资料', icon: UserOutlined },
+  { key: 'level', label: '会员等级', icon: CrownOutlined },
   { key: 'address', label: '收货地址', icon: EnvironmentOutlined },
+  { key: 'integration', label: '我的积分', icon: GiftOutlined },
   { key: 'password', label: '修改密码', icon: LockOutlined }
 ]
 const activeTab = ref('profile')
@@ -287,6 +425,89 @@ const addressForm = reactive({
 // 地址弹窗省市区级联
 const addressRegionValue = ref([])
 
+// 会员等级相关
+const levelList = ref([])
+const currentLevelInfo = ref(null)
+const levelLoading = ref(false)
+const purchaseLoading = ref(null)
+
+const isCurrentLevel = (lv) => {
+  return currentLevelInfo.value && currentLevelInfo.value.id === lv.id
+}
+
+const canUpgrade = (lv) => {
+  if (!currentLevelInfo.value) return lv.level > 0
+  return lv.level > currentLevelInfo.value.level
+}
+
+const loadLevelData = async () => {
+  if (!memberId.value) return
+  levelLoading.value = true
+  try {
+    const [listRes, currentRes] = await Promise.all([
+      getMemberLevelList(),
+      getCurrentMemberLevel(memberId.value)
+    ])
+    if (listRes.success) levelList.value = listRes.data || []
+    if (currentRes.success) currentLevelInfo.value = currentRes.data
+  } catch (e) {
+    // 静默处理
+  } finally {
+    levelLoading.value = false
+  }
+}
+
+const handlePurchase = async (lv) => {
+  purchaseLoading.value = lv.id
+  try {
+    const res = await purchaseMemberLevel(memberId.value, lv.id)
+    if (res.success && res.data) {
+      // 跳转到支付页面
+      const { orderSn, payAmount } = res.data
+      message.info('订单已创建，正在跳转支付页面...')
+      router.push(`/pay?orderSn=${orderSn}&payAmount=${payAmount}`)
+    } else {
+      message.error(res.message || '创建订单失败')
+    }
+  } catch (e) {
+    message.error('创建订单失败，请重试')
+  } finally {
+    purchaseLoading.value = null
+  }
+}
+
+// 积分相关
+const integrationList = ref([])
+const integrationCurrent = ref(1)
+const integrationSize = 10
+const integrationTotal = ref(0)
+const integrationLoading = ref(false)
+
+const loadIntegrationHistory = async () => {
+  if (!memberId.value) return
+  integrationLoading.value = true
+  try {
+    const res = await getIntegrationHistory({
+      memberId: memberId.value,
+      current: integrationCurrent.value,
+      size: integrationSize
+    })
+    if (res.success) {
+      integrationList.value = res.data || []
+      integrationTotal.value = res.total || 0
+    }
+  } catch (e) {
+    message.error('加载积分记录失败')
+  } finally {
+    integrationLoading.value = false
+  }
+}
+
+const formatDateTime = (dt) => {
+  if (!dt) return ''
+  return String(dt).replace('T', ' ').slice(0, 19)
+}
+
 const onAddressRegionChange = (value) => {
   if (value && value.length >= 2) {
     addressForm.province = value[0]
@@ -328,6 +549,8 @@ const initData = async () => {
       profileForm.phone = info?.phone || ''
     }
     loadAddresses()
+    // 加载会员等级（sidebar要显示）
+    loadLevelData()
   }
 }
 
@@ -518,6 +741,20 @@ const handleSetDefault = async (id) => {
 
 onMounted(() => {
   initData()
+})
+
+// 切换到积分tab时加载数据
+watch(activeTab, (val) => {
+  if (val === 'integration') {
+    loadIntegrationHistory()
+  } else if (val === 'level') {
+    loadLevelData()
+  }
+})
+
+// 积分翻页
+watch(integrationCurrent, () => {
+  loadIntegrationHistory()
 })
 </script>
 

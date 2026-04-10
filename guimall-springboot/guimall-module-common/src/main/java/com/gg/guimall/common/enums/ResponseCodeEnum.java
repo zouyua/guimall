@@ -90,6 +90,10 @@ public enum ResponseCodeEnum implements BaseExceptionInterface {
     COUPON_NOT_BELONG_TO_MEMBER("60007", "该优惠券不属于当前会员"),
     COUPON_ALREADY_USED("60008", "优惠券已使用或已过期"),
 
+    // ----------- 积分异常状态码 -----------
+    INTEGRATION_NOT_ENOUGH("70001", "积分不足"),
+    INTEGRATION_DEDUCT_FAIL("70002", "积分扣减失败"),
+
     ;
 
     // 异常码

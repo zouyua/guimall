@@ -268,6 +268,11 @@ const routes = [
                 meta: { title: '溯源记录管理' }
             },
             {
+                path: 'trace/recordType',
+                component: () => import('@/pages/admin/trace/recordType.vue'),
+                meta: { title: '记录类型管理' }
+            },
+            {
                 path: 'ums/admin',
                 component: () => import('@/pages/admin/ums/admin/index.vue'),
                 meta: { title: '角色管理' }
@@ -296,6 +301,21 @@ const routes = [
                 path: 'ums/menu/update',
                 component: () => import('@/pages/admin/ums/menu/update.vue'),
                 meta: { title: '编辑菜单' }
+            },
+            {
+                path: 'ums/integration',
+                component: () => import('@/pages/admin/ums/integration/index.vue'),
+                meta: { title: '积分管理' }
+            },
+            {
+                path: 'ums/member',
+                component: () => import('@/pages/admin/ums/member/index.vue'),
+                meta: { title: '会员管理' }
+            },
+            {
+                path: 'ums/memberLevel',
+                component: () => import('@/pages/admin/ums/memberLevel/index.vue'),
+                meta: { title: '会员等级管理' }
             }
         ]
     }

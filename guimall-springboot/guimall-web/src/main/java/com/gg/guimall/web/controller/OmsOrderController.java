@@ -83,5 +83,12 @@ public class OmsOrderController {
         long remaining = ORDER_TIMEOUT_MINUTES * 60 - elapsed;
         return Response.success(Math.max(remaining, 0));
     }
+
+    @PostMapping("/confirmReceipt")
+    @ApiOperation(value = "确认收货（前台）")
+    @ApiOperationLog(description = "确认收货（前台）")
+    public Response confirmReceipt(@RequestParam Long orderId, @RequestParam Long memberId) {
+        return omsOrderService.confirmReceipt(orderId, memberId);
+    }
 }
 

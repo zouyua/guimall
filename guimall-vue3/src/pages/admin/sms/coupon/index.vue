@@ -8,6 +8,15 @@
           <a-input v-model:value="searchName" placeholder="请输入名称" class="w-56" allow-clear />
         </a-form-item>
 
+        <a-form-item label="优惠类型">
+          <a-select v-model:value="searchType" placeholder="全部类型" class="!w-40" allow-clear>
+            <a-select-option :value="0">全场赠券</a-select-option>
+            <a-select-option :value="1">会员赠券</a-select-option>
+            <a-select-option :value="2">购物赠券</a-select-option>
+            <a-select-option :value="3">注册赠券</a-select-option>
+          </a-select>
+        </a-form-item>
+
         <a-form-item>
           <a-button type="primary" @click="handleSearch">查询</a-button>
           <a-button class="ml-2" @click="handleReset">重置</a-button>
@@ -26,7 +35,7 @@
         </a-button>
       </div>
 
-      <a-table :dataSource="pagedData" :columns="columns" :pagination="false" rowKey="id" bordered class="w-full" />
+      <a-table :dataSource="pagedData" :columns="columns" :pagination="false" rowKey="id" bordered class="w-full" :scroll="{ x: 1100 }" />
 
       <div class="mt-6 flex justify-center">
         <a-pagination
@@ -49,7 +58,7 @@
 // 职责：查询/分页/删除/跳转新增编辑/查看领取记录
 import { ref, computed, h, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { Button, Popconfirm, message } from 'ant-design-vue'
+import { Button, Popconfirm, Tag, message } from 'ant-design-vue'
 import { PlusOutlined, EditOutlined, UnorderedListOutlined, DeleteOutlined } from '@ant-design/icons-vue'
 import { deleteCoupon, fetchCouponList } from '@/api/admin/coupon'
 
@@ -57,6 +66,11 @@ const router = useRouter()
 
 // 查询条件
 const searchName = ref('')
+const searchType = ref()
+
+// 优惠券类型字典
+const COUPON_TYPE_LABEL = { 0: '全场赠券', 1: '会员赠券', 2: '购物赠券', 3: '注册赠券' }
+const COUPON_TYPE_COLOR = { 0: 'blue', 1: 'green', 2: 'orange', 3: 'purple' }
 
 // 列表数据与分页状态
 const allRows = ref([])
@@ -74,12 +88,13 @@ const columns = [
     width: 70,
     customRender: ({ index }) => (current.value - 1) * size.value + index + 1
   },
-  { title: '优惠券名称', dataIndex: 'name', align: 'center', ellipsis: true },
+  { title: '优惠券名称', dataIndex: 'name', align: 'center', width: 180, ellipsis: true },
   {
     title: '优惠类型',
     align: 'center',
     width: 120,
-    customRender: () => '满减券'
+    customRender: ({ record }) =>
+      h(Tag, { color: COUPON_TYPE_COLOR[record.type] || 'default' }, () => COUPON_TYPE_LABEL[record.type] || '未知')
   },
   { title: '优惠金额', dataIndex: 'amount', align: 'center', width: 100 },
   { title: '发行数量', dataIndex: 'count', align: 'center', width: 100 },
@@ -94,6 +109,7 @@ const columns = [
     title: '操作',
     align: 'center',
     width: 280,
+    fixed: 'right',
     customRender: ({ record }) =>
       h(
         'div',
@@ -154,6 +170,7 @@ const handleSearch = () => {
 const handleReset = () => {
   // 重置所有查询条件，并重新拉取列表
   searchName.value = ''
+  searchType.value = undefined
   const prev = current.value
   current.value = 1
   if (prev === 1) fetchList()
@@ -181,8 +198,8 @@ const fetchList = async () => {
     size: size.value
   }
   if (searchName.value.trim()) reqVO.name = searchName.value.trim()
-  // 仅保留满减功能，固定传 type=0
-  reqVO.type = 0
+  // 支持按类型筛选，不传则查询所有类型
+  if (searchType.value !== undefined && searchType.value !== null) reqVO.type = searchType.value
   const rsp = await fetchCouponList(reqVO)
   if (!rsp?.success) {
     message.error(rsp?.message || '获取优惠券列表失败')

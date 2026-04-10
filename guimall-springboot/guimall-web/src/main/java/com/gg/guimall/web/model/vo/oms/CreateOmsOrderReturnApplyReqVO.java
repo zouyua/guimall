@@ -48,4 +48,7 @@ public class CreateOmsOrderReturnApplyReqVO {
     @NotNull(message = "退货金额不能为空")
     @ApiModelProperty(value = "退货金额", required = true)
     private BigDecimal returnAmount;
+
+    @ApiModelProperty(value = "退货快递单号")
+    private String deliverySn;
 }

@@ -7,12 +7,15 @@ import com.gg.guimall.common.domain.dos.OmsOrderItemDO;
 import com.gg.guimall.common.domain.dos.OmsOrderReturnApplyDO;
 import com.gg.guimall.common.domain.dos.OmsOrderReturnReasonDO;
 import com.gg.guimall.common.domain.dos.SmsCouponHistoryDO;
+import com.gg.guimall.common.domain.dos.UmsIntegrationHistoryDO;
 import com.gg.guimall.common.domain.mapper.OmsOrderItemMapper;
 import com.gg.guimall.common.domain.mapper.OmsOrderMapper;
 import com.gg.guimall.common.domain.mapper.OmsOrderReturnApplyMapper;
 import com.gg.guimall.common.domain.mapper.OmsOrderReturnReasonMapper;
 import com.gg.guimall.common.domain.mapper.SmsCouponHistoryMapper;
 import com.gg.guimall.common.domain.mapper.SmsCouponMapper;
+import com.gg.guimall.common.domain.mapper.UmsIntegrationHistoryMapper;
+import com.gg.guimall.common.domain.mapper.UmsMemberMapper;
 import com.gg.guimall.common.enums.ResponseCodeEnum;
 import com.gg.guimall.common.exception.BizException;
 import com.gg.guimall.common.utils.Response;
@@ -54,6 +57,12 @@ public class OmsOrderReturnApplyServiceImpl implements OmsOrderReturnApplyServic
 
     @Autowired
     private SmsCouponMapper couponMapper;
+
+    @Autowired
+    private UmsMemberMapper umsMemberMapper;
+
+    @Autowired
+    private UmsIntegrationHistoryMapper integrationHistoryMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -114,6 +123,7 @@ public class OmsOrderReturnApplyServiceImpl implements OmsOrderReturnApplyServic
                 .reason(reqVO.getReason())
                 .description(reqVO.getDescription())
                 .proofPics(reqVO.getProofPics())
+                .deliverySn(reqVO.getDeliverySn())
                 .createTime(LocalDateTime.now())
                 .build();
 
@@ -163,6 +173,22 @@ public class OmsOrderReturnApplyServiceImpl implements OmsOrderReturnApplyServic
                 // 减少优惠券使用数量
                 couponMapper.decrementUseCount(orderDO.getCouponId());
             }
+        }
+
+        // 如果使用了积分，退还积分
+        if (Objects.nonNull(orderDO.getUseIntegration()) && orderDO.getUseIntegration() > 0) {
+            umsMemberMapper.addIntegration(reqVO.getMemberId(), orderDO.getUseIntegration());
+            // 记录积分退还历史
+            UmsIntegrationHistoryDO historyDO = UmsIntegrationHistoryDO.builder()
+                    .memberId(reqVO.getMemberId())
+                    .changeCount(orderDO.getUseIntegration())
+                    .changeType(0) // 获取
+                    .sourceType(4) // 取消退还
+                    .sourceId(orderDO.getId())
+                    .note("取消订单退还积分，订单号：" + orderDO.getOrderSn())
+                    .createTime(LocalDateTime.now())
+                    .build();
+            integrationHistoryMapper.insert(historyDO);
         }
 
         return Response.success();

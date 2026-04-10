@@ -23,10 +23,7 @@
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z" /></svg>
               </a-badge>
             </router-link>
-            <router-link to="/member/center" class="flex items-center gap-1.5 text-sm text-stone-600 hover:text-emerald-600 transition-colors">
-              <img :src="memberAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + memberNickname" class="w-6 h-6 rounded-full border border-emerald-100" />
-              <span>{{ memberNickname }}</span>
-            </router-link>
+            <MemberBadge :nickname="memberNickname" :avatar="memberAvatar" />
             <button @click="handleLogout" class="text-sm text-stone-500 hover:text-red-500 transition-colors">退出</button>
           </template>
           <!-- 未登录 -->
@@ -63,6 +60,8 @@ import { useRouter } from 'vue-router'
 import { isMemberLoggedIn, getMemberInfo, removeMemberInfo } from '@/composables/member'
 import { removeMemberToken } from '@/composables/cookie'
 import { useCartStore } from '@/stores/cart'
+import { useMemberLevelStore } from '@/stores/memberLevel'
+import MemberBadge from '@/components/MemberBadge.vue'
 
 defineProps({
   title: String,
@@ -71,6 +70,7 @@ defineProps({
 
 const router = useRouter()
 const cartStore = useCartStore()
+const memberLevelStore = useMemberLevelStore()
 
 const memberLoggedIn = ref(isMemberLoggedIn())
 const memberNickname = ref('')
@@ -93,6 +93,7 @@ const handleLogout = () => {
   memberNickname.value = ''
   memberAvatar.value = ''
   cartStore.reset()
+  memberLevelStore.reset()
   router.push('/')
 }
 

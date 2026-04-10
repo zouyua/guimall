@@ -42,6 +42,14 @@ public class FindOmsOrderDetailRspVO {
 
     private String couponName;
 
+    private BigDecimal promotionAmount;
+
+    /** 使用积分数量 */
+    private Integer useIntegration;
+
+    /** 积分抵扣金额 */
+    private BigDecimal integrationAmount;
+
     private Integer status;
 
     private String deliveryCompany;
@@ -55,6 +63,16 @@ public class FindOmsOrderDetailRspVO {
     private String receiverDetailAddress;
 
     private String note;
+
+    private Integer payType;
+
+    private String paymentSn;
+
+    private LocalDateTime payTime;
+
+    private LocalDateTime deliveryTime;
+
+    private LocalDateTime receiveTime;
 
     private List<OrderItem> items;
 

@@ -19,5 +19,10 @@ public interface OmsOrderService {
     PageResponse<FindOmsOrderPageListRspVO> findOrderPageList(FindOmsOrderPageListReqVO reqVO);
 
     Response findOrderDetail(FindOmsOrderDetailReqVO reqVO);
+
+    /**
+     * 前台用户确认收货
+     */
+    Response confirmReceipt(Long orderId, Long memberId);
 }
 

@@ -48,6 +48,18 @@ public class FindOmsOrderDetailRspVO {
     @ApiModelProperty(value = "运费")
     private BigDecimal freightAmount;
 
+    @ApiModelProperty(value = "优惠券ID")
+    private Long couponId;
+
+    @ApiModelProperty(value = "优惠券金额")
+    private BigDecimal couponAmount;
+
+    @ApiModelProperty(value = "优惠券名称")
+    private String couponName;
+
+    @ApiModelProperty(value = "促销优惠金额")
+    private BigDecimal promotionAmount;
+
     @ApiModelProperty(value = "订单状态：0待付款；1待发货；2已发货；3已完成；4已关闭；5无效订单")
     private Integer status;
 
@@ -68,6 +80,24 @@ public class FindOmsOrderDetailRspVO {
 
     @ApiModelProperty(value = "订单备注")
     private String note;
+
+    @ApiModelProperty(value = "管理员备注")
+    private String adminNote;
+
+    @ApiModelProperty(value = "支付方式:0未支付1支付宝2微信")
+    private Integer payType;
+
+    @ApiModelProperty(value = "支付流水号")
+    private String paymentSn;
+
+    @ApiModelProperty(value = "支付时间")
+    private LocalDateTime payTime;
+
+    @ApiModelProperty(value = "发货时间")
+    private LocalDateTime deliveryTime;
+
+    @ApiModelProperty(value = "确认收货时间")
+    private LocalDateTime receiveTime;
 
     @ApiModelProperty(value = "订单商品明细")
     private List<OrderItem> items;

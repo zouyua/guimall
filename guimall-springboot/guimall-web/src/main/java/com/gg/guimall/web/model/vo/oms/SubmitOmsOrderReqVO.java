@@ -50,6 +50,9 @@ public class SubmitOmsOrderReqVO {
     /** 优惠券ID（可选） */
     private Long couponId;
 
+    /** 使用积分数量（可选，0或null表示不使用积分） */
+    private Integer useIntegration;
+
     /** 订单备注（可选） */
     private String note;
 

@@ -16,8 +16,13 @@
         <a-form-item label="优惠券名称" name="name" required>
           <a-input v-model:value="form.name" placeholder="请输入优惠券名称" allow-clear />
         </a-form-item>
-        <a-form-item label="优惠类型">
-          <a-tag color="processing">满减券（固定）</a-tag>
+        <a-form-item label="优惠类型" name="type" required>
+          <a-select v-model:value="form.type" class="w-full max-w-xs">
+            <a-select-option :value="0">全场赠券</a-select-option>
+            <a-select-option :value="1">会员赠券</a-select-option>
+            <a-select-option :value="2">购物赠券</a-select-option>
+            <a-select-option :value="3">注册赠券</a-select-option>
+          </a-select>
         </a-form-item>
         <a-form-item label="使用平台" name="platform" required>
           <a-select v-model:value="form.platform" class="w-full max-w-xs">
@@ -73,25 +78,28 @@
             </a-tag>
           </div>
         </a-form-item>
-        <a-form-item label="开始时间" name="startTime" required>
-          <a-date-picker
-            v-model:value="form.startTime"
+        <a-form-item label="有效期" name="startTime" required>
+          <a-range-picker
+            :value="[form.startTime, form.endTime]"
+            @change="handleTimeRangeChange"
             show-time
             format="YYYY-MM-DD HH:mm:ss"
             value-format="YYYY-MM-DD HH:mm:ss"
-            class="w-full max-w-xs"
-            placeholder="请选择开始时间"
+            class="w-full"
+            :placeholder="['开始时间', '结束时间']"
           />
+          <div class="text-xs text-gray-400 mt-1">即优惠券的使用有效时间范围</div>
         </a-form-item>
-        <a-form-item label="结束时间" name="endTime" required>
+        <a-form-item label="领取开始时间">
           <a-date-picker
-            v-model:value="form.endTime"
+            v-model:value="form.enableTime"
             show-time
             format="YYYY-MM-DD HH:mm:ss"
             value-format="YYYY-MM-DD HH:mm:ss"
             class="w-full max-w-xs"
-            placeholder="请选择结束时间"
+            placeholder="不设置则与使用开始时间相同"
           />
+          <div class="text-xs text-gray-400 mt-1">可提前于使用开始时间领取，不设置则默认与使用开始时间相同</div>
         </a-form-item>
         <a-form-item label="备注">
           <a-textarea v-model:value="form.note" :rows="3" placeholder="选填" allow-clear />
@@ -162,6 +170,7 @@ const form = reactive({
   useType: 0,
   startTime: undefined,
   endTime: undefined,
+  enableTime: undefined,
   note: ''
 })
 
@@ -189,19 +198,30 @@ const productColumns = [
 // 表单规则（必填项提示）
 const rules = {
   name: [{ required: true, message: '请输入优惠券名称', trigger: 'blur' }],
+  type: [{ required: true, message: '请选择优惠类型', trigger: 'change' }],
   platform: [{ required: true, message: '请选择使用平台', trigger: 'change' }],
   count: [{ required: true, message: '请输入发行总量', trigger: 'change' }],
   amount: [{ required: true, message: '请输入优惠金额', trigger: 'change' }],
   perLimit: [{ required: true, message: '请输入每人限领数量', trigger: 'change' }],
   minAmount: [{ required: true, message: '请输入最低消费金额', trigger: 'change' }],
   useType: [{ required: true, message: '请选择使用范围', trigger: 'change' }],
-  startTime: [{ required: true, message: '请选择开始时间', trigger: 'change' }],
-  endTime: [{ required: true, message: '请选择结束时间', trigger: 'change' }]
+  startTime: [{ required: true, message: '请选择有效期', trigger: 'change' }],
 }
 
 const goBack = () => {
   // 返回优惠券列表页
   router.push('/admin/sms/coupon')
+}
+
+// 有效期范围选择
+const handleTimeRangeChange = (dates) => {
+  if (dates && dates.length === 2) {
+    form.startTime = dates[0]
+    form.endTime = dates[1]
+  } else {
+    form.startTime = undefined
+    form.endTime = undefined
+  }
 }
 
 // 加载分类选项
@@ -280,6 +300,12 @@ const handleSubmit = async () => {
     return
   }
 
+  // 校验有效期
+  if (!form.startTime || !form.endTime) {
+    message.warning('请选择有效期')
+    return
+  }
+
   // 提交入参与后端 VO 严格对齐
   const payload = {
     type: Number(form.type),
@@ -291,7 +317,7 @@ const handleSubmit = async () => {
     minAmount: Number(form.minAmount),
     startTime: form.startTime,
     endTime: form.endTime,
-    enableTime: form.startTime, // 领取开始时间默认等于使用开始时间
+    enableTime: form.enableTime || form.startTime, // 未设置则默认与使用开始时间相同
     useType: Number(form.useType),
     note: form.note?.trim() || ''
   }

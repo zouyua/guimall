@@ -97,13 +97,15 @@ import {
   EyeOutlined,
   EditOutlined,
   CloseCircleOutlined,
-  InfoCircleOutlined
+  InfoCircleOutlined,
+  CheckCircleOutlined
 } from '@ant-design/icons-vue'
 
 import {
   fetchOrderList,
   closeOrder,
-  remarkOrder
+  remarkOrder,
+  confirmReceipt
 } from '@/api/admin/order'
 
 const router = useRouter()
@@ -276,6 +278,30 @@ const columns = [
           () => [h(EditOutlined), ' 备注']
         ),
 
+        // 确认收货：仅已发货(2)状态显示
+        ...(record.status === 2
+          ? [
+              h(
+                Popconfirm,
+                {
+                  title: '确定确认收货吗？',
+                  onConfirm: () => submitConfirmReceipt(record)
+                },
+                {
+                  default: () =>
+                    h(
+                      Button,
+                      {
+                        size: 'small',
+                        style: { color: '#059669', borderColor: '#059669' }
+                      },
+                      () => [h(CheckCircleOutlined), ' 确认收货']
+                    )
+                }
+              )
+            ]
+          : []),
+
         h(
           Popconfirm,
           {
@@ -419,6 +445,23 @@ const openRemark = async (record) => {
 
   if (rsp?.success) {
     message.success('备注成功')
+    fetchList()
+  }
+
+}
+
+/*
+  =====================================
+  确认收货
+  =====================================
+*/
+
+const submitConfirmReceipt = async (record) => {
+
+  const rsp = await confirmReceipt(record.id)
+
+  if (rsp?.success) {
+    message.success('已确认收货')
     fetchList()
   }
 

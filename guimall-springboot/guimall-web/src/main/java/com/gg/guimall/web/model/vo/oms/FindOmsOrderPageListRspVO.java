@@ -42,6 +42,12 @@ public class FindOmsOrderPageListRspVO {
     @ApiModelProperty(value = "订单状态：0待付款；1待发货；2已发货；3已完成；4已关闭；5无效订单")
     private Integer status;
 
+    @ApiModelProperty(value = "订单类型：0普通商品订单；1会员等级订单")
+    private Integer orderType;
+
+    @ApiModelProperty(value = "订单备注")
+    private String note;
+
     @ApiModelProperty(value = "订单商品列表")
     private List<OrderItemVO> items;
 

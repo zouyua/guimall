@@ -22,9 +22,27 @@
         <a-descriptions-item label="支付金额">¥ {{ order.payAmount }}</a-descriptions-item>
         <a-descriptions-item label="订单总额">¥ {{ order.totalAmount }}</a-descriptions-item>
         <a-descriptions-item label="运费">¥ {{ order.freightAmount }}</a-descriptions-item>
+        <a-descriptions-item v-if="order.couponAmount && order.couponAmount > 0" label="优惠券">
+          {{ order.couponName || '优惠券' }}（-¥ {{ order.couponAmount }}）
+        </a-descriptions-item>
+        <a-descriptions-item v-if="order.promotionAmount && order.promotionAmount > 0" label="促销优惠">
+          -¥ {{ order.promotionAmount }}
+        </a-descriptions-item>
+        <a-descriptions-item label="支付方式">{{ PAY_TYPE_LABEL[order.payType] || '未支付' }}</a-descriptions-item>
+        <a-descriptions-item label="支付流水号">{{ order.paymentSn || '—' }}</a-descriptions-item>
         <a-descriptions-item label="物流公司">{{ order.deliveryCompany || '—' }}</a-descriptions-item>
         <a-descriptions-item label="物流单号">{{ order.deliverySn || '—' }}</a-descriptions-item>
-        <a-descriptions-item label="订单备注" :span="2">{{ order.note || '无' }}</a-descriptions-item>
+        <a-descriptions-item label="订单备注">{{ order.note || '无' }}</a-descriptions-item>
+        <a-descriptions-item label="管理员备注">{{ order.adminNote || '无' }}</a-descriptions-item>
+      </a-descriptions>
+    </a-card>
+
+    <a-card :bordered="false" title="时间线" class="mb-5">
+      <a-descriptions bordered :column="2" size="middle" class="max-w-5xl">
+        <a-descriptions-item label="下单时间">{{ order.createTime || '—' }}</a-descriptions-item>
+        <a-descriptions-item label="支付时间">{{ order.payTime || '—' }}</a-descriptions-item>
+        <a-descriptions-item label="发货时间">{{ order.deliveryTime || '—' }}</a-descriptions-item>
+        <a-descriptions-item label="确认收货时间">{{ order.receiveTime || '—' }}</a-descriptions-item>
       </a-descriptions>
     </a-card>
 
@@ -66,6 +84,7 @@ const route = useRoute()
 
 const ORDER_STATUS_LABEL = { 0: '待付款', 1: '待发货', 2: '已发货', 3: '已完成', 4: '已关闭', 5: '无效订单' }
 const ORDER_STATUS_COLOR = { 0: 'orange', 1: 'blue', 2: 'cyan', 3: 'success', 4: 'default', 5: 'default' }
+const PAY_TYPE_LABEL = { 0: '未支付', 1: '支付宝', 2: '微信' }
 
 const order = reactive({
   id: null,
@@ -74,14 +93,24 @@ const order = reactive({
   createTime: '',
   memberUsername: '',
   payAmount: 0,
+  payType: 0,
+  paymentSn: '',
+  payTime: '',
   note: '',
+  adminNote: '',
   receiverName: '',
   receiverPhone: '',
   receiverDetailAddress: '',
   totalAmount: 0,
   freightAmount: 0,
+  couponId: null,
+  couponAmount: 0,
+  couponName: '',
+  promotionAmount: 0,
   deliveryCompany: '',
   deliverySn: '',
+  deliveryTime: '',
+  receiveTime: '',
   items: []
 })
 
@@ -118,14 +147,24 @@ const loadDetail = async () => {
     createTime: d.createTime,
     memberUsername: d.memberUsername || '',
     payAmount: d.payAmount || 0,
+    payType: d.payType ?? 0,
+    paymentSn: d.paymentSn || '',
+    payTime: d.payTime || '',
     note: d.note || '',
+    adminNote: d.adminNote || '',
     receiverName: d.receiverName || '',
     receiverPhone: d.receiverPhone || '',
     receiverDetailAddress: d.receiverDetailAddress || '',
     totalAmount: d.totalAmount || 0,
     freightAmount: d.freightAmount || 0,
+    couponId: d.couponId || null,
+    couponAmount: d.couponAmount || 0,
+    couponName: d.couponName || '',
+    promotionAmount: d.promotionAmount || 0,
     deliveryCompany: d.deliveryCompany || '',
     deliverySn: d.deliverySn || '',
+    deliveryTime: d.deliveryTime || '',
+    receiveTime: d.receiveTime || '',
     items: d.items || []
   })
 }

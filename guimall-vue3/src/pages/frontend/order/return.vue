@@ -80,6 +80,10 @@
                 <p class="text-xs text-stone-400 mb-2">如有商品质量问题，请上传相关图片</p>
                 <a-input v-model:value="formData.proofPics" placeholder="图片URL，多张用逗号分隔" size="large" />
               </a-form-item>
+
+              <a-form-item label="退货快递单号（选填）">
+                <a-input v-model:value="formData.deliverySn" placeholder="请输入退货快递单号" size="large" />
+              </a-form-item>
             </a-form>
           </div>
 
@@ -130,7 +134,8 @@ const formData = ref({
   returnAmount: '',
   returnName: '',
   returnPhone: '',
-  proofPics: ''
+  proofPics: '',
+  deliverySn: ''
 })
 
 const loadOrderDetail = async () => {
@@ -202,7 +207,8 @@ const handleSubmit = async () => {
       returnAmount: parseFloat(formData.value.returnAmount),
       returnName: formData.value.returnName,
       returnPhone: formData.value.returnPhone,
-      proofPics: formData.value.proofPics
+      proofPics: formData.value.proofPics,
+      deliverySn: formData.value.deliverySn
     }
 
     const res = await createReturnApply(data)

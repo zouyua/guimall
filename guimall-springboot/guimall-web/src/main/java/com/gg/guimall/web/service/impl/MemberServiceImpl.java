@@ -121,6 +121,8 @@ public class MemberServiceImpl implements MemberService {
                 .city(memberDO.getCity())
                 .job(memberDO.getJob())
                 .personalizedSignature(memberDO.getPersonalizedSignature())
+                .integration(memberDO.getIntegration())
+                .historyIntegration(memberDO.getHistoryIntegration())
                 .build();
 
         return Response.success(rspVO);

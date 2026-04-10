@@ -36,6 +36,75 @@
             </div>
           </div>
 
+          <!-- 订单时间线 -->
+          <div class="bg-white rounded-3xl p-8 shadow-sm border border-stone-100">
+            <h2 class="text-lg font-bold text-stone-900 mb-6 flex items-center gap-2">
+              <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+              </svg>
+              订单进度
+            </h2>
+            <div class="relative">
+              <!-- 时间线轴 -->
+              <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-stone-200"></div>
+              <!-- 下单 -->
+              <div class="relative flex items-start gap-4 pb-6">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center z-10 shrink-0 bg-emerald-500 text-white">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg>
+                </div>
+                <div>
+                  <p class="font-bold text-stone-800">提交订单</p>
+                  <p class="text-sm text-stone-400 mt-0.5">{{ orderDetail.createTime }}</p>
+                </div>
+              </div>
+              <!-- 支付 -->
+              <div class="relative flex items-start gap-4 pb-6">
+                <div :class="orderDetail.payTime ? 'bg-emerald-500 text-white' : 'bg-stone-200 text-stone-400'"
+                  class="w-8 h-8 rounded-full flex items-center justify-center z-10 shrink-0">
+                  <svg v-if="orderDetail.payTime" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg>
+                  <span v-else class="text-xs font-bold">2</span>
+                </div>
+                <div>
+                  <p :class="orderDetail.payTime ? 'text-stone-800' : 'text-stone-400'" class="font-bold">付款成功</p>
+                  <p v-if="orderDetail.payTime" class="text-sm text-stone-400 mt-0.5">{{ orderDetail.payTime }}</p>
+                  <p v-else class="text-sm text-stone-300 mt-0.5">等待付款</p>
+                </div>
+              </div>
+              <!-- 发货 -->
+              <div class="relative flex items-start gap-4 pb-6">
+                <div :class="orderDetail.deliveryTime ? 'bg-emerald-500 text-white' : 'bg-stone-200 text-stone-400'"
+                  class="w-8 h-8 rounded-full flex items-center justify-center z-10 shrink-0">
+                  <svg v-if="orderDetail.deliveryTime" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg>
+                  <span v-else class="text-xs font-bold">3</span>
+                </div>
+                <div>
+                  <p :class="orderDetail.deliveryTime ? 'text-stone-800' : 'text-stone-400'" class="font-bold">商家发货</p>
+                  <template v-if="orderDetail.deliveryTime">
+                    <p class="text-sm text-stone-400 mt-0.5">{{ orderDetail.deliveryTime }}</p>
+                    <p v-if="orderDetail.deliveryCompany || orderDetail.deliverySn" class="text-sm text-stone-500 mt-1">
+                      <span v-if="orderDetail.deliveryCompany">{{ orderDetail.deliveryCompany }}</span>
+                      <span v-if="orderDetail.deliverySn" class="font-mono ml-1">{{ orderDetail.deliverySn }}</span>
+                    </p>
+                  </template>
+                  <p v-else class="text-sm text-stone-300 mt-0.5">等待发货</p>
+                </div>
+              </div>
+              <!-- 确认收货 -->
+              <div class="relative flex items-start gap-4">
+                <div :class="orderDetail.receiveTime ? 'bg-emerald-500 text-white' : 'bg-stone-200 text-stone-400'"
+                  class="w-8 h-8 rounded-full flex items-center justify-center z-10 shrink-0">
+                  <svg v-if="orderDetail.receiveTime" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg>
+                  <span v-else class="text-xs font-bold">4</span>
+                </div>
+                <div>
+                  <p :class="orderDetail.receiveTime ? 'text-stone-800' : 'text-stone-400'" class="font-bold">确认收货</p>
+                  <p v-if="orderDetail.receiveTime" class="text-sm text-stone-400 mt-0.5">{{ orderDetail.receiveTime }}</p>
+                  <p v-else class="text-sm text-stone-300 mt-0.5">等待收货</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- 收货信息 -->
           <div class="bg-white rounded-3xl p-8 shadow-sm border border-stone-100">
             <h2 class="text-lg font-bold text-stone-900 mb-6 flex items-center gap-2">
@@ -49,6 +118,20 @@
               <div><span class="text-stone-400">收货人：</span><span class="font-bold">{{ orderDetail.receiverName }}</span></div>
               <div><span class="text-stone-400">联系电话：</span><span class="font-bold">{{ orderDetail.receiverPhone }}</span></div>
               <div class="col-span-2"><span class="text-stone-400">收货地址：</span><span class="font-bold">{{ orderDetail.receiverDetailAddress }}</span></div>
+            </div>
+          </div>
+
+          <!-- 物流信息 -->
+          <div v-if="orderDetail.deliveryCompany || orderDetail.deliverySn" class="bg-white rounded-3xl p-8 shadow-sm border border-stone-100">
+            <h2 class="text-lg font-bold text-stone-900 mb-6 flex items-center gap-2">
+              <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+              </svg>
+              物流信息
+            </h2>
+            <div class="grid grid-cols-2 gap-4 text-sm">
+              <div><span class="text-stone-400">物流公司：</span><span class="font-bold">{{ orderDetail.deliveryCompany || '—' }}</span></div>
+              <div><span class="text-stone-400">物流单号：</span><span class="font-mono font-bold">{{ orderDetail.deliverySn || '—' }}</span></div>
             </div>
           </div>
 
@@ -97,6 +180,18 @@
                 <span>优惠券（{{ orderDetail.couponName || '优惠券' }}）</span>
                 <span class="font-bold">-¥{{ orderDetail.couponAmount }}</span>
               </div>
+              <div v-if="orderDetail.integrationAmount && orderDetail.integrationAmount > 0" class="flex justify-between text-purple-600">
+                <span>积分抵扣（{{ orderDetail.useIntegration || 0 }}积分）</span>
+                <span class="font-bold">-¥{{ orderDetail.integrationAmount }}</span>
+              </div>
+              <div v-if="orderDetail.promotionAmount && orderDetail.promotionAmount > 0" class="flex justify-between text-amber-600">
+                <span>会员折扣</span>
+                <span class="font-bold">-¥{{ orderDetail.promotionAmount }}</span>
+              </div>
+              <div v-if="otherDiscount > 0 && !(orderDetail.couponAmount > 0) && !(orderDetail.promotionAmount > 0)" class="flex justify-between text-emerald-600">
+                <span>优惠</span>
+                <span class="font-bold">-¥{{ otherDiscount }}</span>
+              </div>
               <div class="border-t border-stone-200 pt-3 flex justify-between items-center">
                 <span class="text-stone-600 font-bold">实付金额</span>
                 <span class="text-2xl font-black text-emerald-600">¥{{ orderDetail.payAmount }}</span>
@@ -112,7 +207,7 @@
 
           <!-- 操作按钮 -->
           <div class="flex justify-center gap-4">
-            <button @click="$router.back()" class="bg-stone-100 text-stone-600 px-8 py-3 rounded-2xl font-bold hover:bg-stone-200 transition-all">
+            <button @click="$router.push('/my-orders')" class="bg-stone-100 text-stone-600 px-8 py-3 rounded-2xl font-bold hover:bg-stone-200 transition-all">
               返回
             </button>
             <!-- 待付款 -->
@@ -126,11 +221,24 @@
                 去支付
               </button>
             </template>
-            <!-- 已支付（待发货/已发货/已完成）-->
-            <button v-else-if="orderDetail.status >= 1 && orderDetail.status <= 3" @click="handleReturnApply"
-              class="bg-orange-600 text-white px-8 py-3 rounded-2xl font-bold hover:bg-orange-700 transition-all shadow-lg shadow-orange-200">
-              申请退货
-            </button>
+            <!-- 已发货 → 确认收货 + 申请退货 -->
+            <template v-else-if="orderDetail.status === 2">
+              <button @click="handleConfirmReceipt"
+                class="bg-emerald-600 text-white px-8 py-3 rounded-2xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200">
+                确认收货
+              </button>
+              <button @click="handleReturnApply"
+                class="bg-orange-100 text-orange-600 px-8 py-3 rounded-2xl font-bold hover:bg-orange-200 transition-all">
+                申请退货
+              </button>
+            </template>
+            <!-- 待发货/已完成 → 申请退货 -->
+            <template v-else-if="orderDetail.status === 1 || orderDetail.status === 3">
+              <button @click="handleReturnApply"
+                class="bg-orange-600 text-white px-8 py-3 rounded-2xl font-bold hover:bg-orange-700 transition-all shadow-lg shadow-orange-200">
+                申请退货
+              </button>
+            </template>
           </div>
         </div>
       </a-spin>
@@ -139,10 +247,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message, Modal } from 'ant-design-vue'
-import { getOrderDetail } from '@/api/frontend/order'
+import { getOrderDetail, confirmReceipt } from '@/api/frontend/order'
 import { cancelOrder } from '@/api/frontend/orderReturn'
 import { getMemberId, isMemberLoggedIn } from '@/composables/member'
 
@@ -160,6 +268,19 @@ const orderId = route.query.id
 
 const loading = ref(false)
 const orderDetail = ref(null)
+
+// 计算未归类的优惠差额（总额 + 运费 - 优惠券 - 促销 - 积分抵扣 - 实付）
+const otherDiscount = computed(() => {
+  if (!orderDetail.value) return 0
+  const total = parseFloat(orderDetail.value.totalAmount) || 0
+  const freight = parseFloat(orderDetail.value.freightAmount) || 0
+  const coupon = parseFloat(orderDetail.value.couponAmount) || 0
+  const promotion = parseFloat(orderDetail.value.promotionAmount) || 0
+  const integration = parseFloat(orderDetail.value.integrationAmount) || 0
+  const pay = parseFloat(orderDetail.value.payAmount) || 0
+  const diff = total + freight - coupon - promotion - integration - pay
+  return diff > 0.001 ? parseFloat(diff.toFixed(2)) : 0
+})
 
 const statusConfig = {
   0: { label: '待付款', color: 'bg-orange-100 text-orange-600' },
@@ -218,6 +339,28 @@ const handleCancelOrder = () => {
 
 const handleReturnApply = () => {
   router.push(`/order/return?orderId=${orderDetail.value.id}`)
+}
+
+const handleConfirmReceipt = () => {
+  Modal.confirm({
+    title: '确认收货？',
+    content: '请确认您已收到商品，确认后订单将完成',
+    okText: '确认收货',
+    cancelText: '取消',
+    onOk: async () => {
+      try {
+        const res = await confirmReceipt(orderDetail.value.id, memberId)
+        if (res.success) {
+          message.success('已确认收货')
+          loadOrderDetail()
+        } else {
+          message.error(res.message || '确认收货失败')
+        }
+      } catch (e) {
+        message.error('确认收货失败')
+      }
+    }
+  })
 }
 
 onMounted(() => {

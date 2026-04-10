@@ -9,6 +9,7 @@ import com.gg.guimall.common.domain.dos.OmsOrderItemDO;
 import com.gg.guimall.common.domain.dos.PmsProductDO;
 import com.gg.guimall.common.domain.dos.SmsCouponDO;
 import com.gg.guimall.common.domain.dos.SmsCouponHistoryDO;
+import com.gg.guimall.common.domain.dos.UmsIntegrationHistoryDO;
 import com.gg.guimall.common.domain.mapper.OmsCartItemMapper;
 import com.gg.guimall.common.domain.mapper.OmsOrderItemMapper;
 import com.gg.guimall.common.domain.mapper.OmsOrderMapper;
@@ -16,6 +17,7 @@ import com.gg.guimall.common.domain.mapper.PmsProductMapper;
 import com.gg.guimall.common.domain.mapper.PmsSkuStockMapper;
 import com.gg.guimall.common.domain.mapper.SmsCouponHistoryMapper;
 import com.gg.guimall.common.domain.mapper.SmsCouponMapper;
+import com.gg.guimall.common.domain.mapper.UmsIntegrationHistoryMapper;
 import com.gg.guimall.common.enums.ResponseCodeEnum;
 import com.gg.guimall.common.exception.BizException;
 import com.gg.guimall.common.utils.PageResponse;
@@ -41,7 +43,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -81,6 +86,17 @@ public class OmsOrderServiceImpl implements OmsOrderService {
 
     @Autowired
     private com.gg.guimall.common.domain.mapper.UmsMemberMapper umsMemberMapper;
+
+    @Autowired
+    private UmsIntegrationHistoryMapper integrationHistoryMapper;
+
+    @Autowired
+    private com.gg.guimall.common.domain.mapper.UmsMemberLevelMapper memberLevelMapper;
+
+    /**
+     * 积分与金额的换算比例：100积分 = 1元
+     */
+    private static final int INTEGRATION_TO_YUAN_RATIO = 100;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -153,7 +169,60 @@ public class OmsOrderServiceImpl implements OmsOrderService {
             }
         }
 
-        BigDecimal payAmount = reqVO.getPayAmount();
+        // ========== 积分抵扣逻辑 ==========
+        Integer useIntegration = reqVO.getUseIntegration();
+        BigDecimal integrationAmount = BigDecimal.ZERO;
+
+        if (Objects.nonNull(useIntegration) && useIntegration > 0) {
+            // 校验会员积分余额
+            if (Objects.isNull(memberDO) || Objects.isNull(memberDO.getIntegration())
+                    || memberDO.getIntegration() < useIntegration) {
+                throw new BizException(ResponseCodeEnum.INTEGRATION_NOT_ENOUGH);
+            }
+            // 换算：100积分 = 1元
+            integrationAmount = BigDecimal.valueOf(useIntegration).divide(
+                    BigDecimal.valueOf(INTEGRATION_TO_YUAN_RATIO), 2, BigDecimal.ROUND_HALF_UP);
+            // 积分抵扣金额不能超过（总金额 - 优惠券抵扣）
+            BigDecimal maxDeduct = totalAmount.subtract(couponAmount);
+            if (integrationAmount.compareTo(maxDeduct) > 0) {
+                integrationAmount = maxDeduct;
+                useIntegration = maxDeduct.multiply(BigDecimal.valueOf(INTEGRATION_TO_YUAN_RATIO)).intValue();
+            }
+            // 原子扣减会员积分
+            int deductResult = umsMemberMapper.deductIntegration(reqVO.getMemberId(), useIntegration);
+            if (deductResult <= 0) {
+                throw new BizException(ResponseCodeEnum.INTEGRATION_DEDUCT_FAIL);
+            }
+            log.info("积分已扣减, memberId={}, useIntegration={}, integrationAmount={}",
+                    reqVO.getMemberId(), useIntegration, integrationAmount);
+        } else {
+            useIntegration = null;
+        }
+
+        // ========== 会员等级折扣逻辑 ==========
+        BigDecimal promotionAmount = BigDecimal.ZERO;
+        if (Objects.nonNull(memberDO) && Objects.equals(memberDO.getStatus(), 1)
+                && Objects.nonNull(memberDO.getMemberLevelId())) {
+            com.gg.guimall.common.domain.dos.UmsMemberLevelDO memberLevel =
+                    memberLevelMapper.selectById(memberDO.getMemberLevelId());
+            if (Objects.nonNull(memberLevel) && Objects.equals(memberLevel.getStatus(), 1)
+                    && Objects.nonNull(memberLevel.getDiscount())
+                    && memberLevel.getDiscount() < 100) {
+                // discount=95 表示 9.5折，折扣金额 = totalAmount * (100 - 95) / 100
+                BigDecimal discountRate = BigDecimal.valueOf(100 - memberLevel.getDiscount())
+                        .divide(BigDecimal.valueOf(100), 4, BigDecimal.ROUND_HALF_UP);
+                promotionAmount = totalAmount.multiply(discountRate)
+                        .setScale(2, BigDecimal.ROUND_HALF_UP);
+                log.info("会员等级折扣, memberId={}, level={}, discount={}%, promotionAmount={}",
+                        reqVO.getMemberId(), memberLevel.getName(), memberLevel.getDiscount(), promotionAmount);
+            }
+        }
+
+        // 计算实付金额：总额 - 优惠券 - 积分抵扣 - 会员折扣
+        BigDecimal payAmount = totalAmount
+                .subtract(couponAmount)
+                .subtract(integrationAmount)
+                .subtract(promotionAmount);
         if (payAmount.compareTo(BigDecimal.ZERO) < 0) {
             payAmount = BigDecimal.ZERO;
         }
@@ -176,8 +245,10 @@ public class OmsOrderServiceImpl implements OmsOrderService {
                 .totalAmount(totalAmount)
                 .payAmount(payAmount)
                 .freightAmount(BigDecimal.ZERO)
-                .promotionAmount(BigDecimal.ZERO)
+                .promotionAmount(promotionAmount)
                 .couponAmount(couponAmount)
+                .useIntegration(useIntegration)
+                .integrationAmount(integrationAmount)
                 .payType(0)
                 .sourceType(0)
                 .status(0)
@@ -212,6 +283,22 @@ public class OmsOrderServiceImpl implements OmsOrderService {
             log.info("订单未使用优惠券, orderId={}, orderSn={}", orderId, orderSn);
         }
 
+        // 记录积分消费历史
+        if (Objects.nonNull(useIntegration) && useIntegration > 0) {
+            UmsIntegrationHistoryDO historyDO = UmsIntegrationHistoryDO.builder()
+                    .memberId(reqVO.getMemberId())
+                    .changeCount(useIntegration)
+                    .changeType(1) // 消费
+                    .sourceType(1) // 下单积分抵扣
+                    .sourceId(orderId)
+                    .note("下单抵扣，订单号：" + orderSn)
+                    .createTime(now)
+                    .build();
+            integrationHistoryMapper.insert(historyDO);
+            log.info("积分消费记录已写入, memberId={}, useIntegration={}, orderId={}",
+                    reqVO.getMemberId(), useIntegration, orderId);
+        }
+
         // 发送 RocketMQ 延迟消息，30 分钟后自动取消未支付订单
         OrderTimeoutMessageDTO msgDTO = new OrderTimeoutMessageDTO(orderId, orderSn);
         rocketMQTemplate.syncSend(
@@ -223,16 +310,18 @@ public class OmsOrderServiceImpl implements OmsOrderService {
         log.info("订单超时延迟消息已发送, orderSn={}, delayLevel={}", orderSn, MQConstants.ORDER_TIMEOUT_DELAY_LEVEL);
 
         // 插入订单商品明细并锁定库存
-        BigDecimal realAmount;
+        List<OmsOrderItemDO> orderItemDOList = new ArrayList<>();
+        List<Long> skuIdsForWarning = new ArrayList<>();
+
         for (SubmitOmsOrderReqVO.OrderItemVO item : reqVO.getItems()) {
             if (Objects.isNull(item) || Objects.isNull(item.getQuantity()) || item.getQuantity() <= 0) {
                 continue;
             }
 
             BigDecimal price = Objects.isNull(item.getPrice()) ? BigDecimal.ZERO : item.getPrice();
-            realAmount = price.multiply(BigDecimal.valueOf(item.getQuantity()));
+            BigDecimal realAmount = price.multiply(BigDecimal.valueOf(item.getQuantity()));
 
-            OmsOrderItemDO orderItemDO = OmsOrderItemDO.builder()
+            orderItemDOList.add(OmsOrderItemDO.builder()
                     .orderId(orderId)
                     .orderSn(orderSn)
                     .productId(item.getProductId())
@@ -244,11 +333,9 @@ public class OmsOrderServiceImpl implements OmsOrderService {
                     .productSkuCode(null)
                     .realAmount(realAmount)
                     .productAttr(item.getProductAttr())
-                    .build();
+                    .build());
 
-            orderItemMapper.insert(orderItemDO);
-
-            // 锁定库存
+            // 锁定库存（每个 SKU 必须单独执行，有乐观锁条件）
             if (Objects.nonNull(item.getProductSkuId()) && item.getProductSkuId() > 0) {
                 int lockResult = pmsSkuStockMapper.lockStock(item.getProductSkuId(), item.getQuantity());
                 if (lockResult <= 0) {
@@ -256,18 +343,30 @@ public class OmsOrderServiceImpl implements OmsOrderService {
                     throw new BizException(ResponseCodeEnum.STOCK_NOT_ENOUGH);
                 }
                 log.info("库存已锁定, skuId={}, quantity={}, orderId={}", item.getProductSkuId(), item.getQuantity(), orderId);
-
-                // 检查库存预警
-                stockWarningService.checkStockWarning(item.getProductSkuId());
+                skuIdsForWarning.add(item.getProductSkuId());
             }
         }
 
-        // 如果是从购物车结算，删除购物车中已结算的商品
+        // 批量插入订单商品明细
+        for (OmsOrderItemDO orderItemDO : orderItemDOList) {
+            orderItemMapper.insert(orderItemDO);
+        }
+
+        // 库存预警检查延到循环外统一处理
+        for (Long skuId : skuIdsForWarning) {
+            stockWarningService.checkStockWarning(skuId);
+        }
+
+        // 如果是从购物车结算，批量删除购物车中已结算的商品
         if (Boolean.TRUE.equals(reqVO.getFromCart())) {
+            List<Long> cartItemIds = new ArrayList<>();
             for (SubmitOmsOrderReqVO.OrderItemVO item : reqVO.getItems()) {
                 if (Objects.nonNull(item.getCartItemId()) && item.getCartItemId() > 0) {
-                    cartItemMapper.deleteById(item.getCartItemId());
+                    cartItemIds.add(item.getCartItemId());
                 }
+            }
+            if (!cartItemIds.isEmpty()) {
+                cartItemMapper.deleteBatchIds(cartItemIds);
             }
             log.info("已清空购物车中的已结算商品, orderId={}, orderSn={}", orderId, orderSn);
         }
@@ -300,13 +399,27 @@ public class OmsOrderServiceImpl implements OmsOrderService {
                 null
         );
 
+        // 批量查询所有订单的商品明细（避免 N+1 查询）
+        List<Long> orderIds = page.getRecords().stream()
+                .map(OmsOrderDO::getId)
+                .collect(Collectors.toList());
+
+        Map<Long, List<OmsOrderItemDO>> itemsByOrderId;
+        if (orderIds.isEmpty()) {
+            itemsByOrderId = Collections.emptyMap();
+        } else {
+            List<OmsOrderItemDO> allItems = orderItemMapper.selectByOrderIds(orderIds);
+            itemsByOrderId = allItems.stream()
+                    .collect(Collectors.groupingBy(OmsOrderItemDO::getOrderId));
+        }
+
         List<FindOmsOrderPageListRspVO> voList = page.getRecords().stream()
                 .map(order -> {
                     FindOmsOrderPageListRspVO vo = new FindOmsOrderPageListRspVO();
                     BeanUtils.copyProperties(order, vo);
 
-                    // 查询订单商品列表
-                    List<OmsOrderItemDO> itemDOList = orderItemMapper.selectByOrderId(order.getId());
+                    // 从批量结果中获取当前订单的商品列表
+                    List<OmsOrderItemDO> itemDOList = itemsByOrderId.getOrDefault(order.getId(), Collections.emptyList());
                     List<FindOmsOrderPageListRspVO.OrderItemVO> items = itemDOList.stream()
                             .map(itemDO -> FindOmsOrderPageListRspVO.OrderItemVO.builder()
                                     .id(itemDO.getId())
@@ -372,6 +485,56 @@ public class OmsOrderServiceImpl implements OmsOrderService {
         }
 
         return Response.success(rspVO);
+    }
+
+    @Override
+    public Response confirmReceipt(Long orderId, Long memberId) {
+        if (Objects.isNull(orderId) || orderId <= 0 || Objects.isNull(memberId) || memberId <= 0) {
+            throw new BizException(ResponseCodeEnum.PARAM_NOT_VALID);
+        }
+
+        OmsOrderDO orderDO = orderMapper.selectById(orderId);
+        if (Objects.isNull(orderDO) || Objects.equals(orderDO.getIsDeleted(), 1)
+                || !Objects.equals(orderDO.getMemberId(), memberId)) {
+            throw new BizException(ResponseCodeEnum.ORDER_NOT_FOUND);
+        }
+
+        // 仅"已发货(2)"允许确认收货 -> "已完成(3)"
+        if (!Objects.equals(orderDO.getStatus(), 2)) {
+            throw new BizException(ResponseCodeEnum.ORDER_STATUS_ILLEGAL);
+        }
+
+        OmsOrderDO updateDO = OmsOrderDO.builder()
+                .id(orderDO.getId())
+                .status(3)
+                .confirmStatus(1)
+                .receiveTime(LocalDateTime.now())
+                .build();
+        orderMapper.updateById(updateDO);
+
+        // ========== 确认收货赠送积分 ==========
+        // 规则：按实付金额取整赠送，1元=1积分
+        BigDecimal payAmount = orderDO.getPayAmount();
+        if (Objects.nonNull(payAmount) && payAmount.compareTo(BigDecimal.ZERO) > 0) {
+            int earnedIntegration = payAmount.intValue();
+            if (earnedIntegration > 0) {
+                umsMemberMapper.addIntegration(memberId, earnedIntegration);
+                // 写入积分获取历史
+                UmsIntegrationHistoryDO historyDO = UmsIntegrationHistoryDO.builder()
+                        .memberId(memberId)
+                        .changeCount(earnedIntegration)
+                        .changeType(0) // 获取
+                        .sourceType(0) // 订单完成奖励
+                        .sourceId(orderDO.getId())
+                        .note("订单完成奖励，订单号：" + orderDO.getOrderSn())
+                        .createTime(LocalDateTime.now())
+                        .build();
+                integrationHistoryMapper.insert(historyDO);
+                log.info("确认收货赠送积分, memberId={}, earned={}, orderId={}", memberId, earnedIntegration, orderDO.getId());
+            }
+        }
+
+        return Response.success();
     }
 }
 

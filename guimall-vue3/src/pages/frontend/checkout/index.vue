@@ -174,6 +174,52 @@
               </div>
             </div>
           </div>
+
+          <!-- 积分抵扣 -->
+          <div v-if="memberIntegration > 0" class="bg-white rounded-3xl border border-stone-100 shadow-sm p-8">
+            <h2 class="text-xl font-black text-stone-900 mb-6 flex items-center">
+              <span class="w-8 h-8 bg-purple-100 rounded-xl flex items-center justify-center mr-3">
+                <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </span>
+              积分抵扣
+              <span class="ml-2 text-sm font-normal text-purple-500">（当前{{ memberIntegration }}积分）</span>
+            </h2>
+
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <a-switch
+                  :checked="integrationEnabled"
+                  @change="toggleIntegration"
+                  class="!bg-stone-300"
+                  :class="{ '!bg-purple-500': integrationEnabled }"
+                />
+                <span class="text-stone-600">
+                  使用积分抵扣
+                  <span class="text-xs text-stone-400 ml-1">（{{ INTEGRATION_TO_YUAN_RATIO }}积分 = 1元）</span>
+                </span>
+              </div>
+              <div v-if="integrationEnabled" class="flex items-center gap-3">
+                <a-input-number
+                  :value="useIntegration"
+                  @change="onIntegrationChange"
+                  :min="0"
+                  :max="maxIntegration"
+                  :step="100"
+                  size="small"
+                  class="!w-28"
+                />
+                <span class="text-purple-600 font-bold text-sm">
+                  抵扣 ¥{{ integrationDiscount.toFixed(2) }}
+                </span>
+              </div>
+            </div>
+
+            <div v-if="maxIntegration === 0 && memberIntegration > 0" class="mt-3 text-xs text-stone-400">
+              当前订单金额不足以使用积分抵扣
+            </div>
+          </div>
         </div>
 
         <!-- 右侧：价格汇总 -->
@@ -193,6 +239,14 @@
               <div v-if="couponDiscount > 0" class="flex justify-between text-orange-500">
                 <span>优惠券抵扣</span>
                 <span class="font-bold">-¥{{ couponDiscount.toFixed(2) }}</span>
+              </div>
+              <div v-if="integrationDiscount > 0" class="flex justify-between text-purple-500">
+                <span>积分抵扣（{{ useIntegration }}积分）</span>
+                <span class="font-bold">-¥{{ integrationDiscount.toFixed(2) }}</span>
+              </div>
+              <div v-if="memberLevelDiscount > 0" class="flex justify-between text-amber-600">
+                <span>会员折扣（{{ memberLevel?.name }}）</span>
+                <span class="font-bold">-¥{{ memberLevelDiscount.toFixed(2) }}</span>
               </div>
               <div class="border-t border-stone-100 pt-4 flex justify-between">
                 <span class="font-bold text-stone-800 text-lg">应付金额</span>
@@ -222,11 +276,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { submitOrder } from '@/api/frontend/order'
-import { getAddressList } from '@/api/frontend/member'
+import { getAddressList, getMemberInfoApi, getCurrentMemberLevel } from '@/api/frontend/member'
 import { getOrderAvailableCoupons } from '@/api/frontend/coupon'
 import { getMemberId, isMemberLoggedIn } from '@/composables/member'
 import regionData from '@/utils/regionData'
@@ -251,6 +305,88 @@ const showManualInput = ref(false)
 const availableCoupons = ref([])
 const selectedCouponId = ref(null)
 const couponDiscount = ref(0)
+
+// 积分抵扣
+const memberIntegration = ref(0) // 会员当前积分余额
+const useIntegration = ref(0)    // 本单使用积分数
+const integrationEnabled = ref(false) // 是否启用积分抵扣
+const INTEGRATION_TO_YUAN_RATIO = 100 // 100积分 = 1元
+
+// 会员等级折扣
+const memberLevel = ref(null) // 当前会员等级信息
+const memberLevelDiscount = computed(() => {
+  if (!memberLevel.value || !memberLevel.value.discount || memberLevel.value.discount >= 100) return 0
+  const total = parseFloat(totalAmount.value) || 0
+  return parseFloat((total * (100 - memberLevel.value.discount) / 100).toFixed(2))
+})
+
+const integrationDiscount = computed(() => {
+  return useIntegration.value / INTEGRATION_TO_YUAN_RATIO
+})
+
+// 积分可抵扣的最大金额（不超过 商品总额 - 优惠券抵扣 - 会员折扣，且不超过会员积分余额对应金额）
+const maxIntegration = computed(() => {
+  const total = parseFloat(totalAmount.value) || 0
+  const discount = couponDiscount.value || 0
+  const levelDiscount = memberLevelDiscount.value || 0
+  const remaining = total - discount - levelDiscount
+  if (remaining <= 0.01) return 0
+  // 最多可抵扣到只剩0.01元
+  const maxDeductYuan = remaining - 0.01
+  const maxByBalance = memberIntegration.value
+  const maxByAmount = Math.floor(maxDeductYuan * INTEGRATION_TO_YUAN_RATIO)
+  return Math.min(maxByBalance, maxByAmount)
+})
+
+const toggleIntegration = (checked) => {
+  integrationEnabled.value = checked
+  if (checked) {
+    // 默认使用全部可用积分
+    useIntegration.value = maxIntegration.value
+  } else {
+    useIntegration.value = 0
+  }
+}
+
+const onIntegrationChange = (val) => {
+  const v = parseInt(val) || 0
+  if (v < 0) {
+    useIntegration.value = 0
+  } else if (v > maxIntegration.value) {
+    useIntegration.value = maxIntegration.value
+  } else {
+    useIntegration.value = v
+  }
+}
+
+const loadMemberIntegration = async () => {
+  if (!memberId) return
+  try {
+    const res = await getMemberInfoApi(memberId)
+    if (res.success && res.data) {
+      memberIntegration.value = res.data.integration || 0
+    }
+  } catch (e) {}
+}
+
+const loadMemberLevel = async () => {
+  if (!memberId) return
+  try {
+    const res = await getCurrentMemberLevel(memberId)
+    if (res.success && res.data) {
+      memberLevel.value = res.data
+    }
+  } catch (e) {}
+}
+
+// 优惠券变化时，重新校正积分使用量
+watch(couponDiscount, () => {
+  if (integrationEnabled.value) {
+    if (useIntegration.value > maxIntegration.value) {
+      useIntegration.value = maxIntegration.value
+    }
+  }
+})
 
 const toggleCoupon = (coupon) => {
   console.log('toggleCoupon 被调用, coupon:', coupon)
@@ -364,7 +500,9 @@ const totalAmount = computed(() => {
 const payAmount = computed(() => {
   const total = parseFloat(totalAmount.value) || 0
   const discount = couponDiscount.value || 0
-  const result = total - discount
+  const intDiscount = integrationDiscount.value || 0
+  const levelDiscount = memberLevelDiscount.value || 0
+  const result = total - discount - intDiscount - levelDiscount
   // 确保最低支付金额为0.01元
   return result > 0.01 ? result.toFixed(2) : '0.01'
 })
@@ -432,6 +570,12 @@ const handleSubmit = async () => {
       }
     }
 
+    // 积分抵扣
+    if (useIntegration.value > 0) {
+      data.useIntegration = useIntegration.value
+      console.log('使用积分:', useIntegration.value, '抵扣金额:', integrationDiscount.value)
+    }
+
     console.log('提交订单数据:', JSON.stringify(data, null, 2))
     const res = await submitOrder(data)
     if (res.success) {
@@ -452,6 +596,10 @@ const handleSubmit = async () => {
 onMounted(() => {
   // 加载已保存的收货地址
   loadAddresses()
+  // 加载会员积分余额
+  loadMemberIntegration()
+  // 加载会员等级信息
+  loadMemberLevel()
 
   // 从sessionStorage获取结算商品
   const stored = sessionStorage.getItem('checkoutItems')

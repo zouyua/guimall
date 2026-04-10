@@ -26,3 +26,10 @@ export function closeOrder(data) {
 export function remarkOrder(data) {
   return axios.post("/admin/oms/order/remark", data);
 }
+
+/** 确认收货 */
+export function confirmReceipt(id) {
+  return axios.post("/admin/oms/order/confirmReceipt", null, {
+    params: { id }
+  });
+}
