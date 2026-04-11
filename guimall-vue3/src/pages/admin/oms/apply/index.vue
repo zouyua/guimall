@@ -84,6 +84,7 @@ const columns = [
     customRender: ({ text }) => `¥ ${text}`
   },
   { title: '商品', dataIndex: 'productName', align: 'center', ellipsis: true },
+  { title: '快递单号', dataIndex: 'deliverySn', align: 'center', ellipsis: true, customRender: ({ text }) => text || '-' },
   {
     title: '状态',
     align: 'center',
@@ -145,6 +146,24 @@ const columns = [
                   }
                 )
               ]
+            : []),
+          ...(record.status === 1
+            ? [
+                h(
+                  Button,
+                  {
+                    size: 'small',
+                    type: 'primary',
+                    style: { backgroundColor: '#059669', borderColor: '#059669' },
+                    class: 'inline-flex shrink-0 items-center gap-1',
+                    onClick: () => handleConfirmReceipt(record)
+                  },
+                  {
+                    icon: () => h(CheckOutlined),
+                    default: () => '确认收货'
+                  }
+                )
+              ]
             : [])
         ]
       )
@@ -183,6 +202,16 @@ const handleReject = async (record) => {
     return
   }
   message.success('已拒绝')
+  await fetchList()
+}
+
+const handleConfirmReceipt = async (record) => {
+  const rsp = await updateOrderReturnApplyStatus({ id: record.id, status: 2 })
+  if (!rsp?.success) {
+    message.error(rsp?.message || '确认收货失败')
+    return
+  }
+  message.success('已确认收货，退货完成')
   await fetchList()
 }
 

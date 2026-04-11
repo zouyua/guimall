@@ -39,3 +39,27 @@ export function deleteAddress(id) {
 export function setDefaultAddress(id, memberId) {
   return axios.post(`/member/address/${id}/default`, null, { params: { memberId } });
 }
+
+/**
+ * 积分变动历史（分页）
+ */
+export function getIntegrationHistory(params) {
+  return axios.get("/member/integration/history", { params });
+}
+
+// ==================== 会员等级相关 ====================
+
+/** 获取所有可用等级列表 */
+export function getMemberLevelList() {
+  return axios.get("/member/level/list");
+}
+
+/** 获取当前会员等级 */
+export function getCurrentMemberLevel(memberId) {
+  return axios.get("/member/level/current", { params: { memberId } });
+}
+
+/** 开通/升级会员等级 */
+export function purchaseMemberLevel(memberId, levelId) {
+  return axios.post("/member/level/purchase", null, { params: { memberId, levelId } });
+}

@@ -35,14 +35,22 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h1 class="text-3xl font-black text-stone-900 mb-3">支付成功</h1>
-          <p class="text-stone-400 mb-2">恭喜您，订单支付已完成！</p>
+          <h1 class="text-3xl font-black text-stone-900 mb-3">
+            {{ isMemberLevelOrder ? '会员开通成功' : '支付成功' }}
+          </h1>
+          <p class="text-stone-400 mb-2">
+            {{ isMemberLevelOrder ? '恭喜您，会员等级已激活！' : '恭喜您，订单支付已完成！' }}
+          </p>
           <p class="text-stone-500 mb-8">
             订单编号：<span class="font-mono font-bold text-stone-800">{{ orderSn }}</span>
           </p>
 
           <div class="flex flex-col sm:flex-row gap-4 justify-center">
-            <router-link to="/my-orders"
+            <router-link v-if="isMemberLevelOrder" to="/member/center"
+              class="bg-amber-500 text-white px-8 py-3 rounded-2xl font-bold hover:bg-amber-600 transition-all shadow-lg shadow-amber-200 text-center">
+              查看会员中心
+            </router-link>
+            <router-link v-else to="/my-orders"
               class="bg-emerald-600 text-white px-8 py-3 rounded-2xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 text-center">
               查看订单
             </router-link>
@@ -90,9 +98,11 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { queryAlipayStatus } from '@/api/frontend/order'
+import { useMemberLevelStore } from '@/stores/memberLevel'
 
 const route = useRoute()
 const router = useRouter()
+const memberLevelStore = useMemberLevelStore()
 
 const loading = ref(true)
 const orderSn = ref('')
@@ -100,6 +110,11 @@ const tradeStatus = ref('')
 
 const isSuccess = computed(() => {
   return tradeStatus.value === 'TRADE_SUCCESS' || tradeStatus.value === 'TRADE_FINISHED'
+})
+
+// 判断是否是会员等级订单（订单号以VIP开头）
+const isMemberLevelOrder = computed(() => {
+  return orderSn.value && orderSn.value.startsWith('VIP')
 })
 
 const retryPay = () => {
@@ -129,12 +144,21 @@ onMounted(async () => {
       const res = await queryAlipayStatus(outTradeNo)
       if (res.success && (res.data === '支付成功' || res.data === '已支付')) {
         tradeStatus.value = 'TRADE_SUCCESS'
+        // 会员等级订单支付成功后，刷新等级缓存
+        if (outTradeNo.startsWith('VIP')) {
+          memberLevelStore.reset()
+          memberLevelStore.loadLevel()
+        }
       } else {
         tradeStatus.value = 'WAIT_BUYER_PAY'
       }
     } catch (e) {
       // 查询失败，有 orderSn 默认视为成功（沙箱可能不返回状态）
       tradeStatus.value = outTradeNo ? 'TRADE_SUCCESS' : ''
+      if (outTradeNo && outTradeNo.startsWith('VIP')) {
+        memberLevelStore.reset()
+        memberLevelStore.loadLevel()
+      }
     } finally {
       loading.value = false
     }

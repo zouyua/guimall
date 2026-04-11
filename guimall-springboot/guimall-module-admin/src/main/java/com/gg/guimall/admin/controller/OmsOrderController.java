@@ -64,5 +64,12 @@ public class OmsOrderController {
     public Response remarkOrder(@RequestBody @Validated RemarkOmsOrderReqVO reqVO) {
         return orderService.remarkOrder(reqVO);
     }
+
+    @PostMapping("/confirmReceipt")
+    @ApiOperation(value = "确认收货")
+    @ApiOperationLog(description = "确认收货")
+    public Response confirmReceipt(@RequestParam Long id) {
+        return orderService.confirmReceipt(id);
+    }
 }
 

@@ -68,5 +68,10 @@ public class OmsOrderReturnApplyDO {
      * 证明图片（逗号分割）
      */
     private String proofPics;
+
+    /**
+     * 退货快递单号
+     */
+    private String deliverySn;
 }
 

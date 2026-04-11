@@ -38,5 +38,10 @@ public interface OmsOrderService {
      * 备注订单
      */
     Response remarkOrder(RemarkOmsOrderReqVO reqVO);
+
+    /**
+     * 确认收货
+     */
+    Response confirmReceipt(Long id);
 }
 

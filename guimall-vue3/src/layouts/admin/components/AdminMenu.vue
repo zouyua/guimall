@@ -55,7 +55,9 @@ import {
     ShoppingOutlined,
     ApartmentOutlined,
     SettingOutlined,
-    LinkOutlined
+    LinkOutlined,
+    StarOutlined,
+    CrownOutlined
 } from '@ant-design/icons-vue'
 
 //引入useMenuStore
@@ -114,7 +116,8 @@ const menus = [
         icon: SafetyCertificateOutlined,
         children: [
             { title: '产地信息', icon: EnvironmentOutlined, path: '/admin/trace/origin' },
-            { title: '溯源记录', icon: UnorderedListOutlined, path: '/admin/trace/record' }
+            { title: '溯源记录', icon: UnorderedListOutlined, path: '/admin/trace/record' },
+            { title: '记录类型', icon: TagsOutlined, path: '/admin/trace/recordType' }
         ]
     },
     {
@@ -146,6 +149,16 @@ const menus = [
             { title: '新品推荐', icon: RocketOutlined, path: '/admin/sms/new' },
             { title: '人气推荐', icon: HeartOutlined, path: '/admin/sms/hot' },
             { title: '轮播图管理', icon: PlayCircleOutlined, path: '/admin/sms/advertise' }
+        ]
+    },
+    {
+        key: 'member',
+        title: '会员模块',
+        icon: TeamOutlined,
+        children: [
+            { title: '会员列表', icon: UserOutlined, path: '/admin/ums/member' },
+            { title: '积分管理', icon: StarOutlined, path: '/admin/ums/integration' },
+            { title: '会员等级', icon: CrownOutlined, path: '/admin/ums/memberLevel' }
         ]
     },
     {

@@ -58,7 +58,7 @@
 </template>
 
 <script setup>
-import { ref, computed, h, onMounted, watch } from 'vue'
+import { ref, computed, h, onMounted, onActivated, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 
@@ -508,6 +508,12 @@ const handleToggleRecommend = async (record, checked) => {
 
 onMounted(async () => {
   await fetchCategories()
+  await fetchStatusRelations()
+  await fetchProducts()
+})
+
+// 从编辑/新增页面返回时自动刷新列表
+onActivated(async () => {
   await fetchStatusRelations()
   await fetchProducts()
 })

@@ -82,24 +82,47 @@
 
           <!-- 订单商品 -->
           <div class="px-8 py-6">
-            <div v-for="item in order.items" :key="item.id"
-              class="flex items-center space-x-4 py-3 first:pt-0">
-              <img :src="item.productPic" class="w-16 h-16 rounded-xl object-cover border border-stone-100 flex-shrink-0" />
+            <!-- 会员等级订单 -->
+            <div v-if="order.orderType === 1" class="flex items-center space-x-4 py-3">
+              <div class="w-16 h-16 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center flex-shrink-0">
+                <svg class="w-8 h-8 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 3l3.057-3L12 4.5 15.943 0 19 3l-2 6.5L19 21H5l2-11.5L5 3z" />
+                </svg>
+              </div>
               <div class="flex-1 min-w-0">
-                <h4 class="font-bold text-stone-800 truncate text-sm">{{ item.productName }}</h4>
-                <p class="text-xs text-stone-400 mt-0.5">{{ item.productAttr || '默认规格' }}</p>
+                <h4 class="font-bold text-stone-800 text-sm">会员等级开通</h4>
+                <p class="text-xs text-amber-500 mt-0.5">{{ order.note || '会员服务' }}</p>
               </div>
               <div class="text-right flex-shrink-0">
-                <p class="text-emerald-600 font-bold text-sm">¥{{ item.productPrice }}</p>
-                <p class="text-xs text-stone-400">× {{ item.productQuantity }}</p>
+                <p class="text-emerald-600 font-bold text-sm">¥{{ order.payAmount }}</p>
               </div>
             </div>
+            <!-- 普通商品订单 -->
+            <template v-else>
+              <div v-for="item in order.items" :key="item.id"
+                class="flex items-center space-x-4 py-3 first:pt-0">
+                <img :src="item.productPic" class="w-16 h-16 rounded-xl object-cover border border-stone-100 flex-shrink-0" />
+                <div class="flex-1 min-w-0">
+                  <h4 class="font-bold text-stone-800 truncate text-sm">{{ item.productName }}</h4>
+                  <p class="text-xs text-stone-400 mt-0.5">{{ item.productAttr || '默认规格' }}</p>
+                </div>
+                <div class="text-right flex-shrink-0">
+                  <p class="text-emerald-600 font-bold text-sm">¥{{ item.productPrice }}</p>
+                  <p class="text-xs text-stone-400">× {{ item.productQuantity }}</p>
+                </div>
+              </div>
+            </template>
           </div>
 
           <!-- 订单底部 -->
           <div class="flex flex-col sm:flex-row items-center justify-between px-8 py-5 border-t border-stone-100">
             <div class="text-stone-500 text-sm mb-3 sm:mb-0">
-              共 <span class="font-bold text-stone-800">{{ order.items?.length || 0 }}</span> 件商品
+              <template v-if="order.orderType === 1">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 text-xs font-bold">会员服务</span>
+              </template>
+              <template v-else>
+                共 <span class="font-bold text-stone-800">{{ order.items?.length || 0 }}</span> 件商品
+              </template>
             </div>
             <div class="flex items-center space-x-6">
               <span class="text-stone-600">
@@ -121,6 +144,11 @@
                 <button @click="viewOrderDetail(order.id)"
                   class="bg-stone-100 text-stone-600 px-6 py-2.5 rounded-xl font-bold hover:bg-stone-200 transition-all text-sm">
                   查看详情
+                </button>
+                <!-- 已发货 → 确认收货 -->
+                <button v-if="order.status === 2" @click="handleConfirmReceipt(order.id)"
+                  class="bg-emerald-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-md text-sm">
+                  确认收货
                 </button>
                 <button @click="handleReturnApply(order.id)"
                   class="bg-orange-100 text-orange-600 px-6 py-2.5 rounded-xl font-bold hover:bg-orange-200 transition-all text-sm">
@@ -155,7 +183,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { message, Modal } from 'ant-design-vue'
-import { getOrderList } from '@/api/frontend/order'
+import { getOrderList, confirmReceipt } from '@/api/frontend/order'
 import { cancelOrder } from '@/api/frontend/orderReturn'
 import { getMemberId, isMemberLoggedIn } from '@/composables/member'
 import { useCartStore } from '@/stores/cart'
@@ -248,6 +276,28 @@ const handleCancelOrder = (orderId) => {
 
 const handleReturnApply = (orderId) => {
   router.push(`/order/return?orderId=${orderId}`)
+}
+
+const handleConfirmReceipt = (orderId) => {
+  Modal.confirm({
+    title: '确认收货？',
+    content: '请确认您已收到商品，确认后订单将完成',
+    okText: '确认收货',
+    cancelText: '取消',
+    onOk: async () => {
+      try {
+        const res = await confirmReceipt(orderId, memberId)
+        if (res.success) {
+          message.success('已确认收货')
+          loadOrders()
+        } else {
+          message.error(res.message || '确认收货失败')
+        }
+      } catch (e) {
+        message.error('确认收货失败')
+      }
+    }
+  })
 }
 
 onMounted(() => {

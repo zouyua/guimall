@@ -9,7 +9,9 @@ import com.alipay.api.request.AlipayTradeQueryRequest;
 import com.alipay.api.response.AlipayTradeQueryResponse;
 import com.gg.guimall.common.config.AlipayConfig;
 import com.gg.guimall.common.domain.dos.OmsOrderDO;
+import com.gg.guimall.common.domain.dos.UmsMemberDO;
 import com.gg.guimall.common.domain.mapper.OmsOrderMapper;
+import com.gg.guimall.common.domain.mapper.UmsMemberMapper;
 import com.gg.guimall.common.utils.Response;
 import com.gg.guimall.web.service.AlipayService;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +36,9 @@ public class AlipayServiceImpl implements AlipayService {
 
     @Autowired
     private OmsOrderMapper omsOrderMapper;
+
+    @Autowired
+    private UmsMemberMapper umsMemberMapper;
 
     @Override
     public Response createPay(String orderSn) {
@@ -64,10 +69,14 @@ public class AlipayServiceImpl implements AlipayService {
             request.setReturnUrl(alipayConfig.getReturnUrl());
 
             // 4. 设置业务参数
+            String subject = "Guimall订单-" + orderSn;
+            if (order.getOrderType() != null && order.getOrderType() == 1) {
+                subject = "Guimall会员开通-" + orderSn;
+            }
             String bizContent = "{" +
                     "\"out_trade_no\":\"" + orderSn + "\"," +
                     "\"total_amount\":\"" + order.getPayAmount() + "\"," +
-                    "\"subject\":\"Guimall订单-" + orderSn + "\"," +
+                    "\"subject\":\"" + subject + "\"," +
                     "\"product_code\":\"FAST_INSTANT_TRADE_PAY\"" +
                     "}";
             request.setBizContent(bizContent);
@@ -126,6 +135,9 @@ public class AlipayServiceImpl implements AlipayService {
                         updateOrder.setUpdateTime(LocalDateTime.now());
                         omsOrderMapper.updateById(updateOrder);
                         log.info("订单支付成功，已更新状态, orderSn={}", outTradeNo);
+
+                        // 会员等级订单：支付成功后自动开通等级
+                        handleMemberLevelActivation(order);
                     }
                 }
 
@@ -184,6 +196,10 @@ public class AlipayServiceImpl implements AlipayService {
                     updateOrder.setUpdateTime(LocalDateTime.now());
                     omsOrderMapper.updateById(updateOrder);
                     log.info("主动查询确认支付成功，已更新订单状态, orderSn={}", orderSn);
+
+                    // 会员等级订单：支付成功后自动开通等级
+                    handleMemberLevelActivation(order);
+
                     return Response.success("支付成功");
                 }
                 return Response.success("未支付");
@@ -193,6 +209,38 @@ public class AlipayServiceImpl implements AlipayService {
         } catch (AlipayApiException e) {
             log.error("查询支付宝交易状态失败, orderSn={}", orderSn, e);
             return Response.fail("查询失败");
+        }
+    }
+
+    /**
+     * 会员等级订单支付成功后，自动激活会员等级
+     * 从订单的 note 字段解析等级ID（格式："开通会员等级：XXX（等级ID：123）"）
+     */
+    private void handleMemberLevelActivation(OmsOrderDO order) {
+        if (order.getOrderType() == null || order.getOrderType() != 1) {
+            return; // 不是会员等级订单，跳过
+        }
+        try {
+            // 从 note 中解析等级ID
+            String note = order.getNote();
+            if (note == null || !note.contains("等级ID：")) {
+                log.warn("会员等级订单note格式异常, orderSn={}, note={}", order.getOrderSn(), note);
+                return;
+            }
+            String levelIdStr = note.substring(note.indexOf("等级ID：") + 5, note.indexOf("）"));
+            Long levelId = Long.parseLong(levelIdStr.trim());
+
+            // 更新会员等级
+            UmsMemberDO member = umsMemberMapper.selectById(order.getMemberId());
+            if (member != null) {
+                member.setMemberLevelId(levelId);
+                member.setUpdateTime(LocalDateTime.now());
+                umsMemberMapper.updateById(member);
+                log.info("会员等级订单支付成功，已激活等级, memberId={}, levelId={}, orderSn={}",
+                        order.getMemberId(), levelId, order.getOrderSn());
+            }
+        } catch (Exception e) {
+            log.error("激活会员等级失败, orderSn={}", order.getOrderSn(), e);
         }
     }
 }

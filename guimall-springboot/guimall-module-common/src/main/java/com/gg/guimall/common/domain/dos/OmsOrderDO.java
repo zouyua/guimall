@@ -102,5 +102,20 @@ public class OmsOrderDO {
     private LocalDateTime deliveryTime;
 
     private LocalDateTime receiveTime;
+
+    /**
+     * 下单时使用的积分数量
+     */
+    private Integer useIntegration;
+
+    /**
+     * 积分抵扣金额
+     */
+    private BigDecimal integrationAmount;
+
+    /**
+     * 订单类型:0普通商品订单 1会员等级订单
+     */
+    private Integer orderType;
 }
 

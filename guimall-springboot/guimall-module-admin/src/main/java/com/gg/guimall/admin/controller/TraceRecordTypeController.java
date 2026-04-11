@@ -9,6 +9,7 @@ import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -39,5 +40,51 @@ public class TraceRecordTypeController {
     public Response listAll() {
         List<TraceRecordTypeDO> list = traceRecordTypeMapper.selectAllTypes();
         return Response.success(list);
+    }
+
+    @PostMapping("/create")
+    @ApiOperation(value = "新增溯源记录类型")
+    @ApiOperationLog(description = "新增溯源记录类型")
+    public Response create(@RequestBody TraceRecordTypeDO recordType) {
+        if (recordType.getCategoryId() == null) {
+            return Response.fail("商品分类ID不能为空");
+        }
+        if (recordType.getTypeName() == null || recordType.getTypeName().trim().isEmpty()) {
+            return Response.fail("记录类型名称不能为空");
+        }
+        recordType.setTypeName(recordType.getTypeName().trim());
+        if (recordType.getSort() == null) {
+            recordType.setSort(0);
+        }
+        recordType.setCreateTime(LocalDateTime.now());
+        recordType.setUpdateTime(LocalDateTime.now());
+        traceRecordTypeMapper.insert(recordType);
+        return Response.success();
+    }
+
+    @PostMapping("/update")
+    @ApiOperation(value = "更新溯源记录类型")
+    @ApiOperationLog(description = "更新溯源记录类型")
+    public Response update(@RequestBody TraceRecordTypeDO recordType) {
+        if (recordType.getId() == null) {
+            return Response.fail("ID不能为空");
+        }
+        if (recordType.getTypeName() != null) {
+            recordType.setTypeName(recordType.getTypeName().trim());
+        }
+        recordType.setUpdateTime(LocalDateTime.now());
+        traceRecordTypeMapper.updateById(recordType);
+        return Response.success();
+    }
+
+    @PostMapping("/delete")
+    @ApiOperation(value = "删除溯源记录类型")
+    @ApiOperationLog(description = "删除溯源记录类型")
+    public Response delete(@RequestParam Long id) {
+        if (id == null) {
+            return Response.fail("ID不能为空");
+        }
+        traceRecordTypeMapper.deleteById(id);
+        return Response.success();
     }
 }

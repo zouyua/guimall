@@ -29,3 +29,10 @@ export function queryAlipayStatus(orderSn) {
 export function getRemainingTime(orderSn) {
   return axios.get("/order/remaining-time", { params: { orderSn } });
 }
+
+// 确认收货（前台）
+export function confirmReceipt(orderId, memberId) {
+  return axios.post("/order/confirmReceipt", null, {
+    params: { orderId, memberId }
+  });
+}

@@ -36,4 +36,10 @@ public class MemberInfoRspVO {
 
     /** 个性签名 */
     private String personalizedSignature;
+
+    /** 当前可用积分 */
+    private Integer integration;
+
+    /** 历史累计积分 */
+    private Integer historyIntegration;
 }
