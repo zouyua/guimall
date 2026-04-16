@@ -4,8 +4,10 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.gg.guimall.common.domain.dos.SmsCouponDO;
 import com.gg.guimall.common.domain.dos.SmsCouponHistoryDO;
+import com.gg.guimall.common.domain.dos.UmsMemberDO;
 import com.gg.guimall.common.domain.mapper.SmsCouponHistoryMapper;
 import com.gg.guimall.common.domain.mapper.SmsCouponMapper;
+import com.gg.guimall.common.domain.mapper.UmsMemberMapper;
 import com.gg.guimall.common.enums.ResponseCodeEnum;
 import com.gg.guimall.common.exception.BizException;
 import com.gg.guimall.common.utils.Response;
@@ -15,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import org.springframework.util.CollectionUtils;
 
 import java.math.BigDecimal;
@@ -39,6 +42,9 @@ public class SmsCouponServiceImpl implements SmsCouponService {
 
     @Autowired
     private SmsCouponHistoryMapper couponHistoryMapper;
+
+    @Autowired
+    private UmsMemberMapper umsMemberMapper;
 
     @Override
     public Response findAvailableCouponList(Long memberId) {
@@ -140,7 +146,7 @@ public class SmsCouponServiceImpl implements SmsCouponService {
                 .couponId(couponId)
                 .memberId(memberId)
                 .couponCode(couponCode)
-                .memberNickname(reqVO.getMemberNickname())
+                .memberNickname(resolveMemberNickname(reqVO))
                 .getType(1) // 1用户领取
                 .createTime(now)
                 .useStatus(0) // 0未使用
@@ -335,5 +341,25 @@ public class SmsCouponServiceImpl implements SmsCouponService {
      */
     private String generateCouponCode() {
         return "CPN" + System.currentTimeMillis() + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    }
+
+    /**
+     * 兼容前端未传 memberNickname 的情况，按 memberId 回填昵称
+     */
+    private String resolveMemberNickname(ReceiveCouponReqVO reqVO) {
+        if (StringUtils.hasText(reqVO.getMemberNickname())) {
+            return reqVO.getMemberNickname().trim();
+        }
+        UmsMemberDO member = umsMemberMapper.selectById(reqVO.getMemberId());
+        if (member == null) {
+            return null;
+        }
+        if (StringUtils.hasText(member.getNickname())) {
+            return member.getNickname().trim();
+        }
+        if (StringUtils.hasText(member.getUsername())) {
+            return member.getUsername().trim();
+        }
+        return null;
     }
 }

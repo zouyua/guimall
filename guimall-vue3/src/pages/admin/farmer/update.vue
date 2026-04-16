@@ -118,7 +118,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { ArrowLeftOutlined, PlusOutlined } from '@ant-design/icons-vue'
@@ -247,6 +247,8 @@ const loadDetail = async () => {
   // 回填头像
   if (form.avatar) {
     avatarFileList.value = [{ uid: '-1', name: '头像', status: 'done', url: form.avatar }]
+  } else {
+    avatarFileList.value = []
   }
 }
 
@@ -256,6 +258,13 @@ onMounted(async () => {
     originOptions.value = originRsp.data || []
   }
   await loadDetail()
+})
+
+// KeepAlive 场景下组件会被复用，query.id 变化时需要重新拉取详情
+watch(() => route.query.id, (newId, oldId) => {
+  if (newId && newId !== oldId) {
+    loadDetail()
+  }
 })
 
 const goBack = () => {

@@ -21,6 +21,12 @@
         <div class="flex items-center space-x-4">
           <!-- 已登录 -->
           <template v-if="memberLoggedIn">
+            <router-link to="/user/coupons" class="coupon-link">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 7h8m-8 5h6m-9-9h14a1 1 0 0 1 1 1v4a2 2 0 1 0 0 4v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-4a2 2 0 1 0 0-4V4a1 1 0 0 1 1-1Z" />
+              </svg>
+              <span>我的优惠券</span>
+            </router-link>
             <router-link to="/cart" class="text-stone-600 hover:text-emerald-600 transition-colors">
               <a-badge :count="cartStore.cartCount" :offset="[-2, 2]" size="small">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z" /></svg>
@@ -215,6 +221,35 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.coupon-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, rgba(236, 253, 245, 0.95) 0%, rgba(209, 250, 229, 0.9) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #047857;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15);
+  transition: all 0.2s ease;
+}
+
+.coupon-link:hover {
+  color: #065f46;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(16, 185, 129, 0.22);
+  border-color: rgba(16, 185, 129, 0.55);
+}
+
+.coupon-link svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2.1;
+}
+
 :deep(.ant-btn-primary) {
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   border: none;
