@@ -26,6 +26,8 @@ public class ProductCategoryTreeVO {
 
     private Integer level;
 
+    private String icon;
+
     private List<ProductCategoryTreeVO> children;
 }
 
