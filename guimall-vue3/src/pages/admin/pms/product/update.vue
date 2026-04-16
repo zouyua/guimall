@@ -1,17 +1,15 @@
-<template>
+﻿<template>
   <div class="p-2 box">
-
     <a-card :bordered="false" class="mb-5">
       <div class="flex flex-wrap items-center gap-4">
         <a-button class="flex items-center gap-1" @click="goBack">
           <ArrowLeftOutlined />
           返回列表
         </a-button>
-        <span class="text-base font-semibold">更改商品信息</span>
+        <span class="text-base font-semibold">修改商品信息</span>
       </div>
     </a-card>
 
-    <!-- 基本信息 -->
     <a-card :bordered="false" title="基本信息">
       <a-form
         ref="formRef"
@@ -21,18 +19,13 @@
         :label-col="{ span: 6 }"
         :wrapper-col="{ span: 14 }"
       >
-
         <a-form-item name="name" label="商品名称">
           <a-input v-model:value="form.name" class="gm-field" />
         </a-form-item>
 
         <a-form-item name="productCategoryId" label="商品分类">
           <a-select v-model:value="form.productCategoryId" allow-clear class="gm-field">
-            <a-select-option
-              v-for="item in categoryOptions"
-              :key="item.id"
-              :value="item.id"
-            >
+            <a-select-option v-for="item in categoryOptions" :key="item.id" :value="item.id">
               {{ item.name }}
             </a-select-option>
           </a-select>
@@ -40,11 +33,7 @@
 
         <a-form-item label="属性分类">
           <a-select v-model:value="form.productAttributeCategoryId" allow-clear class="gm-field">
-            <a-select-option
-              v-for="item in attrCategoryOptions"
-              :key="item.id"
-              :value="item.id"
-            >
+            <a-select-option v-for="item in attrCategoryOptions" :key="item.id" :value="item.id">
               {{ item.name }}
             </a-select-option>
           </a-select>
@@ -52,11 +41,7 @@
 
         <a-form-item name="farmerId" label="关联农户">
           <a-select v-model:value="form.farmerId" allow-clear class="gm-field">
-            <a-select-option
-              v-for="item in farmerOptions"
-              :key="item.id"
-              :value="item.id"
-            >
+            <a-select-option v-for="item in farmerOptions" :key="item.id" :value="item.id">
               {{ item.name }}
             </a-select-option>
           </a-select>
@@ -66,8 +51,20 @@
           <a-input v-model:value="form.productSn" class="gm-field" />
         </a-form-item>
 
-        <a-form-item label="主图地址">
-          <a-input v-model:value="form.pic" class="gm-field" />
+        <a-form-item label="商品主图">
+          <a-upload
+            :max-count="1"
+            list-type="picture-card"
+            :file-list="picFileList"
+            :custom-request="handlePicUpload"
+            @remove="handlePicRemove"
+            accept="image/*"
+          >
+            <div v-if="picFileList.length === 0">
+              <PlusOutlined />
+              <div class="mt-2">上传图片</div>
+            </div>
+          </a-upload>
         </a-form-item>
 
         <a-form-item name="price" label="销售价格">
@@ -97,34 +94,26 @@
         <a-form-item label="商品描述">
           <a-textarea v-model:value="form.description" :rows="4" class="gm-field" />
         </a-form-item>
-
       </a-form>
 
       <div class="mt-6 flex justify-center gap-3">
         <a-button type="primary" @click="handleSubmit">保存</a-button>
         <a-button @click="goBack">取消</a-button>
       </div>
-
     </a-card>
 
-    <!-- SKU库存 -->
     <a-card title="SKU库存管理" class="mt-5">
       <a-alert
         class="mb-4"
         type="warning"
         show-icon
         banner
-        message="SKU库存需要单独保存，不会随底部的【保存基本信息】按钮一起保存"
+        message="SKU库存需要单独保存，不会随着上面的【保存基本信息】按钮一起保存"
       />
 
       <div class="mb-4">
         <a-button @click="handleAddSku">新增SKU</a-button>
-        <a-button
-          type="primary"
-          :loading="skuSaveLoading"
-          @click="handleSaveSku"
-          style="margin-left:10px"
-        >
+        <a-button type="primary" :loading="skuSaveLoading" @click="handleSaveSku" style="margin-left:10px">
           保存SKU库存
         </a-button>
       </div>
@@ -136,15 +125,12 @@
         :pagination="false"
         bordered
       />
-
     </a-card>
 
-    <!-- 底部固定操作栏 -->
     <div class="fixed-bottom-bar">
       <a-button type="primary" @click="handleSubmit">保存基本信息</a-button>
       <a-button @click="goBack">取消</a-button>
     </div>
-
   </div>
 </template>
 
@@ -152,7 +138,7 @@
 import { reactive, ref, onMounted, watch, h } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { message, Input, InputNumber, Button, Popconfirm } from 'ant-design-vue'
-import { ArrowLeftOutlined } from '@ant-design/icons-vue'
+import { ArrowLeftOutlined, PlusOutlined } from '@ant-design/icons-vue'
 
 import {
   getProductDetail,
@@ -161,12 +147,10 @@ import {
   unpublishProduct
 } from '@/api/admin/product'
 
-import {
-  fetchProductCategoryOptions
-} from '@/api/admin/productCategory'
-
+import { fetchProductCategoryOptions } from '@/api/admin/productCategory'
 import { fetchFarmerOptions } from '@/api/admin/farmer'
 import { fetchProductAttrCategoryOptions } from '@/api/admin/productAttrCategory'
+import { uploadFile } from '@/api/admin/upload'
 
 import {
   fetchSkuListByProductId,
@@ -184,6 +168,7 @@ const farmerOptions = ref([])
 const attrCategoryOptions = ref([])
 
 const publishChecked = ref(false)
+const picFileList = ref([])
 
 const skuRows = ref([])
 const skuSaveLoading = ref(false)
@@ -205,11 +190,32 @@ const form = reactive({
   description: ''
 })
 
+const handlePicUpload = async ({ file, onSuccess, onError }) => {
+  try {
+    const res = await uploadFile(file)
+    if (res.success) {
+      form.pic = res.data
+      picFileList.value = [{ uid: '-1', name: file.name, status: 'done', url: res.data }]
+      onSuccess(res)
+    } else {
+      message.error(res.message || '上传失败')
+      onError(new Error(res.message))
+    }
+  } catch (e) {
+    message.error('上传失败')
+    onError(e)
+  }
+}
+
+const handlePicRemove = () => {
+  form.pic = ''
+  picFileList.value = []
+}
+
 const normalizeUnit = (v) => {
   const unit = String(v ?? '').trim()
   if (!unit || unit === 'null' || unit === 'undefined') return '斤'
-  // 常见乱码/占位符：问号、替换字符等
-  if (/[?\uFF1F\uFFFD�]/.test(unit)) return '斤'
+  if (/[?\uFF1F\uFFFD]/.test(unit)) return '斤'
   return unit
 }
 
@@ -230,14 +236,13 @@ onMounted(() => {
   init()
 })
 
-// 监听路由变化，当编辑不同商品时重新加载数据
 watch(() => route.query.id, (newId, oldId) => {
   if (newId && newId !== oldId) {
-    // 重置表单和数据
     Object.assign(form, {
       id: null,
       name: '',
       productCategoryId: undefined,
+      productAttributeCategoryId: undefined,
       farmerId: undefined,
       productSn: '',
       pic: '',
@@ -247,20 +252,15 @@ watch(() => route.query.id, (newId, oldId) => {
       sale: 0,
       unit: '斤',
       publishStatus: 0,
-      detailHtml: ''
+      description: ''
     })
     picFileList.value = []
     skuRows.value = []
-    paramRows.value = []
-    selectedParamIds.value = new Set()
-
-    // 重新加载数据
     init()
   }
 })
 
 const init = async () => {
-
   const id = Number(route.query.id)
   if (!id) return
 
@@ -277,33 +277,28 @@ const init = async () => {
 
   Object.assign(form, detailRsp.data)
   form.unit = normalizeUnit(form.unit)
-
   publishChecked.value = form.publishStatus === 1
+  picFileList.value = form.pic
+    ? [{ uid: '-1', name: '商品主图', status: 'done', url: form.pic }]
+    : []
 
   await fetchSkuList()
 }
 
 const fetchSkuList = async () => {
-
   const rsp = await fetchSkuListByProductId(form.id)
-
   if (!rsp?.success) {
     message.error('获取SKU失败')
     return
   }
 
   skuRows.value = (rsp.data || []).map((item, i) => {
-
-    // 从 specs 数组中提取规格名称和规格值
     let specKey = ''
     let specValue = ''
     if (Array.isArray(item.specs) && item.specs.length > 0) {
-      // 取第一个规格（通常一个SKU只有一个主规格）
       specKey = item.specs[0].specKey || ''
       specValue = item.specs[0].specValue || ''
     }
-
-    console.log('SKU item:', item.id, 'specs:', item.specs, 'specKey:', specKey, 'specValue:', specValue)
 
     return {
       ...item,
@@ -316,8 +311,6 @@ const fetchSkuList = async () => {
       lowStock: item.lowStock || 0
     }
   })
-
-  console.log('skuRows:', skuRows.value)
 }
 
 const skuColumns = [
@@ -409,12 +402,11 @@ const skuColumns = [
       h(
         Popconfirm,
         {
-          title: '确认删除?',
+          title: '确认删除？',
           onConfirm: () => handleDeleteSku(record)
         },
         {
-          default: () =>
-            h(Button, { danger: true, size: 'small' }, () => '删除')
+          default: () => h(Button, { danger: true, size: 'small' }, () => '删除')
         }
       )
   }
@@ -435,26 +427,20 @@ const handleAddSku = () => {
   })
 }
 
-const handleDeleteSku = async record => {
-
+const handleDeleteSku = async (record) => {
   if (!record.id) {
     skuRows.value = skuRows.value.filter(r => r.tempKey !== record.tempKey)
     return
   }
 
   await deleteSku(record.id)
-
   message.success('删除成功')
-
   fetchSkuList()
 }
 
 const handleSaveSku = async () => {
-
   skuSaveLoading.value = true
-
   try {
-
     const payload = skuRows.value.map(row => ({
       id: row.id,
       productId: form.id,
@@ -464,29 +450,23 @@ const handleSaveSku = async () => {
       promotionPrice: row.promotionPrice || null,
       lowStock: row.lowStock || 0,
       pic: row.pic || '',
-      specs: [
-        { specKey: row.specKey || '', specValue: row.specValue || '' }
-      ]
+      specs: [{ specKey: row.specKey || '', specValue: row.specValue || '' }]
     }))
 
     const rsp = await saveSkuList(form.id, payload)
-
-    if (!rsp.success) {
+    if (!rsp?.success) {
       message.error('保存失败')
       return
     }
 
     message.success('SKU保存成功')
-
     fetchSkuList()
-
   } finally {
     skuSaveLoading.value = false
   }
 }
 
 const handleSubmit = async () => {
-
   await formRef.value.validate()
 
   await updateProduct({
@@ -502,7 +482,6 @@ const handleSubmit = async () => {
   }
 
   message.success('保存成功')
-
   goBack()
 }
 </script>
@@ -533,7 +512,6 @@ const handleSubmit = async () => {
   padding-bottom: 72px;
 }
 
-/* 统一把"更改商品信息"页的表单控件改成浅灰圆角风格 */
 :deep(.gm-field .ant-input),
 :deep(.gm-field.ant-input),
 :deep(.gm-field .ant-input-number),

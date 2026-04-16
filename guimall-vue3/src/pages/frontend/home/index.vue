@@ -61,7 +61,12 @@
              :class="queryParams.categoryId === cat.id ? 'bg-emerald-600 text-white shadow-emerald-200' : 'bg-white text-stone-800'"
              class="p-6 rounded-3xl shadow-xl hover:shadow-2xl hover:-translate-y-2 transition-all text-center cursor-pointer border border-stone-100 group">
           <div class="w-16 h-16 mx-auto bg-stone-50 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-emerald-50 transition-colors">
-            <img :src="cat.icon" class="w-10 h-10 object-contain group-hover:scale-110 transition-transform" />
+            <img
+              v-if="cat.icon"
+              :src="cat.icon"
+              class="w-10 h-10 object-contain group-hover:scale-110 transition-transform"
+            />
+            <span v-else class="text-emerald-600 text-sm font-bold">{{ (cat.name || '').slice(0, 1) }}</span>
           </div>
           <h3 class="font-bold">{{ cat.name }}</h3>
         </div>
@@ -302,7 +307,7 @@ const loadHomeData = async () => {
     categories.value = categoryRes.data.slice(0, 6).map(item => ({
       id: item.id,
       name: item.name,
-      icon: item.icon || 'https://cdn-icons-png.flaticon.com/128/1625/1625099.png'
+      icon: item.icon || ''
     }))
   }
 
