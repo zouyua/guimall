@@ -14,6 +14,7 @@
         <div class="flex items-center space-x-4">
           <router-link to="/" class="text-stone-600 hover:text-emerald-600 font-medium transition-colors">首页</router-link>
           <router-link to="/my-orders" class="text-stone-600 hover:text-emerald-600 font-medium transition-colors">我的订单</router-link>
+          <router-link to="/user/coupons" class="text-stone-600 hover:text-emerald-600 font-medium transition-colors">我的优惠券</router-link>
           <router-link to="/cart" class="text-stone-600 hover:text-emerald-600 font-medium transition-colors">购物车</router-link>
         </div>
       </div>
