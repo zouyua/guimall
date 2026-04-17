@@ -9,7 +9,10 @@ export function createHomeAdvertise(data) {
 }
 
 export function updateHomeAdvertise(id, data) {
-  return axios.post(`/admin/sms/advertise/update/${id}`, data);
+  return axios.post(`/admin/sms/advertise/update/${id}`, {
+    ...(data || {}),
+    id
+  });
 }
 
 export function deleteHomeAdvertise(id) {
