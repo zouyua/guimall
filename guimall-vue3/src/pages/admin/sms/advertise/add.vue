@@ -26,7 +26,19 @@
         </a-form-item>
 
         <a-form-item label="轮播图片" name="pic" required>
-          <a-input v-model:value="form.pic" placeholder="图片 URL，建议与前端轮播组件比例一致" allow-clear />
+          <a-upload
+            :max-count="1"
+            list-type="picture-card"
+            :file-list="picFileList"
+            :custom-request="handlePicUpload"
+            @remove="handlePicRemove"
+            accept="image/*"
+          >
+            <div v-if="picFileList.length === 0">
+              <PlusOutlined />
+              <div class="mt-2">上传图片</div>
+            </div>
+          </a-upload>
         </a-form-item>
 
         <a-form-item label="广告位置" name="type" required>
@@ -37,11 +49,25 @@
         </a-form-item>
 
         <a-form-item label="开始时间" name="startTime" required>
-          <a-input v-model:value="form.startTime" placeholder="YYYY-MM-DD HH:mm:ss" allow-clear />
+          <a-date-picker
+            v-model:value="form.startTime"
+            show-time
+            value-format="YYYY-MM-DD HH:mm:ss"
+            format="YYYY-MM-DD HH:mm:ss"
+            class="w-full"
+            placeholder="请选择开始时间"
+          />
         </a-form-item>
 
         <a-form-item label="结束时间" name="endTime" required>
-          <a-input v-model:value="form.endTime" placeholder="YYYY-MM-DD HH:mm:ss" allow-clear />
+          <a-date-picker
+            v-model:value="form.endTime"
+            show-time
+            value-format="YYYY-MM-DD HH:mm:ss"
+            format="YYYY-MM-DD HH:mm:ss"
+            class="w-full"
+            placeholder="请选择结束时间"
+          />
         </a-form-item>
 
         <a-form-item label="排序" name="sort" required>
@@ -76,13 +102,15 @@
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
-import { ArrowLeftOutlined } from '@ant-design/icons-vue'
+import { ArrowLeftOutlined, PlusOutlined } from '@ant-design/icons-vue'
 import { createHomeAdvertise } from '@/api/admin/homeAdvertise'
+import { uploadFile } from '@/api/admin/upload'
 
 const router = useRouter()
 
 // 表单引用（用于 validate）
 const formRef = ref()
+const picFileList = ref([])
 // 表单数据（字段与 CreateSmsHomeAdvertiseReqVO 对齐）
 const form = reactive({
   name: '',
@@ -100,10 +128,32 @@ const form = reactive({
 const rules = {
   name: [{ required: true, message: '请输入轮播标题', trigger: 'blur' }],
   type: [{ required: true, message: '请选择广告位置', trigger: 'change' }],
-  pic: [{ required: true, message: '请输入轮播图片', trigger: 'blur' }],
-  startTime: [{ required: true, message: '请输入开始时间', trigger: 'blur' }],
-  endTime: [{ required: true, message: '请输入结束时间', trigger: 'blur' }],
+  pic: [{ required: true, message: '请上传轮播图片', trigger: 'change' }],
+  startTime: [{ required: true, message: '请选择开始时间', trigger: 'change' }],
+  endTime: [{ required: true, message: '请选择结束时间', trigger: 'change' }],
   sort: [{ required: true, message: '请输入排序值', trigger: 'change' }]
+}
+
+const handlePicUpload = async ({ file, onSuccess, onError }) => {
+  try {
+    const res = await uploadFile(file)
+    if (res.success) {
+      form.pic = res.data
+      picFileList.value = [{ uid: '-1', name: file.name, status: 'done', url: res.data }]
+      onSuccess(res)
+      return
+    }
+    message.error(res.message || '上传失败')
+    onError(new Error(res.message || '上传失败'))
+  } catch (e) {
+    message.error('上传失败')
+    onError(e)
+  }
+}
+
+const handlePicRemove = () => {
+  form.pic = ''
+  picFileList.value = []
 }
 
 const goBack = () => {
@@ -123,8 +173,8 @@ const handleSubmit = async () => {
     name: form.name.trim(),
     type: Number(form.type),
     pic: form.pic.trim(),
-    startTime: form.startTime.trim(),
-    endTime: form.endTime.trim(),
+    startTime: form.startTime?.trim(),
+    endTime: form.endTime?.trim(),
     status: Number(form.status),
     url: form.url?.trim() || '',
     note: form.note?.trim() || '',

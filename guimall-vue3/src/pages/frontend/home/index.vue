@@ -40,8 +40,8 @@
 
     <!-- Banner 区域 (Ant Design Carousel) -->
     <header class="max-w-screen-xl mx-auto px-4 mt-6">
-      <a-carousel autoplay class="rounded-[2.5rem] overflow-hidden shadow-2xl">
-        <div v-for="adv in advertises" :key="adv.id" class="relative h-[450px]">
+      <a-carousel v-if="displayAdvertises.length > 0" autoplay class="rounded-[2.5rem] overflow-hidden shadow-2xl">
+        <div v-for="adv in displayAdvertises" :key="adv.id || adv.pic" class="relative h-[450px]">
           <img :src="adv.pic" class="w-full h-full object-cover" />
           <div class="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent flex items-center px-12">
             <div class="max-w-lg text-white space-y-4">
@@ -51,6 +51,12 @@
           </div>
         </div>
       </a-carousel>
+      <div v-else class="h-[450px] rounded-[2.5rem] overflow-hidden shadow-2xl bg-gradient-to-r from-emerald-700 to-emerald-500 text-white flex items-center justify-center">
+        <div class="text-center">
+          <div class="text-4xl font-black mb-3">GUIMALL</div>
+          <div class="text-emerald-100">暂无可展示的轮播图，请在管理端配置并启用</div>
+        </div>
+      </div>
     </header>
 
     <!-- 分类展示 (真实数据) -->
@@ -203,7 +209,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   getProductList,
@@ -261,6 +267,16 @@ const queryParams = ref({
 
 const total = ref(0)
 const advertises = ref([])
+const displayAdvertises = computed(() => {
+  return advertises.value
+    .filter(item => item && item.pic && String(item.pic).trim().length > 0)
+    .sort((a, b) => {
+      const sortA = Number(a?.sort ?? 0)
+      const sortB = Number(b?.sort ?? 0)
+      if (sortA !== sortB) return sortA - sortB
+      return Number(b?.id ?? 0) - Number(a?.id ?? 0)
+    })
+})
 const categories = ref([])
 const newProducts = ref([])
 const recommendProducts = ref([])
@@ -299,7 +315,11 @@ const loadData = async () => {
 const loadHomeData = async () => {
   // 加载轮播图 (type=0 WEB)
   const advRes = await getHomeAdvertises(0)
-  if (advRes.success) advertises.value = advRes.data
+  if (advRes.success) {
+    advertises.value = Array.isArray(advRes.data) ? advRes.data : []
+  } else {
+    advertises.value = []
+  }
 
   // 加载分类
   const categoryRes = await getCategoryTree()
