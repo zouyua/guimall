@@ -184,10 +184,15 @@ const parsedParams = computed(() => {
   return params.filter(p => p.key && p.key.trim())
 })
 
+// 加载商品详情数据
 const loadDetail = async () => {
+  // 调用 API 获取商品详情，id 来自路由参数
   const res = await getProductDetail(id)
+  // 判断接口请求是否成功
   if (res.success) {
+    // 将返回的数据赋值给 product 响应式对象
     product.value = res.data
+    // 如果商品有 SKU 列表，默认选中第一个 SKU
     if (product.value.skus && product.value.skus.length > 0) {
       selectedSku.value = product.value.skus[0]
     }
@@ -220,6 +225,7 @@ const goTrace = () => {
   router.push(`/trace/${id}`)
 }
 
+// 加入购物车：校验登录和规格，构造数据，调用接口，成功后提示并刷新购物车数量
 const handleAddCart = async () => {
   if (!isMemberLoggedIn()) {
     message.warning('请先登录')
@@ -253,6 +259,7 @@ const handleAddCart = async () => {
   }
 }
 
+// 立即购买：校验登录和规格，构造订单商品数据，存入 sessionStorage 并跳转结算页
 const handleBuyNow = () => {
   if (!isMemberLoggedIn()) {
     message.warning('请先登录')
@@ -283,7 +290,9 @@ const handleBuyNow = () => {
 }
 
 onMounted(() => {
+  // 组件挂载后自动加载商品详情
   loadDetail()
+  // 同步购物车商品数量（用于顶部购物车徽章显示）
   cartStore.loadCartCount()
 })
 </script>

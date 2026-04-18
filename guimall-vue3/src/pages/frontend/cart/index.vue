@@ -190,16 +190,19 @@ const calcTotal = () => {
   selectAll.value = cartList.value.length > 0 && cartList.value.every(i => i.selected)
 }
 
+// 加载购物车列表：请求后端接口，设置 loading 状态，初始化每项为选中
 const loadCart = async () => {
-  loading.value = true
+  loading.value = true // 开始加载，显示 loading 动画
   try {
-    const res = await getCartList(memberId)
-    if (res.success) {
+    const res = await getCartList(memberId) // 调用接口获取当前用户的购物车列表
+    if (res.success) { // 如果请求成功
+      // 把每个购物车项都加上 selected: true 字段，表示默认全选
       cartList.value = (res.data || []).map(item => ({ ...item, selected: true }))
+      // 如果购物车有商品，则全选按钮为 true，否则为 false
       selectAll.value = cartList.value.length > 0
     }
   } finally {
-    loading.value = false
+    loading.value = false // 加载结束，隐藏 loading 动画
   }
 }
 
@@ -247,17 +250,19 @@ const handleDeleteSelected = async () => {
   }
 }
 
+// 结算操作：筛选已选中的商品，校验后存入 sessionStorage 并跳转到结算页
 const goCheckout = () => {
-  const selectedItems = cartList.value.filter(i => i.selected)
-  if (selectedItems.length === 0) {
-    message.warning('请选择要结算的商品')
+  const selectedItems = cartList.value.filter(i => i.selected) // 获取所有被选中的购物车项
+  if (selectedItems.length === 0) { // 如果没有选中商品
+    message.warning('请选择要结算的商品') // 提示用户
     return
   }
-  // 将选中的购物车项ID存入sessionStorage
+  // 将选中的购物车项ID存入本地存储对象sessionStorage
   sessionStorage.setItem('checkoutItems', JSON.stringify(selectedItems))
   router.push('/checkout')
 }
 
+// 组件挂载后自动加载购物车数据
 onMounted(() => {
   loadCart()
 })

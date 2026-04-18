@@ -21,7 +21,7 @@
         <div class="flex items-center space-x-4">
           <!-- 已登录 -->
           <template v-if="memberLoggedIn">
-            <router-link to="/cart" class="text-stone-600 hover:text-emerald-600 transition-colors">
+            <router-link to="/cart" class="flex items-center text-stone-600 hover:text-emerald-600 transition-colors">
               <a-badge :count="cartStore.cartCount" :offset="[-2, 2]" size="small">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z" /></svg>
               </a-badge>
@@ -200,7 +200,7 @@
         </div>
         <div>
           <h4 class="text-white font-bold mb-6 uppercase tracking-widest text-sm">联系我们</h4>
-          <p>地址：广西桂林市XX区助农科技园</p>
+          <p>地址：广西桂林市雁山区助农科技园</p>
           <p>电话：400-888-9999</p>
         </div>
       </div>
@@ -223,6 +223,7 @@ import { removeMemberToken } from '@/composables/cookie'
 import { useCartStore } from '@/stores/cart'
 import { useMemberLevelStore } from '@/stores/memberLevel'
 import MemberBadge from '@/components/MemberBadge.vue'
+import { getMemberDetail } from '@/api/admin/member'
 
 const router = useRouter()
 const cartStore = useCartStore()
@@ -232,12 +233,32 @@ const memberLoggedIn = ref(isMemberLoggedIn())
 const memberNickname = ref('')
 const memberAvatar = ref('')
 
+// const initMemberStatus = () => {
+//   memberLoggedIn.value = isMemberLoggedIn()
+//   if (memberLoggedIn.value) {
+//     const info = getMemberInfo()
+//     memberNickname.value = info?.nickname || info?.username || '会员'
+//     memberAvatar.value = info?.icon || ''
+//   }
+// }
+
 const initMemberStatus = () => {
   memberLoggedIn.value = isMemberLoggedIn()
+
   if (memberLoggedIn.value) {
-    const info = getMemberInfo()
-    memberNickname.value = info?.nickname || info?.username || '会员'
-    memberAvatar.value = info?.icon || ''
+
+    // 获取会员ID
+    const memberId = getMemberId()
+
+    // 请求会员信息接口
+    getMemberDetail(memberId).then(res => {
+
+      const info = res.data
+
+      memberNickname.value = info?.nickname || info?.username || '会员'
+      memberAvatar.value = info?.icon || ''
+
+    })
   }
 }
 

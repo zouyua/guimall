@@ -8,7 +8,7 @@
             {{ greeting }}，{{ displayName }}
           </div>
           <p class="mt-1 mb-0 text-sm text-gray-500">
-            {{ todayText }} · 桂品商城管理后台工作台
+            {{ todayText }} · Guimall商城管理后台工作台
           </p>
         </div>
       </div>
@@ -158,7 +158,12 @@
       <a-col :xs="24" :lg="10">
         <a-card :bordered="false" title="快捷入口" class="h-full">
           <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <a-button
+           <a-button v-for="link in quickLinks" :key="link.path"
+              class="quick-link-btn flex flex-col items-center justify-center h-[72px]" @click="router.push(link.path)">
+              <component :is="link.icon" class="text-lg text-blue-600 mb-1" />
+              <span class="text-xs">{{ link.label }}</span>
+            </a-button>
+            <!-- <a-button
               v-for="link in quickLinks"
               :key="link.path"
               class="quick-link-btn !h-auto !py-3 !px-2"
@@ -168,7 +173,7 @@
                 <component :is="link.icon" class="text-lg text-blue-600" />
                 <span class="text-xs">{{ link.label }}</span>
               </span>
-            </a-button>
+            </a-button> -->
           </div>
         </a-card>
       </a-col>
@@ -593,6 +598,7 @@ onMounted(() => {
 
 .quick-link-btn {
   border-color: #e2e8f0;
+  line-height: 1;
 }
 
 .quick-link-btn:hover {

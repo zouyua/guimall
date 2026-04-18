@@ -491,12 +491,14 @@ const loadAddresses = async () => {
   } catch (e) {}
 }
 
+// 计算商品总金额（所有商品单价*数量之和，保留两位小数）
 const totalAmount = computed(() => {
   return orderItems.value
     .reduce((sum, item) => sum + item.price * item.quantity, 0)
     .toFixed(2)
 })
 
+//计算应付金额
 const payAmount = computed(() => {
   const total = parseFloat(totalAmount.value) || 0
   const discount = couponDiscount.value || 0
