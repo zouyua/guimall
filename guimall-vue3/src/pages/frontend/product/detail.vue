@@ -34,11 +34,16 @@
         <!-- 左侧：图片展示 -->
         <div class="lg:col-span-6">
           <div class="bg-white rounded-[3rem] overflow-hidden shadow-xl border border-stone-100 sticky top-24">
-            <img :src="product.pic" class="w-full aspect-square object-cover transition-transform duration-700 hover:scale-105" />
-            <div v-if="product.albumPics" class="flex p-4 gap-4 overflow-x-auto">
-              <img v-for="pic in product.albumPics.split(',')" :key="pic" :src="pic"
-                class="w-20 h-20 rounded-2xl object-cover cursor-pointer border-2 hover:border-emerald-500 transition-all"
-                @click="product.pic = pic" />
+            <img :src="mainDisplayPic" class="w-full aspect-square object-cover transition-transform duration-700 hover:scale-105" />
+            <div v-if="albumPicList.length > 0" class="flex p-4 gap-4 overflow-x-auto">
+              <img
+                v-for="pic in albumPicList"
+                :key="pic"
+                :src="pic"
+                class="w-20 h-20 rounded-2xl object-cover cursor-pointer border-2 transition-all"
+                :class="currentPreviewPic === pic ? 'border-emerald-500' : 'border-transparent hover:border-emerald-500'"
+                @click="currentPreviewPic = pic"
+              />
             </div>
           </div>
         </div>
@@ -141,7 +146,9 @@
           <!-- 详情介绍 -->
           <div class="pt-12 border-t border-stone-200">
              <h3 class="text-2xl font-black text-stone-900 mb-6">产品故事</h3>
-             <div class="prose prose-stone max-w-none text-stone-500 leading-relaxed" v-html="product.detailHtml || product.description">
+             <div v-if="hasDetailHtml" class="prose prose-stone max-w-none text-stone-500 leading-relaxed" v-html="product.detailHtml"></div>
+             <div v-else class="prose prose-stone max-w-none text-stone-500 leading-relaxed whitespace-pre-line">
+               {{ product.description || '暂无描述' }}
              </div>
           </div>
         </div>
@@ -176,6 +183,35 @@ const id = route.query.id
 const product = ref({})
 const selectedSku = ref(null)
 const quantity = ref(1)
+const currentPreviewPic = ref('')
+
+const albumPicList = computed(() => {
+  if (Array.isArray(product.value.albumPicList) && product.value.albumPicList.length > 0) {
+    return product.value.albumPicList
+      .map(item => String(item || '').trim())
+      .filter(Boolean)
+  }
+  const list = String(product.value.albumPics || '')
+    .split(',')
+    .map(item => item.trim())
+    .filter(Boolean)
+  if (list.length > 0) return list
+  return product.value.pic ? [product.value.pic] : []
+})
+
+const mainDisplayPic = computed(() => {
+  return currentPreviewPic.value || product.value.pic || albumPicList.value[0] || ''
+})
+
+const hasDetailHtml = computed(() => {
+  const html = String(product.value.detailHtml || '').trim()
+  if (!html) return false
+  const plainText = html
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/gi, '')
+    .trim()
+  return plainText.length > 0
+})
 
 // 商品参数（直接从 API 返回的数组读取）
 const parsedParams = computed(() => {
@@ -188,6 +224,7 @@ const loadDetail = async () => {
   const res = await getProductDetail(id)
   if (res.success) {
     product.value = res.data
+    currentPreviewPic.value = product.value.pic || albumPicList.value[0] || ''
     if (product.value.skus && product.value.skus.length > 0) {
       selectedSku.value = product.value.skus[0]
     }
@@ -212,7 +249,7 @@ const selectSku = (sku) => {
   selectedSku.value = sku
   // SKU 有独立图片时切换主图
   if (sku.pic) {
-    product.value = { ...product.value, pic: sku.pic }
+    currentPreviewPic.value = sku.pic
   }
 }
 

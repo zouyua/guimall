@@ -44,6 +44,10 @@
           <a-input v-model:value="form.productSn" placeholder="请输入商品货号" />
         </a-form-item>
 
+        <a-form-item label="商品副标题">
+          <a-input v-model:value="form.subTitle" placeholder="请输入商品副标题" />
+        </a-form-item>
+
         <a-form-item label="商品主图">
           <a-upload
             :max-count="1"
@@ -51,8 +55,25 @@
             :file-list="picFileList"
             :custom-request="handlePicUpload"
             @remove="handlePicRemove"
+            accept="image/*"
           >
             <div v-if="picFileList.length === 0">
+              <plus-outlined />
+              <div class="mt-2">上传图片</div>
+            </div>
+          </a-upload>
+        </a-form-item>
+
+        <a-form-item label="商品相册">
+          <a-upload
+            list-type="picture-card"
+            :file-list="albumFileList"
+            :custom-request="handleAlbumUpload"
+            @remove="handleAlbumRemove"
+            accept="image/*"
+            multiple
+          >
+            <div>
               <plus-outlined />
               <div class="mt-2">上传图片</div>
             </div>
@@ -159,6 +180,7 @@ const categoryOptions = ref([])
 const farmerOptions = ref([])
 const publishChecked = ref(false)
 const picFileList = ref([])
+const albumFileList = ref([])
 
 // SKU 管理
 const skuRows = ref([])
@@ -197,6 +219,45 @@ const handlePicRemove = () => {
   picFileList.value = []
 }
 
+const syncAlbumFields = () => {
+  const list = albumFileList.value
+    .map(item => item.url || item.response?.data || '')
+    .map(item => String(item).trim())
+    .filter(Boolean)
+  form.albumPicList = list
+  form.albumPics = list.join(',')
+}
+
+const handleAlbumUpload = async ({ file, onSuccess, onError }) => {
+  try {
+    const res = await uploadFile(file)
+    if (res.success) {
+      albumFileList.value = [
+        ...albumFileList.value,
+        {
+          uid: `${Date.now()}-${Math.random()}`,
+          name: file.name,
+          status: 'done',
+          url: res.data
+        }
+      ]
+      syncAlbumFields()
+      onSuccess(res)
+    } else {
+      message.error(res.message || '上传失败')
+      onError(new Error(res.message))
+    }
+  } catch (e) {
+    message.error('上传失败')
+    onError(e)
+  }
+}
+
+const handleAlbumRemove = (file) => {
+  albumFileList.value = albumFileList.value.filter(item => item.uid !== file.uid)
+  syncAlbumFields()
+}
+
 const rules = {
   name: [{ required: true, message: '请输入商品名称', trigger: 'blur' }],
   productCategoryId: [{ required: true, message: '请选择商品分类', trigger: 'change' }],
@@ -211,7 +272,10 @@ const form = reactive({
   productCategoryId: undefined,
   farmerId: undefined,
   productSn: '',
+  subTitle: '',
   pic: '',
+  albumPics: '',
+  albumPicList: [],
   price: undefined,
   originalPrice: undefined,
   stock: 0,
@@ -459,11 +523,14 @@ const handleSubmit = async () => {
     productCategoryId: form.productCategoryId,
     farmerId: form.farmerId,
     name: form.name.trim(),
+    subTitle: form.subTitle?.trim() || null,
     productSn: form.productSn.trim(),
     pic: form.pic?.trim() || null,
+    albumPicList: form.albumPicList || [],
+    albumPics: form.albumPics || null,
     detailHtml: form.detailHtml || null,
     price: form.price,
-    originalPrice: form.originalPrice,
+    marketPrice: form.originalPrice ?? null,
     stock: form.stock,
     unit: form.unit?.trim() || null,
     productParams: buildProductParams(),
@@ -494,7 +561,10 @@ const handleSubmit = async () => {
     productCategoryId: undefined,
     farmerId: undefined,
     productSn: '',
+    subTitle: '',
     pic: '',
+    albumPics: '',
+    albumPicList: [],
     price: undefined,
     originalPrice: undefined,
     stock: 0,
@@ -506,6 +576,7 @@ const handleSubmit = async () => {
   // 清空其他状态
   publishChecked.value = false
   picFileList.value = []
+  albumFileList.value = []
   skuRows.value = []
   selectedParamIds.value.clear()
 

@@ -110,7 +110,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { getAvailableCouponList, receiveCoupon } from '@/api/frontend/coupon'
-import { isMemberLoggedIn, getMemberInfo, getMemberId, removeMemberInfo } from '@/composables/member'
+import { isMemberLoggedIn, getMemberId, removeMemberInfo, refreshMemberInfo } from '@/composables/member'
 import { removeMemberToken } from '@/composables/cookie'
 import { useCartStore } from '@/stores/cart'
 import { useMemberLevelStore } from '@/stores/memberLevel'
@@ -129,10 +129,10 @@ const memberNickname = ref('')
 const memberAvatar = ref('')
 
 // 初始化会员状态
-const initMemberStatus = () => {
+const initMemberStatus = async () => {
   memberLoggedIn.value = isMemberLoggedIn()
   if (memberLoggedIn.value) {
-    const info = getMemberInfo()
+    const info = await refreshMemberInfo()
     memberNickname.value = info?.nickname || info?.username || '会员'
     memberAvatar.value = info?.icon || ''
     cartStore.loadCartCount()

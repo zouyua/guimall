@@ -248,7 +248,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getTraceDetail } from '@/api/frontend/product'
-import { isMemberLoggedIn, getMemberInfo, removeMemberInfo } from '@/composables/member'
+import { isMemberLoggedIn, removeMemberInfo, refreshMemberInfo } from '@/composables/member'
 import { removeMemberToken } from '@/composables/cookie'
 import { useCartStore } from '@/stores/cart'
 import { useMemberLevelStore } from '@/stores/memberLevel'
@@ -267,10 +267,10 @@ const memberLoggedIn = ref(isMemberLoggedIn())
 const memberNickname = ref('')
 const memberAvatar = ref('')
 
-const initMemberStatus = () => {
+const initMemberStatus = async () => {
   memberLoggedIn.value = isMemberLoggedIn()
   if (memberLoggedIn.value) {
-    const info = getMemberInfo()
+    const info = await refreshMemberInfo()
     memberNickname.value = info?.nickname || info?.username || '会员'
     memberAvatar.value = info?.icon || ''
   }

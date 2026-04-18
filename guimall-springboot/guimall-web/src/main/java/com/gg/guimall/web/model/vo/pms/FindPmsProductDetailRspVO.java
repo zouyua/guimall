@@ -40,6 +40,8 @@ public class FindPmsProductDetailRspVO {
 
     private String albumPics;
 
+    private List<String> albumPicList;
+
     private String description;
 
     private BigDecimal price;

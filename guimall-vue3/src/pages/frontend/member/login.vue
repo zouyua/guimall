@@ -180,7 +180,7 @@
 import { ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { setMemberToken } from '@/composables/cookie'
-import { setMemberInfo } from '@/composables/member'
+import { setMemberInfo, refreshMemberInfo } from '@/composables/member'
 import { memberLogin, memberRegister } from '@/api/frontend/member'
 
 const router = useRouter()
@@ -236,8 +236,12 @@ const handleLogin = async () => {
       // 存储会员信息
       setMemberInfo({
         memberId: res.data.memberId,
-        nickname: res.data.nickname || res.data.username || loginForm.value.username
+        id: res.data.memberId,
+        username: res.data.username || loginForm.value.username,
+        nickname: res.data.nickname || res.data.username || loginForm.value.username,
+        icon: res.data.icon || ''
       })
+      await refreshMemberInfo({ force: true })
       // 跳转到之前的页面或首页
       const redirect = route.query.redirect || '/'
       router.push(redirect)

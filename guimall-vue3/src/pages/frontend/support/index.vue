@@ -203,8 +203,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getAidAgricultureProducts, getSupportFarmers } from '@/api/frontend/product'
-import { isMemberLoggedIn, getMemberInfo } from '@/composables/member'
-import { removeMemberInfo } from '@/composables/member'
+import { isMemberLoggedIn, removeMemberInfo, refreshMemberInfo } from '@/composables/member'
 import { removeMemberToken } from '@/composables/cookie'
 import { useCartStore } from '@/stores/cart'
 import { useMemberLevelStore } from '@/stores/memberLevel'
@@ -219,10 +218,10 @@ const memberLoggedIn = ref(isMemberLoggedIn())
 const memberNickname = ref('')
 const memberAvatar = ref('')
 
-const initMemberStatus = () => {
+const initMemberStatus = async () => {
   memberLoggedIn.value = isMemberLoggedIn()
   if (memberLoggedIn.value) {
-    const info = getMemberInfo()
+    const info = await refreshMemberInfo()
     memberNickname.value = info?.nickname || info?.username || '会员'
     memberAvatar.value = info?.icon || ''
     cartStore.loadCartCount()

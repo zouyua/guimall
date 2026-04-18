@@ -124,7 +124,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { getMemberCouponList } from '@/api/frontend/coupon'
-import { isMemberLoggedIn, getMemberInfo, getMemberId } from '@/composables/member'
+import { isMemberLoggedIn, getMemberId, refreshMemberInfo } from '@/composables/member'
 import MemberBadge from '@/components/MemberBadge.vue'
 import dayjs from 'dayjs'
 
@@ -139,10 +139,10 @@ const memberNickname = ref('')
 const memberAvatar = ref('')
 
 // 初始化会员状态
-const initMemberStatus = () => {
+const initMemberStatus = async () => {
   memberLoggedIn.value = isMemberLoggedIn()
   if (memberLoggedIn.value) {
-    const info = getMemberInfo()
+    const info = await refreshMemberInfo()
     memberNickname.value = info?.nickname || info?.username || '会员'
     memberAvatar.value = info?.icon || ''
   }

@@ -50,6 +50,9 @@ public class FindPmsProductDetailRspVO {
     @ApiModelProperty(value = "商品相册图片（逗号分割）")
     private String albumPics;
 
+    @ApiModelProperty(value = "商品相册图片列表")
+    private List<String> albumPicList;
+
     @ApiModelProperty(value = "商品描述")
     private String description;
 

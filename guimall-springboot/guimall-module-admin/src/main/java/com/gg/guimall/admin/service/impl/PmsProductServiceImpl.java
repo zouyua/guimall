@@ -90,7 +90,7 @@ public class PmsProductServiceImpl implements PmsProductService {
                 .subTitle(reqVO.getSubTitle())
                 .productSn(reqVO.getProductSn())
                 .pic(reqVO.getPic())
-                .albumPics(reqVO.getAlbumPics())
+                .albumPics(normalizeAlbumPics(reqVO.getAlbumPics(), reqVO.getAlbumPicList()))
                 .description(reqVO.getDescription())
                 .price(reqVO.getPrice())
                 .marketPrice(reqVO.getMarketPrice())
@@ -200,6 +200,7 @@ public class PmsProductServiceImpl implements PmsProductService {
 
         FindPmsProductDetailRspVO rspVO = new FindPmsProductDetailRspVO();
         BeanUtils.copyProperties(productDO, rspVO);
+        rspVO.setAlbumPicList(parseAlbumPicList(productDO.getAlbumPics()));
 
         // 关联查询并填充分类名称
         if (Objects.nonNull(productDO.getProductCategoryId())) {
@@ -284,7 +285,7 @@ public class PmsProductServiceImpl implements PmsProductService {
                 .subTitle(reqVO.getSubTitle())
                 .productSn(reqVO.getProductSn())
                 .pic(reqVO.getPic())
-                .albumPics(reqVO.getAlbumPics())
+                .albumPics(normalizeAlbumPics(reqVO.getAlbumPics(), reqVO.getAlbumPicList()))
                 .description(reqVO.getDescription())
                 .price(reqVO.getPrice())
                 .marketPrice(reqVO.getMarketPrice())
@@ -480,5 +481,31 @@ public class PmsProductServiceImpl implements PmsProductService {
             pmsSkuStockMapper.insert(skuStockDO);
             log.info("SKU保存成功: skuCode={}, price={}, stock={}", skuItem.getSkuCode(), skuItem.getPrice(), skuItem.getStock());
         }
+    }
+
+    private String normalizeAlbumPics(String albumPics, List<String> albumPicList) {
+        if (!CollectionUtils.isEmpty(albumPicList)) {
+            List<String> cleanedList = albumPicList.stream()
+                    .filter(Objects::nonNull)
+                    .map(String::trim)
+                    .filter(item -> !item.isEmpty())
+                    .collect(Collectors.toList());
+            return cleanedList.isEmpty() ? null : String.join(",", cleanedList);
+        }
+        if (albumPics == null) {
+            return null;
+        }
+        String normalized = albumPics.trim();
+        return normalized.isEmpty() ? null : normalized;
+    }
+
+    private List<String> parseAlbumPicList(String albumPics) {
+        if (albumPics == null || albumPics.trim().isEmpty()) {
+            return Collections.emptyList();
+        }
+        return java.util.Arrays.stream(albumPics.split(","))
+                .map(String::trim)
+                .filter(item -> !item.isEmpty())
+                .collect(Collectors.toList());
     }
 }

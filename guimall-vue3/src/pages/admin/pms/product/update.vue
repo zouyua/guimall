@@ -51,6 +51,10 @@
           <a-input v-model:value="form.productSn" class="gm-field" />
         </a-form-item>
 
+        <a-form-item label="商品副标题">
+          <a-input v-model:value="form.subTitle" class="gm-field" />
+        </a-form-item>
+
         <a-form-item label="商品主图">
           <a-upload
             :max-count="1"
@@ -61,6 +65,22 @@
             accept="image/*"
           >
             <div v-if="picFileList.length === 0">
+              <PlusOutlined />
+              <div class="mt-2">上传图片</div>
+            </div>
+          </a-upload>
+        </a-form-item>
+
+        <a-form-item label="商品相册">
+          <a-upload
+            list-type="picture-card"
+            :file-list="albumFileList"
+            :custom-request="handleAlbumUpload"
+            @remove="handleAlbumRemove"
+            accept="image/*"
+            multiple
+          >
+            <div>
               <PlusOutlined />
               <div class="mt-2">上传图片</div>
             </div>
@@ -169,6 +189,7 @@ const attrCategoryOptions = ref([])
 
 const publishChecked = ref(false)
 const picFileList = ref([])
+const albumFileList = ref([])
 
 const skuRows = ref([])
 const skuSaveLoading = ref(false)
@@ -180,7 +201,10 @@ const form = reactive({
   productAttributeCategoryId: undefined,
   farmerId: undefined,
   productSn: '',
+  subTitle: '',
   pic: '',
+  albumPics: '',
+  albumPicList: [],
   price: undefined,
   originalPrice: undefined,
   stock: 0,
@@ -210,6 +234,55 @@ const handlePicUpload = async ({ file, onSuccess, onError }) => {
 const handlePicRemove = () => {
   form.pic = ''
   picFileList.value = []
+}
+
+const parseAlbumPicList = (albumPics, albumPicList) => {
+  if (Array.isArray(albumPicList) && albumPicList.length > 0) {
+    return albumPicList.map(item => String(item || '').trim()).filter(Boolean)
+  }
+  return String(albumPics || '')
+    .split(',')
+    .map(item => item.trim())
+    .filter(Boolean)
+}
+
+const syncAlbumFields = () => {
+  const list = albumFileList.value
+    .map(item => item.url || item.response?.data || '')
+    .map(item => String(item).trim())
+    .filter(Boolean)
+  form.albumPicList = list
+  form.albumPics = list.join(',')
+}
+
+const handleAlbumUpload = async ({ file, onSuccess, onError }) => {
+  try {
+    const res = await uploadFile(file)
+    if (res.success) {
+      albumFileList.value = [
+        ...albumFileList.value,
+        {
+          uid: `${Date.now()}-${Math.random()}`,
+          name: file.name,
+          status: 'done',
+          url: res.data
+        }
+      ]
+      syncAlbumFields()
+      onSuccess(res)
+    } else {
+      message.error(res.message || '上传失败')
+      onError(new Error(res.message))
+    }
+  } catch (e) {
+    message.error('上传失败')
+    onError(e)
+  }
+}
+
+const handleAlbumRemove = (file) => {
+  albumFileList.value = albumFileList.value.filter(item => item.uid !== file.uid)
+  syncAlbumFields()
 }
 
 const normalizeUnit = (v) => {
@@ -245,7 +318,10 @@ watch(() => route.query.id, (newId, oldId) => {
       productAttributeCategoryId: undefined,
       farmerId: undefined,
       productSn: '',
+      subTitle: '',
       pic: '',
+      albumPics: '',
+      albumPicList: [],
       price: undefined,
       originalPrice: undefined,
       stock: 0,
@@ -255,6 +331,7 @@ watch(() => route.query.id, (newId, oldId) => {
       description: ''
     })
     picFileList.value = []
+    albumFileList.value = []
     skuRows.value = []
     init()
   }
@@ -276,7 +353,20 @@ const init = async () => {
   attrCategoryOptions.value = attrRsp?.data || []
 
   Object.assign(form, detailRsp.data)
+  form.subTitle = form.subTitle || ''
+  form.originalPrice = detailRsp?.data?.marketPrice ?? form.originalPrice
   form.unit = normalizeUnit(form.unit)
+
+  const albumPicList = parseAlbumPicList(detailRsp?.data?.albumPics, detailRsp?.data?.albumPicList)
+  albumFileList.value = albumPicList.map((url, index) => ({
+    uid: `album-${index}`,
+    name: `相册图${index + 1}`,
+    status: 'done',
+    url
+  }))
+  form.albumPicList = albumPicList
+  form.albumPics = albumPicList.join(',')
+
   publishChecked.value = form.publishStatus === 1
   picFileList.value = form.pic
     ? [{ uid: '-1', name: '商品主图', status: 'done', url: form.pic }]
@@ -469,8 +559,17 @@ const handleSaveSku = async () => {
 const handleSubmit = async () => {
   await formRef.value.validate()
 
+  const albumPicList = albumFileList.value
+    .map(item => item.url || item.response?.data || '')
+    .map(item => String(item).trim())
+    .filter(Boolean)
+
   await updateProduct({
     ...form,
+    subTitle: form.subTitle?.trim() || null,
+    marketPrice: form.originalPrice ?? null,
+    albumPicList,
+    albumPics: albumPicList.join(',') || null,
     unit: normalizeUnit(form.unit),
     publishStatus: publishChecked.value ? 1 : 0
   })

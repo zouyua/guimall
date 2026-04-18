@@ -194,6 +194,7 @@ public class PmsProductServiceImpl implements PmsProductService {
 
         FindPmsProductDetailRspVO rspVO = new FindPmsProductDetailRspVO();
         BeanUtils.copyProperties(productDO, rspVO);
+        rspVO.setAlbumPicList(parseAlbumPicList(productDO.getAlbumPics()));
 
         // 分类名/农户名补充
         if (Objects.nonNull(productDO.getProductCategoryId())) {
@@ -273,6 +274,16 @@ public class PmsProductServiceImpl implements PmsProductService {
         }
 
         return Response.success(rspVO);
+    }
+
+    private List<String> parseAlbumPicList(String albumPics) {
+        if (albumPics == null || albumPics.trim().isEmpty()) {
+            return Collections.emptyList();
+        }
+        return java.util.Arrays.stream(albumPics.split(","))
+                .map(String::trim)
+                .filter(item -> !item.isEmpty())
+                .collect(Collectors.toList());
     }
 }
 
