@@ -4,7 +4,7 @@
     <a-card :bordered="false" class="mb-5">
       <div class="text-base font-semibold text-gray-900 mb-1">首页轮播图</div>
       <p class="text-sm text-gray-500 mb-0 leading-relaxed">
-        与前端首页轮播组件对应，仅配置轮播图、排序与是否展示；轮播为纯展示，无需、也不配置跳转链接。
+        <!-- 与前端首页轮播组件对应，仅配置轮播图、排序与是否展示；轮播为纯展示，无需、也不配置跳转链接。 -->
       </p>
     </a-card>
 

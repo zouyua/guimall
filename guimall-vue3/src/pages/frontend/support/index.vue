@@ -87,6 +87,7 @@
         <div v-for="farmer in farmers" :key="farmer.id"
              class="flex-none w-[280px] bg-white rounded-[2.5rem] p-8 border border-stone-100 shadow-sm hover:shadow-xl transition-all duration-500">
           <div class="flex items-start gap-4 mb-6">
+<!--            使用 DiceBear API 生成随机卡通头像-->
             <img :src="farmer.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + farmer.name"
                  class="w-16 h-16 rounded-2xl border-2 border-emerald-100 object-cover" />
             <div class="min-w-0 min-h-[52px]">

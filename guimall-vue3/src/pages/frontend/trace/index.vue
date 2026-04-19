@@ -390,10 +390,10 @@ const loadTraceDetail = async () => {
 }
 
 const certifications = [
-  { name: '中国地理标志', icon: 'https://www.svgrepo.com/show/475456/medal.svg' },
-  { name: '绿色食品认证', icon: 'https://www.svgrepo.com/show/475440/leaf.svg' },
-  { name: '有机农产品', icon: 'https://www.svgrepo.com/show/475437/flower.svg' },
-  { name: '助农帮扶', icon: 'https://www.svgrepo.com/show/475443/hand.svg' }
+  { name: '中国地理标志', icon: 'http://175.178.0.51:9000/weblog-gq/农场品地理标志.png' },
+  { name: '绿色食品认证', icon: 'http://175.178.0.51:9000/weblog-gq/绿色食品认证.png' },
+  { name: '有机农产品', icon: 'http://175.178.0.51:9000/weblog-gq/有机农产品.png' },
+  { name: '助农帮扶', icon: 'http://175.178.0.51:9000/weblog-gq//nongchanpin.png' }
 ]
 
 onMounted(() => {
