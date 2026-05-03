@@ -385,16 +385,18 @@ const operationStatCards = computed(() => [
 /** 近7日销售额 */
 const last7DaysSales = ref([])
 
+// 计算图表 Y 轴最大值（向上取整为好看的数值）
 const chartYMax = computed(() =>
   niceChartMax(Math.max(...last7DaysSales.value.map((d) => d.amount), 0))
 )
 
+// 计算 Y 轴刻度（从最大值到0的5个刻度点）
 const yAxisTicks = computed(() => {
   const max = chartYMax.value
   return [1, 0.75, 0.5, 0.25, 0].map((ratio) => ({
     ratio,
     value: max * ratio,
-    label: formatAxisY(max * ratio)
+    label: formatAxisY(max * ratio) // 格式化显示标签（如万、k等）
   }))
 })
 
